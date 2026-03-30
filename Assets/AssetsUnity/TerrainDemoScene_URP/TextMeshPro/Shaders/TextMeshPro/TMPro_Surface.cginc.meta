@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 4e73fe76fe2d97e4799b18bc393fec72
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 213197
+  packageName: Unity Terrain - URP Demo Scene
+  packageVersion: 1.0.3
+  assetPath: Assets/AssetsUnity/TerrainDemoScene_URP/TextMeshPro/Shaders/TextMeshPro/TMPro_Surface.cginc
+  uploadId: 727820

@@ -1,0 +1,18 @@
+﻿<Solution>
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="CitrioN.Common.csproj" />
+  <Project Path="CitrioN.UI.Panels.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="CitrioN.UI.Components.csproj" />
+  <Project Path="CitrioN.StyleProfileSystem.csproj" />
+  <Project Path="CitrioN.SettingsMenuCreator.Editor.csproj" />
+  <Project Path="CitrioN.SettingsMenuCreator.csproj" />
+  <Project Path="CitrioN.Common.Editor.csproj" />
+  <Project Path="com.cqf.urpvolumetricfog.editor.csproj" />
+  <Project Path="com.cqf.urpvolumetricfog.runtime.csproj" />
+  <Project Path="CitrioN.StyleProfileSystem.UIToolkit.csproj" />
+  <Project Path="CitrioN.UI.Components.Editor.csproj" />
+  <Project Path="CitrioN.UI.csproj" />
+  <Project Path="CitrioN.UI.Components.UIToolkit.csproj" />
+  <Project Path="CitrioN.StyleProfileSystem.Editor.csproj" />
+</Solution>

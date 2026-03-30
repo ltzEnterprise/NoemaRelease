@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 800fcbf77cf50eb4fab6fe764087c84d
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 305174
+  packageName: Dynamic Photo Camera mini
+  packageVersion: 1.0
+  assetPath: Assets/PhotoCollection/Prefabs/Photo.prefab
+  uploadId: 730649
