@@ -34,7 +34,11 @@ public class SoundtrackManager : MonoBehaviour
             audioSource.loop = true;
             audioSource.volume = volume;
             audioSource.Play();
-            fadeSpan = (fadeTime - interval)/2;
+            
+            // CORREÇÃO DE ERRO FATAL: 
+            // Se o fadeTime e o interval fossem iguais, fadeSpan virava 0.
+            // Dividir por zero na Unity crasava o jogo. O Mathf.Max impede que chegue a zero.
+            fadeSpan = Mathf.Max(0.1f, (fadeTime - interval) / 2);
         }
         else
         {
@@ -57,13 +61,13 @@ public class SoundtrackManager : MonoBehaviour
 
     private IEnumerator FadeVolume(float target, int index, float interval)
     {
-        float starterVolume = volume;
+        float starterVolume = audioSource.volume; // Atualizado para pegar o volume atual da source em vez da variável base
         
         // Fade Out
         while (audioSource.volume >= 0.0005f)
         {
             audioSource.volume -= (starterVolume / fadeSpan) * Time.deltaTime;
-            yield return null; // Time.deltaTime aqui estava errado, o correto é null ou WaitForEndOfFrame
+            yield return null; 
         }
         
         audioSource.volume = 0;

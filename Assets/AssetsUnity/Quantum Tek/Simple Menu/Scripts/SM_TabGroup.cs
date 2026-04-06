@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace QuantumTek.SimpleMenu
 {
-    /// <summary> How the tabs are aligned at the top of a tab group. </summary>
     [System.Serializable]
     public enum SM_TabAlign
     {
@@ -12,50 +11,56 @@ namespace QuantumTek.SimpleMenu
         Right
     }
 
-    /// <summary> Handles everything in a tab group, from the tab windows to which one is open. </summary>
     [AddComponentMenu("Quantum Tek/Simple Menu/Tab Group")]
     [DisallowMultipleComponent]
     public class SM_TabGroup : MonoBehaviour
     {
         [Header("Object References")]
-        [Tooltip("A reference to the tab group's content.")]
         [SerializeField] protected Transform content;
-        [Tooltip("A reference to the tab group's animator.")]
         [SerializeField] protected Animator animator;
         [Space]
         [Header("Animation Variables")]
-        [Tooltip("How the animation will be handled for opening/closing the tab group.")]
         [SerializeField] protected SM_AnimationType animationType;
-        [Tooltip("The name of the animator boolean used, if applicable.")]
         [SerializeField] protected string animatorBool = "Shown";
-        [Tooltip("The name of the animator trigger used to show the tab group, if applicable.")]
         [SerializeField] protected string animatorShowTrigger = "Show";
-        [Tooltip("The name of the animator trigger used to hide the tab group, if applicable.")]
         [SerializeField] protected string animatorHideTrigger = "Hide";
         [Space]
         [Header("Tab Variables")]
-        [Tooltip("How far from the left and right side the tabs will be during left and right align, and how far off the top of the window they will be.")]
         [SerializeField] protected Vector2 tabOffset;
-        [Tooltip("The alignment that the tabs use in the AlignTabs function.")]
         [SerializeField] protected SM_TabAlign alignment;
 
-        /// <summary> A list of the windows in the tab group. Don't change unless through the GetWindows function. </summary>
         protected List<SM_TabWindow> windows;
-        /// <summary> A list of the tabs in the tab group. Don't change. </summary>
         protected List<SM_Tab> tabs;
-        /// <summary> A reference to the currently selected tab window. Don't change, use the ChangeTab function. </summary>
         protected SM_TabWindow current;
-        /// <summary> Whether or not the tab group is active or shown. Don't change this, as it's changed by the Toggle function. </summary>
         [HideInInspector] public bool active;
+
+        // 🔥 A SOLUÇÃO BRUTA QUE VOCÊ PEDIU 🔥
+        // Toda vez que esse grupo de abas for ativado na tela, ele FORÇA a primeira aba (Gameplay)
+        protected void OnEnable()
+        {
+            if (content == null) return;
+            
+            GetWindows(); // Atualiza a lista garantindo que vai achar tudo
+            
+            if (windows != null && windows.Count > 0)
+            {
+                // Desliga TODAS pra garantir que não vai ter aba sobreposta
+                for (int i = 0; i < windows.Count; i++)
+                {
+                    if (windows[i] != null) windows[i].Toggle(false);
+                }
+                
+                // Pega a primeira aba (Gameplay) e FORÇA ELA A FICAR SELECIONADA
+                current = windows[0];
+                current.Toggle(true);
+            }
+        }
 
         protected void Start()
         {
-            // Get active state from start
             if (content) active = content.gameObject.activeSelf;
-            // Find the tab windows in this tab group
             GetWindows();
 
-            // Get starting window
             int windowCount = windows.Count;
             for (int i = 0; i < windowCount; ++i)
             { if (windows[i].content.gameObject.activeSelf) current = windows[i]; }
@@ -67,7 +72,8 @@ namespace QuantumTek.SimpleMenu
 
         protected void GetWindows()
         {
-            SM_TabWindow[] tempWindows = content.GetComponentsInChildren<SM_TabWindow>();
+            // 🔥 TRUE ADICIONADO AQUI: Faz ele achar as abas mesmo se estiverem invisíveis/desligadas
+            SM_TabWindow[] tempWindows = content.GetComponentsInChildren<SM_TabWindow>(true);
             windows = new List<SM_TabWindow>(tempWindows);
             
             tabs = new List<SM_Tab>();
@@ -76,8 +82,6 @@ namespace QuantumTek.SimpleMenu
             { tabs.Add(windows[i].tab); }
         }
 
-        /// <summary> Toggles the active state of the tab group. </summary>
-        /// <param name="shown">Whether or not the tab group should be shown.</param>
         public void Toggle(bool shown)
         {
             active = shown;
@@ -90,28 +94,27 @@ namespace QuantumTek.SimpleMenu
             }
         }
 
-        /// <summary> Changes the current tab. </summary>
-        /// <param name="tab">The tab window to change to.</param>
         public void ChangeTab(SM_TabWindow tab)
         {
             if (!tab) return;
-            if (current) current.Toggle(false);
+            
+            // 🔥 PREVINE BUG: Só desliga a aba atual se você clicar em UMA DIFERENTE
+            if (current != null && current != tab) current.Toggle(false);
+            
             current = tab;
             if (current) current.Toggle(true);
         }
 
-        /// <summary> Aligns the tabs of the tab group with the tab group's alignment. </summary>
         public void AlignTabs()
         {
-            if (windows.Count == 0 || tabs.Count == 0) GetWindows();
+            if (windows == null || windows.Count == 0 || tabs == null || tabs.Count == 0) GetWindows();
 
             float tabsWidth = 0;
             int tabCount = tabs.Count;
             RectTransform tabTransform;
-            // Find the total width.
             for (int i = 0; i < tabCount; ++i)
             { tabTransform = tabs[i].GetComponent<RectTransform>(); if (!tabTransform) continue; tabsWidth += tabTransform.rect.width; }
-            // Align the tabs using the total width.
+            
             float currentTabWidth = 0;
             for (int i = 0; i < tabCount; ++i)
             {

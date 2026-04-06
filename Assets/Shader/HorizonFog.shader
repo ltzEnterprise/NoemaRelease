@@ -4,9 +4,13 @@ Shader "Custom/HorizonFog"
     {
         _FogColor ("Cor da Névoa", Color) = (0.5, 0.5, 0.5, 1)
         
-        // Controla onde a névoa começa a sumir e onde ela some de vez (Baseado no UV do objeto)
-        _GradientStart ("Início do Fade (Altura)", Range(0, 1)) = 0.2
-        _GradientEnd ("Fim do Fade (Altura)", Range(0, 1)) = 0.8
+        // Agora é uma FAIXA, não um balde que enche até o chão
+        _FadeBottom ("Some no Chão (Zero Embaixo)", Range(0, 1)) = 0.1
+        _HorizonLine ("Linha do Horizonte (Pico da Névoa)", Range(0, 1)) = 0.2
+        _FadeTop ("Some no Céu (Zero em Cima)", Range(0, 1)) = 0.8
+        
+        // Mantido pro seu DayNightCycle continuar funcionando
+        _DensityMultiplier ("Multiplicador de Densidade", Range(0, 5)) = 1.0
     }
     SubShader
     {
@@ -36,26 +40,37 @@ Shader "Custom/HorizonFog"
             };
 
             float4 _FogColor;
-            float _GradientStart;
-            float _GradientEnd;
+            float _FadeBottom;
+            float _HorizonLine;
+            float _FadeTop;
+            float _DensityMultiplier;
 
             v2f vert (appdata v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                // Pega a UV real do cilindro
                 o.uv = v.uv; 
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
-                // A MÁGICA CONSERTADA TÁ AQUI:
-                // Cria a máscara de degradê baseada na UV.y (altura física do modelo 3D)
-                float alphaMask = 1.0 - smoothstep(_GradientStart, _GradientEnd, i.uv.y);
+                // Faz a névoa sumir do horizonte pra baixo (salva o seu chão)
+                float fadeBaixo = smoothstep(_FadeBottom, _HorizonLine, i.uv.y);
+
+                // Faz a névoa sumir do horizonte pra cima (salva o seu céu)
+                float fadeCima = 1.0 - smoothstep(_HorizonLine, _FadeTop, i.uv.y);
+
+                // Multiplica os dois pra criar uma "Faixa" de neblina só no fundo
+                float alphaMask = fadeBaixo * fadeCima;
                 
-                // Retorna a cor sólida do Fog com o Alpha calculado
-                return float4(_FogColor.rgb, _FogColor.a * alphaMask);
+                // Suaviza a curva pra ficar mais atmosférico
+                alphaMask = pow(alphaMask, 1.5);
+                
+                // Aplica a densidade global do script de Dia/Noite
+                float finalAlpha = clamp(_FogColor.a * alphaMask * _DensityMultiplier, 0.0, 1.0);
+                
+                return float4(_FogColor.rgb, finalAlpha);
             }
             ENDCG
         }

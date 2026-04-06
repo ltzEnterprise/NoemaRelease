@@ -13,12 +13,18 @@ public class PhysicsPickupObject : MonoBehaviour
     public float forcaArremesso = 10f; 
     public float distanciaMaximaQuebra = 4f; 
 
+    [Header("--- SEGURANÇA (BLOQUEIO) ---")]
+    [Tooltip("Quais Layers vão bloquear a sua mão e o texto?")]
+    public LayerMask camadasBloqueadoras = Physics.DefaultRaycastLayers;
+
     [Header("--- UI ---")]
     public GameObject textoInteragir; 
 
     // Variáveis Internas
     private bool estaSegurando = false;
+    private bool sendoOlhado = false; // <-- Nova variável de controle visual
     private Rigidbody rb;
+    private Collider meuCollider;
     private int layerOriginal;
     
     // Controle de Quebra e Bug do Clique
@@ -33,6 +39,7 @@ public class PhysicsPickupObject : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        meuCollider = GetComponent<Collider>();
         layerOriginal = gameObject.layer;
         
         originalDamping = rb.linearDamping; 
@@ -45,26 +52,67 @@ public class PhysicsPickupObject : MonoBehaviour
             cameraPlayer = Camera.main.transform;
     }
 
+    // --- FUNÇÃO QUE CHECA A PAREDE MAGNÉTICA ---
+    bool CaminhoEstaBloqueado()
+    {
+        if (cameraPlayer == null || meuCollider == null) return false;
+
+        // Estica uma linha da câmera até o centro do cubo
+        if (Physics.Linecast(cameraPlayer.position, meuCollider.bounds.center, out RaycastHit hit, camadasBloqueadoras, QueryTriggerInteraction.Ignore))
+        {
+            // Se bateu em algo que NÃO é o cubo e NÃO é o jogador, tá bloqueado.
+            if (hit.collider.gameObject != this.gameObject && hit.collider.transform.root != cameraPlayer.root)
+            {
+                return true; 
+            }
+        }
+        return false;
+    }
+
     public void AoOlhar()
     {
         if (estaSegurando) return; 
-        if (textoInteragir && !textoInteragir.activeSelf) textoInteragir.SetActive(true);
+        sendoOlhado = true; // Avisa o Update que o player tá com a mira aqui
     }
 
     public void AoSair()
     {
+        sendoOlhado = false; // Player tirou a mira, desliga tudo
         if (textoInteragir) textoInteragir.SetActive(false);
     }
 
     public void Interagir()
     {
-        if (estaSegurando) Soltar();
-        else Pegar();
+        if (estaSegurando) 
+        {
+            Soltar();
+        }
+        else 
+        {
+            // O bloqueio definitivo na hora de apertar 'E'
+            if (!CaminhoEstaBloqueado())
+            {
+                Pegar();
+            }
+        }
     }
 
     void Update()
     {
-        // Só deixa arremessar se já passou 0.2 segundos desde que pegou. Mata o bug do double-click.
+        // --- CONTROLE CONTÍNUO DO TEXTO ---
+        if (sendoOlhado && !estaSegurando)
+        {
+            bool bloqueado = CaminhoEstaBloqueado();
+            
+            if (textoInteragir)
+            {
+                // Liga e desliga o texto de forma burra e rápida acompanhando o obstáculo
+                if (bloqueado && textoInteragir.activeSelf) textoInteragir.SetActive(false);
+                else if (!bloqueado && !textoInteragir.activeSelf) textoInteragir.SetActive(true);
+            }
+        }
+
+        // Arremesso
         if (estaSegurando && Time.time > tempoQuePegou + 0.2f && Input.GetMouseButtonDown(0))
         {
             Arremessar();
@@ -88,6 +136,7 @@ public class PhysicsPickupObject : MonoBehaviour
         }
 
         estaSegurando = true;
+        sendoOlhado = false; // Desliga o UI porque já tá na mão
         jaChegouNaMao = false; 
         tempoQuePegou = Time.time; 
         

@@ -24,11 +24,16 @@ public class InventarioRunas : MonoBehaviour
     [HideInInspector] public Vector3 ultimaPosicaoSalva;
     [HideInInspector] public bool deveCarregarPosicao = false;
 
-    private void Awake() 
+private void Awake() 
     { 
         if (Instance == null) 
         {
             Instance = this;
+            
+            // --- A MÁGICA AQUI ---
+            // Tira o objeto de dentro de qualquer "pai" e joga ele na raiz da cena
+            transform.SetParent(null); 
+            
             DontDestroyOnLoad(gameObject); 
             SceneManager.sceneLoaded += OnSceneLoaded;
         } 

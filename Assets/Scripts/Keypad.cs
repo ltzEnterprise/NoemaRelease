@@ -4,6 +4,10 @@ using System.Collections;
 
 public class Keypad : MonoBehaviour
 {
+    [Header("--- BLOQUEADOR ---")]
+    [Tooltip("Coloque o objeto que bloqueia (ex: plasma). Se ficar vazio, funciona normal.")]
+    public GameObject bloqueador;
+
     [Header("Configurações")]
     public string senhaCorreta = "1487";
     public int limiteDigitos = 4;
@@ -43,6 +47,12 @@ public class Keypad : MonoBehaviour
     private Coroutine rotinaReset;
     private bool aguardandoLimpeza = false;
 
+    // Função que checa em tempo real se a parada tá bloqueada
+    private bool TaBloqueado()
+    {
+        return bloqueador != null && bloqueador.activeInHierarchy;
+    }
+
     void Start() 
     { 
         if(cameraFixaKeypad) 
@@ -61,6 +71,8 @@ public class Keypad : MonoBehaviour
 
     public void AoOlhar() 
     { 
+        if (TaBloqueado()) return; // Se tiver bloqueado, o texto nem aparece
+
         // O painel NUNCA MAIS trava, então o texto sempre aparece se não tiver usando
         if (!jogadorUsando && textoInteragirProprio) 
             textoInteragirProprio.SetActive(true); 
@@ -74,11 +86,18 @@ public class Keypad : MonoBehaviour
 
     public void Interagir()
     {
+        if (TaBloqueado()) return; // Se tiver bloqueado, foda-se o clique
         if (!jogadorUsando) EntrarModoKeypad();
     }
 
     void Update()
     {
+        // Monitoramento constante: Se ativar o bloqueador na cara do jogador, apaga o texto na hora
+        if (TaBloqueado() && textoInteragirProprio && textoInteragirProprio.activeSelf)
+        {
+            textoInteragirProprio.SetActive(false);
+        }
+
         if (!jogadorUsando) return;
 
         if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape))

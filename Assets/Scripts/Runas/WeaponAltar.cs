@@ -10,7 +10,6 @@ public class WeaponAltar : MonoBehaviour
     public int requiredRunesCount = 7; 
     public int weaponIDToUnlock = 1; 
     
-    // CORREÇÃO: Agora aponta para a classe nova em inglês
     public AltarActivationCutscene cutsceneScript; 
 
     [Header("--- UI & VISUAL ---")]
@@ -21,6 +20,10 @@ public class WeaponAltar : MonoBehaviour
 
     private bool isWeaponAvailable = false;
     private bool alreadyTaken = false;
+    
+    // Travas para organizar a UI sem brigar com o seu Raycast central
+    private bool estaOlhando = false; 
+    private bool mostrandoErro = false; 
 
     void Start()
     {
@@ -37,40 +40,50 @@ public class WeaponAltar : MonoBehaviour
         if(highlightLight) highlightLight.SetActive(true);
     }
 
-    // --- RAYCAST INTERACTION PROTOCOL ---
+    // --- MÉTODOS DO SEU SISTEMA DE RAYCAST CENTRAL (NOMES CORRIGIDOS) ---
 
-    public void OnLook() 
+    public void AoOlhar() // O seu laser chama isso aqui
     { 
-        if(runesUIPanel && !alreadyTaken) runesUIPanel.SetActive(true); 
+        if (alreadyTaken) return;
+
+        estaOlhando = true;
+
+        // Só mostra o painel principal se a mensagem de erro NÃO estiver na tela
+        if (runesUIPanel && !mostrandoErro) runesUIPanel.SetActive(true); 
     }
     
-    public void OnLookAway() 
+    public void AoSair() // O seu laser chama isso quando você vira a cara
     { 
+        estaOlhando = false;
         if(runesUIPanel) runesUIPanel.SetActive(false); 
+        if(missingRunesText) missingRunesText.SetActive(false);
     }
 
-    public void Interact()
+    public void Interagir() // O seu laser chama isso quando você aperta [E]
     {
         if (alreadyTaken) return;
 
-        // Verifica se tem InventarioRunas na cena (evita erro se não tiver)
-        if (InventarioRunas.Instance == null)
+        int runasAtuais = 0;
+
+        if (InventarioRunas.Instance != null)
+        {
+            runasAtuais = InventarioRunas.Instance.runasNaMao.Count;
+        }
+        else if (!devMode)
         {
             Debug.LogError("ERRO CRÍTICO: 'InventarioRunas' não encontrado na cena!");
             return;
         }
 
-        bool hasEnoughRunes = InventarioRunas.Instance.runasNaMao.Count >= requiredRunesCount;
-
-        if (hasEnoughRunes || devMode)
+        if (runasAtuais >= requiredRunesCount || devMode)
         {
             if (!isWeaponAvailable) SpawnWeaponOnAltar();
 
-            if (!devMode) 
+            if (!devMode && InventarioRunas.Instance != null) 
             {
                 InventarioRunas.Instance.UsarTodasAsRunasNoAltar(); 
             }
-            else 
+            else if (devMode)
             {
                 Debug.Log(">> ALTAR ACTIVATED VIA DEV MODE <<");
             }
@@ -96,7 +109,6 @@ public class WeaponAltar : MonoBehaviour
         }
         else 
         {
-            // Se não tiver cutscene, finaliza direto
             FinalizeActivation();
         }
     }
@@ -105,21 +117,17 @@ public class WeaponAltar : MonoBehaviour
     {
         Debug.Log("Reward Delivered.");
         
-        // Change Day/Night
         if (DayNightCycle.Instance != null) 
             DayNightCycle.Instance.ChangeTo(DayNightCycle.TimeState.Night);
 
-        // Hide Altar Visuals
         if(visualWeapon) visualWeapon.SetActive(false);
         if(highlightLight) highlightLight.SetActive(false);
 
-        // Unlock Weapon in Global State
         if (weaponIDToUnlock >= 0 && weaponIDToUnlock < EstadoGlobal.armasDesbloqueadas.Length)
         {
             EstadoGlobal.armasDesbloqueadas[weaponIDToUnlock] = true; 
         }
 
-        // Force Equip via Inventory
         if (InventoryManager.Instance != null)
         {
             InventoryManager.Instance.TentarEquipar(weaponIDToUnlock); 
@@ -128,8 +136,19 @@ public class WeaponAltar : MonoBehaviour
 
     IEnumerator ShowMissingRunesWarning() 
     { 
+        mostrandoErro = true;
+        if(runesUIPanel) runesUIPanel.SetActive(false); 
         if(missingRunesText) missingRunesText.SetActive(true); 
+        
         yield return new WaitForSeconds(2f); 
+        
         if(missingRunesText) missingRunesText.SetActive(false); 
+        mostrandoErro = false;
+
+        // Só liga a UI normal de novo se AINDA estiver olhando
+        if (estaOlhando && runesUIPanel && !alreadyTaken)
+        {
+            runesUIPanel.SetActive(true);
+        }
     }
 }

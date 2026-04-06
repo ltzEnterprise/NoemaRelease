@@ -188,7 +188,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8684650003415960022}
-  - component: {fileID: 7447337340984846325}
   - component: {fileID: 6030364844784284153}
   m_Layer: 0
   m_Name: KeypadInteractions
@@ -214,23 +213,6 @@ Transform:
   - {fileID: 1653251209661018606}
   m_Father: {fileID: 5884554079730342855}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7447337340984846325
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5107851605996999599}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 71ae167cb6715d445a97663ddf745b21, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KeypadInteracao
-  textoInteragir: {fileID: 9206474269516527493}
-  cameraDoPlayer: {fileID: 0}
-  cameraFixaKeypad: {fileID: 4275525481489521422}
-  scriptLook: {fileID: 0}
-  scriptMove: {fileID: 0}
 --- !u!65 &6030364844784284153
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1313,10 +1295,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e87658b712a461242b876d8603bf0842, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Keypad
+  bloqueador: {fileID: 0}
   senhaCorreta: 1487
   limiteDigitos: 4
-  displayTexto: {fileID: 6707871004299285255}
+  senhaExtra: 
+  quadPainelExtra: {fileID: 0}
   portaParaAbrir: {fileID: 0}
+  pontoDeRetorno: {fileID: 0}
+  cameraFixaKeypad: {fileID: 0}
+  darRunaAoAcertar: 1
+  nomeDaRuna: Runa_Investigacao
+  painelAvisoRuna: {fileID: 0}
+  darManivelaAoAcertar: 0
+  idDaManivela: 3
+  manivelaFlutuante: {fileID: 0}
+  textoInteragirProprio: {fileID: 0}
+  displayTexto: {fileID: 6707871004299285255}
   audioSource: {fileID: 4796782851851793998}
   somBip: {fileID: 8300000, guid: 89d62380470be9e47ba7cf3f97105142, type: 3}
   somErro: {fileID: 8300000, guid: 6badc82930e38c34891f46e1f01f63d3, type: 3}

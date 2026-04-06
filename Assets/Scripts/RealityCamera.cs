@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI; 
 using System.Collections;
+using System.Collections.Generic;
 
 public class RealityCamera : MonoBehaviour
 {
@@ -45,7 +46,7 @@ public class RealityCamera : MonoBehaviour
     [Header("--- ZOOM ---")]
     public float zoomSpeed = 40f; 
     public float minFOV = 20f;    
-    private float maxFOV = 60f; // Agora isso se ajusta ao seu FOV automaticamente
+    private float maxFOV = 60f; 
 
     [Header("--- SONS ---")]
     public AudioClip somClique;      
@@ -94,7 +95,6 @@ public class RealityCamera : MonoBehaviour
         PlayerPrefs.Save();
 
         if (audioSource && somUpgradeRecebido) audioSource.PlayOneShot(somUpgradeRecebido);
-        Debug.Log("📷 UPGRADE DA CÂMERA RECEBIDO: Lanternas Liberadas!");
     }
 
     void OnEnable() 
@@ -113,7 +113,6 @@ public class RealityCamera : MonoBehaviour
         if (luzNormalObj) luzNormalObj.SetActive(false); 
         if (luzUVObj) luzUVObj.SetActive(false); 
         
-        // Se desligar de vez, reseta o FOV pro original
         if (cameraPlayer != null && fovOriginal > 0) cameraPlayer.fieldOfView = fovOriginal;
         
         EsconderAmbosOsTextos(); 
@@ -145,13 +144,12 @@ public class RealityCamera : MonoBehaviour
         {
             modoAtivo = !modoAtivo;
 
-            if (modoAtivo) // ENTROU NA CAMERA
+            if (modoAtivo) 
             {
-                // --- CAPTURA O FOV EXATO DAS CONFIGURAÇÕES ---
                 if (cameraPlayer != null)
                 {
                     fovOriginal = cameraPlayer.fieldOfView;
-                    maxFOV = fovOriginal; // Garante que o Zoom não passe do seu FOV natural
+                    maxFOV = fovOriginal; 
                 }
                 
                 if (hudCamera) hudCamera.SetActive(true);
@@ -161,7 +159,7 @@ public class RealityCamera : MonoBehaviour
                 if (textoAjudaEntrar) textoAjudaEntrar.SetActive(false);
                 if (textoAjudaLuz && temUpgradeLanterna) textoAjudaLuz.SetActive(true);
             }
-            else // SAIU DA CAMERA
+            else 
             {
                 if (hudCamera) hudCamera.SetActive(false);
                 ToggleRenderers(true); 
@@ -169,7 +167,6 @@ public class RealityCamera : MonoBehaviour
                 
                 if (textoAjudaLuz) textoAjudaLuz.SetActive(false);
                 
-                // --- DEVOLVE O FOV AO NORMAL ---
                 if (cameraPlayer != null) cameraPlayer.fieldOfView = fovOriginal;
 
                 if (InventoryManager.Instance != null)
@@ -205,11 +202,9 @@ public class RealityCamera : MonoBehaviour
             if (temCameraNaMao) ToggleRenderers(false);
         }
 
-        // --- INPUTS DA CAMERA ATIVADA ---
         if (Input.GetKeyDown(teclaLuz)) TrocarLuz();
         if (Input.GetKeyDown(teclaFoto)) TentarFotoEsfera(); 
 
-        // O FOV SÓ ALTERA SE APERTAR O BOTÃO DE ZOOM
         if (cameraPlayer != null)
         {
             if (Input.GetKey(teclaZoomIn) || Input.GetKey(teclaZoomOut))
@@ -222,6 +217,7 @@ public class RealityCamera : MonoBehaviour
         }
     }
 
+    // --- FOTO CORRIGIDA PRO IGNORE COM DEDO DURO ---
     void TentarFotoEsfera()
     {
         if (Time.time < proximaFoto) return;
@@ -229,23 +225,39 @@ public class RealityCamera : MonoBehaviour
 
         if (cameraPlayer == null) return;
 
-        RaycastHit hit;
         Vector3 origem = cameraPlayer.transform.position + (cameraPlayer.transform.forward * 0.2f);
         Vector3 direcao = cameraPlayer.transform.forward;
 
-        if (Physics.SphereCast(origem, raioDaMira, direcao, out hit, alcanceMaximo, layerObjetosFoto, QueryTriggerInteraction.Ignore))
+        // Voltou a ser Ignore, você tem toda a razão.
+        RaycastHit[] hits = Physics.SphereCastAll(origem, raioDaMira, direcao, alcanceMaximo, layerObjetosFoto, QueryTriggerInteraction.Ignore);
+
+        if (hits.Length > 0)
         {
-            AmbientSkyObject alvo = hit.collider.GetComponent<AmbientSkyObject>();
-            if (alvo == null) alvo = hit.collider.GetComponentInParent<AmbientSkyObject>();
+            System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
 
-            if (alvo != null)
+            foreach (RaycastHit hit in hits)
             {
-                bool temParede = Physics.Linecast(cameraPlayer.transform.position, alvo.transform.position, layerParede, QueryTriggerInteraction.Ignore);
+                AmbientSkyObject alvo = hit.collider.GetComponent<AmbientSkyObject>();
+                if (alvo == null) alvo = hit.collider.GetComponentInParent<AmbientSkyObject>();
 
-                if (!temParede)
+                if (alvo != null)
                 {
-                    ExecutarFoto(alvo);
-                    return;
+                    Vector3 centroDoObjeto = hit.collider.bounds.center;
+
+                    // A linha que checa se tem parede na frente. 
+                    // Agora usamos out RaycastHit pra descobrir EXATAMENTE o que a linha atingiu.
+                    if (Physics.Linecast(cameraPlayer.transform.position, centroDoObjeto, out RaycastHit hitParede, layerParede, QueryTriggerInteraction.Ignore))
+                    {
+                        // Se bateu em algo da Layer Parede antes de chegar no centro do objeto, ele avisa no Console!
+                        Debug.LogWarning($"📷 FOTO BLOQUEADA: Tentou ver o [{alvo.gameObject.name}], mas o objeto [{hitParede.collider.gameObject.name}] entrou na frente!");
+                        Debug.DrawLine(cameraPlayer.transform.position, hitParede.point, Color.red, 3f);
+                    }
+                    else
+                    {
+                        // Caminho livre!
+                        ExecutarFoto(alvo);
+                        return;
+                    }
                 }
             }
         }

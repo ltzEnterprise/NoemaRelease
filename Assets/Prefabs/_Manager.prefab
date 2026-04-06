@@ -33,6 +33,7 @@ RectTransform:
   - {fileID: 7457846766961948343}
   - {fileID: 1379222966730636975}
   - {fileID: 956330211702482184}
+  - {fileID: 1504170158407191752}
   m_Father: {fileID: 8122255964196842920}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -605,7 +606,7 @@ RectTransform:
   m_Children:
   - {fileID: 8281355837685917467}
   - {fileID: 5189128871860582112}
-  m_Father: {fileID: 8122255964196842920}
+  m_Father: {fileID: 4388541377622567083}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -5769,6 +5770,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InterfaceManager
   modoDesenvolvedor: 1
+  contentOpcoes: {fileID: 0}
   painelConfirmacaoReset: {fileID: 3035678336377614589}
   painelMenuPrincipal: {fileID: 0}
   painelSlots: {fileID: 0}
@@ -5788,6 +5790,11 @@ MonoBehaviour:
   imagemCongelada: {fileID: 0}
   playerMaster: {fileID: 0}
   isCenaDeJogo: 0
+  mouseLivreNoJogo: 0
+  musicaDoMenu: {fileID: 0}
+  clipeMusicaMenu: {fileID: 0}
+  volumeMaximoMusica: 1
+  tempoDeFade: 1.5
 --- !u!1 &4596560696933886024
 GameObject:
   m_ObjectHideFlags: 0
@@ -11255,7 +11262,6 @@ RectTransform:
   m_Children:
   - {fileID: 7243591956732827741}
   - {fileID: 4388541377622567083}
-  - {fileID: 1504170158407191752}
   m_Father: {fileID: 4646379439022823244}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}

@@ -4,35 +4,58 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using TMPro;
 using QuantumTek.SimpleMenu;
+using System.Reflection; 
 
 public class SettingsManager : MonoBehaviour
 {
     [Header("--- REFERÊNCIAS ---")]
     public AudioMixer mixerPrincipal; 
     public Camera cameraDoJogador; 
-    
-    [Header("--- CONTROLE DE ABAS ---")]
     public SM_TabGroup controladorDeAbas; 
     public SM_TabWindow janelaGameplay; 
 
-    [Header("--- UI DROPDOWNS ---")]
+    [Header("--- VELOCIDADE DO JOGADOR ---")]
+    public FPS_Master playerNaCena; 
+    public SM_OptionList listaVelocidade; 
+    public float andarLento = 3f;
+    public float correrLento = 6f;
+    public float andarNormal = 5f;
+    public float correrNormal = 10f;
+    public float andarRapido = 7f;
+    public float correrRapido = 14f;
+
+    [Header("--- UI DROPDOWNS E OPTION LIST ---")]
     public TMP_Dropdown dropdownResolucao;
     public TMP_Dropdown dropdownQualidade;
-    public TMP_Dropdown dropdownIdioma; 
+    public TMP_Dropdown dropdownIdioma;
+    public SM_OptionList listaDificuldade; 
 
-    [Header("--- UI SLIDERS (FORÇA POSIÇÃO) ---")]
+    [Header("--- UI SLIDERS ---")]
     public Slider sliderMaster;
     public Slider sliderMusic;
     public Slider sliderSFX;
     public Slider sliderFOV;
     public Slider sliderSensibilidade;
 
-    [Header("--- UI TEXTOS DOS NÚMEROS ---")]
+    [Header("--- UI TEXTOS ---")]
     public TextMeshProUGUI textMaster;
     public TextMeshProUGUI textMusic;
     public TextMeshProUGUI textSFX;
     public TextMeshProUGUI textFOV;
     public TextMeshProUGUI textSensibilidade;
+
+    [Header("--- TRADUÇÕES DOS MENUS GERADOS ---")]
+    public List<string> qualidades_PT = new List<string> { "Baixo", "Médio", "Alto" };
+    public List<string> qualidades_EN = new List<string> { "Low", "Medium", "High" };
+
+    public List<string> dificuldades_PT = new List<string> { "Fácil", "Normal" };
+    public List<string> dificuldades_EN = new List<string> { "Easy", "Normal" };
+
+    public List<string> velocidades_PT = new List<string> { "Lento", "Normal", "Rápido" };
+    public List<string> velocidades_EN = new List<string> { "Slow", "Normal", "Fast" };
+
+    public List<string> idiomas_PT = new List<string> { "Português", "Inglês" };
+    public List<string> idiomas_EN = new List<string> { "Portuguese", "English" };
 
     private struct ResData {
         public int w, h, hz;
@@ -40,20 +63,12 @@ public class SettingsManager : MonoBehaviour
     }
     private List<ResData> listaManual = new List<ResData>();
 
-    private void OnEnable()
-    {
-        if (controladorDeAbas != null && janelaGameplay != null) 
-            controladorDeAbas.ChangeTab(janelaGameplay);
-    }
+    private bool isUpdatingUI = false;
 
     private void Start()
     {
         if (!PlayerPrefs.HasKey("ConfiguracoesCriadas")) SetDefaultSettings();
-
         ConfigurarListaDeResolucoesManual();
-        ConfigurarListaDeQualidade();
-        ConfigurarListaDeIdioma();
-        
         LoadAndApplyAllSettings();
     }
 
@@ -66,96 +81,123 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.SetFloat("MouseSensitivity", 2.06f);
         PlayerPrefs.SetInt("QualityLevel", 2); 
         PlayerPrefs.SetInt("VSync", 0); 
-        PlayerPrefs.SetInt("Idioma", 1); 
-        PlayerPrefs.SetInt("DificuldadeJogo", 0); 
+        PlayerPrefs.SetInt("Idioma", 0); 
+        PlayerPrefs.SetInt("DificuldadeJogo", 1); 
+        PlayerPrefs.SetInt("PlayerSpeed", 1);
         PlayerPrefs.SetInt("Resolution", 9); 
         PlayerPrefs.SetInt("ConfiguracoesCriadas", 1); 
         PlayerPrefs.Save();
     }
-    public void RestaurarPadroes()
-    {
-        SetDefaultSettings();
-        LoadAndApplyAllSettings(); 
-        Debug.Log("Configurações repostas para o padrão!");
-    }
 
-    private void ConfigurarListaDeResolucoesManual()
+    public void ResetarConfiguracoes()
     {
-        if (dropdownResolucao == null) return;
-        dropdownResolucao.ClearOptions();
-        listaManual.Clear();
-        int[] widths = { 1280, 1366, 1600, 1920, 2560, 3840 };
-        int[] heights = { 720, 768, 900, 1080, 1440, 2160 };
-        int[] rates = { 60, 120, 144 }; 
-        List<string> opcoesDeTexto = new List<string>();
-        for (int i = 0; i < widths.Length; i++) {
-            foreach (int r in rates) {
-                string resStr = widths[i] + "x" + heights[i] + " (" + r + "Hz)";
-                opcoesDeTexto.Add(resStr);
-                listaManual.Add(new ResData(widths[i], heights[i], r));
-            }
-        }
-        dropdownResolucao.AddOptions(opcoesDeTexto);
-        int savedRes = PlayerPrefs.GetInt("Resolution", 9); 
-        savedRes = Mathf.Clamp(savedRes, 0, listaManual.Count - 1);
-        dropdownResolucao.value = savedRes;
-        dropdownResolucao.RefreshShownValue();
-    }
-
-    private void ConfigurarListaDeQualidade()
-    {
-        if (dropdownQualidade == null) return;
-        dropdownQualidade.value = PlayerPrefs.GetInt("QualityLevel", 2);
-        dropdownQualidade.RefreshShownValue();
-    }
-
-    private void ConfigurarListaDeIdioma()
-    {
-        if (dropdownIdioma == null) return;
-        dropdownIdioma.ClearOptions();
-        dropdownIdioma.AddOptions(new List<string> { "Português", "English" });
-        dropdownIdioma.value = PlayerPrefs.GetInt("Idioma", 0);
-        dropdownIdioma.RefreshShownValue();
+        SetDefaultSettings(); 
+        LoadAndApplyAllSettings();
     }
 
     public void LoadAndApplyAllSettings()
     {
         float vMaster = PlayerPrefs.GetFloat("MasterVolume", 1f);
-        float vMusic = PlayerPrefs.GetFloat("MusicVolume", 1f);
+        float vMusic = PlayerPrefs.GetFloat("MusicVolume", 0.8f);
         float vSFX = PlayerPrefs.GetFloat("SFXVolume", 1f);
-        float vFOV = PlayerPrefs.GetFloat("PlayerFOV", 60f);
-        float vSens = PlayerPrefs.GetFloat("MouseSensitivity", 2f);
+        float vFOV = PlayerPrefs.GetFloat("PlayerFOV", 70f);
+        float vSens = PlayerPrefs.GetFloat("MouseSensitivity", 2.06f);
+        
+        int vQualidade = PlayerPrefs.GetInt("QualityLevel", 2);
+        int vIdioma = PlayerPrefs.GetInt("Idioma", 0);
+        int vDificuldade = PlayerPrefs.GetInt("DificuldadeJogo", 1);
+        int vVelocidade = PlayerPrefs.GetInt("PlayerSpeed", 1);
+        int vResolucao = PlayerPrefs.GetInt("Resolution", 9);
 
-        if (sliderMaster) sliderMaster.value = vMaster;
-        if (sliderMusic) sliderMusic.value = vMusic;
-        if (sliderSFX) sliderSFX.value = vSFX;
-        if (sliderFOV) sliderFOV.value = vFOV;
-        if (sliderSensibilidade) sliderSensibilidade.value = vSens;
+        if (sliderMaster) sliderMaster.SetValueWithoutNotify(vMaster);
+        if (sliderMusic) sliderMusic.SetValueWithoutNotify(vMusic);
+        if (sliderSFX) sliderSFX.SetValueWithoutNotify(vSFX);
+        if (sliderFOV) sliderFOV.SetValueWithoutNotify(vFOV);
+        if (sliderSensibilidade) sliderSensibilidade.SetValueWithoutNotify(vSens);
+
+        if (dropdownQualidade) dropdownQualidade.SetValueWithoutNotify(vQualidade);
+        if (dropdownIdioma) dropdownIdioma.SetValueWithoutNotify(vIdioma);
+        if (dropdownResolucao) dropdownResolucao.SetValueWithoutNotify(Mathf.Clamp(vResolucao, 0, listaManual.Count > 0 ? listaManual.Count - 1 : 0));
 
         ApplyMasterVolume(vMaster);
         ApplyMusicVolume(vMusic);
         ApplySFXVolume(vSFX);
         ApplyFOV(vFOV);
         ApplySensitivity(vSens);
-
-        ApplyQuality(PlayerPrefs.GetInt("QualityLevel", 2));
+        ApplyQuality(vQualidade);
         ApplyVSync(PlayerPrefs.GetInt("VSync", 0) == 1);
-        ApplyIdioma(PlayerPrefs.GetInt("Idioma", 0));
+        ApplyIdioma(vIdioma); 
+        ApplyVelocidadeInterna(vVelocidade);
 
-        int resIndex = PlayerPrefs.GetInt("Resolution", -1);
-        if (resIndex != -1) ApplyResolution(resIndex);
+        isUpdatingUI = true;
+        if (listaDificuldade) { listaDificuldade.current = vDificuldade; listaDificuldade.SetOption(vDificuldade); }
+        if (listaVelocidade) { listaVelocidade.current = vVelocidade; listaVelocidade.SetOption(vVelocidade); }
+        isUpdatingUI = false;
+
+        if (vResolucao >= 0 && vResolucao < listaManual.Count) ApplyResolution(vResolucao);
     }
 
-    // --- MÉTODOS DE APLICAÇÃO (SEM O %) ---
+    public void AtualizarTextosDinamicos(int lang)
+    {
+        if (dropdownIdioma != null)
+        {
+            int val = dropdownIdioma.value;
+            dropdownIdioma.ClearOptions();
+            dropdownIdioma.AddOptions(lang == 0 ? idiomas_PT : idiomas_EN);
+            dropdownIdioma.SetValueWithoutNotify(val);
+            dropdownIdioma.RefreshShownValue();
+        }
+
+        if (dropdownQualidade != null)
+        {
+            int val = dropdownQualidade.value;
+            dropdownQualidade.ClearOptions();
+            dropdownQualidade.AddOptions(lang == 0 ? qualidades_PT : qualidades_EN);
+            dropdownQualidade.SetValueWithoutNotify(val);
+            dropdownQualidade.RefreshShownValue();
+        }
+
+        ActualizarOpcoesLista(listaDificuldade, lang == 0 ? dificuldades_PT : dificuldades_EN);
+        ActualizarOpcoesLista(listaVelocidade, lang == 0 ? velocidades_PT : velocidades_EN);
+    }
+
+    private void ActualizarOpcoesLista(SM_OptionList list, List<string> novasOpcoes)
+    {
+        if (list == null) return;
+        
+        FieldInfo field = typeof(SM_OptionList).GetField("options", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (field != null)
+        {
+            List<string> listaInterna = (List<string>)field.GetValue(list);
+            listaInterna.Clear();
+            listaInterna.AddRange(novasOpcoes);
+            list.SetOption(list.current); 
+        }
+    }
+
+    public void ApplyIdioma(int index) 
+    { 
+        if (isUpdatingUI) return;
+
+        PlayerPrefs.SetInt("Idioma", index); 
+        
+        if (LanguageManager.Instance != null)
+        {
+            LanguageManager.Instance.ChangeLanguage(index);
+        }
+
+        isUpdatingUI = true;
+        AtualizarTextosDinamicos(index);
+        isUpdatingUI = false;
+    }
 
     public void ApplySensitivity(float value)
     {
         PlayerPrefs.SetFloat("MouseSensitivity", value);
-        PlayerPrefs.Save();
         if (textSensibilidade) 
         {
-            int display = Mathf.RoundToInt(Mathf.InverseLerp(0.1f, 5.0f, value) * 100f);
-            textSensibilidade.text = display.ToString();
+            float display = Mathf.InverseLerp(0.1f, 5.0f, value) * 100f;
+            textSensibilidade.text = Mathf.RoundToInt(display).ToString();
         }
         if (FPS_Master.Instance != null) FPS_Master.Instance.CarregarConfiguracoes();
     }
@@ -163,7 +205,6 @@ public class SettingsManager : MonoBehaviour
     public void ApplyFOV(float value)
     {
         PlayerPrefs.SetFloat("PlayerFOV", value);
-        PlayerPrefs.Save();
         if (textFOV) textFOV.text = Mathf.RoundToInt(value).ToString();
         if (cameraDoJogador != null) cameraDoJogador.fieldOfView = value;
         if (FPS_Master.Instance != null) FPS_Master.Instance.CarregarConfiguracoes();
@@ -171,26 +212,52 @@ public class SettingsManager : MonoBehaviour
 
     public void ApplyMasterVolume(float value) 
     { 
-        if(mixerPrincipal) mixerPrincipal.SetFloat("VolGeral", Mathf.Log10(Mathf.Clamp(value, 0.0001f, 1f)) * 20f); 
+        float db = Mathf.Log10(Mathf.Max(0.0001f, value)) * 20f;
+        if(mixerPrincipal) mixerPrincipal.SetFloat("VolGeral", db); 
         PlayerPrefs.SetFloat("MasterVolume", value); 
-        PlayerPrefs.Save(); 
         if (textMaster) textMaster.text = Mathf.RoundToInt(value * 100f).ToString();
     }
 
     public void ApplyMusicVolume(float value) 
     { 
-        if(mixerPrincipal) mixerPrincipal.SetFloat("VolMusica", Mathf.Log10(Mathf.Clamp(value, 0.0001f, 1f)) * 20f); 
+        float db = Mathf.Log10(Mathf.Max(0.0001f, value)) * 20f;
+        if(mixerPrincipal) mixerPrincipal.SetFloat("VolMusica", db); 
         PlayerPrefs.SetFloat("MusicVolume", value); 
-        PlayerPrefs.Save(); 
         if (textMusic) textMusic.text = Mathf.RoundToInt(value * 100f).ToString();
     }
 
     public void ApplySFXVolume(float value) 
     { 
-        if(mixerPrincipal) mixerPrincipal.SetFloat("VolEfeitos", Mathf.Log10(Mathf.Clamp(value, 0.0001f, 1f)) * 20f); 
+        float db = Mathf.Log10(Mathf.Max(0.0001f, value)) * 20f;
+        if(mixerPrincipal) mixerPrincipal.SetFloat("VolEfeitos", db); 
         PlayerPrefs.SetFloat("SFXVolume", value); 
-        PlayerPrefs.Save(); 
         if (textSFX) textSFX.text = Mathf.RoundToInt(value * 100f).ToString();
+    }
+
+    public void SaveSettings() { PlayerPrefs.Save(); }
+    private void OnDisable() { PlayerPrefs.Save(); }
+
+    private void ConfigurarListaDeResolucoesManual()
+    {
+        if (dropdownResolucao == null) return;
+        dropdownResolucao.ClearOptions();
+        listaManual.Clear();
+        
+        int[] widths = { 1280, 1366, 1600, 1920, 2560, 3840 };
+        int[] heights = { 720, 768, 900, 1080, 1440, 2160 };
+        int[] rates = { 60, 120, 144 }; 
+        
+        List<string> opcoesDeTexto = new List<string>();
+        for (int i = 0; i < widths.Length; i++) 
+        {
+            foreach (int r in rates) 
+            {
+                opcoesDeTexto.Add($"{widths[i]}x{heights[i]} ({r}Hz)");
+                listaManual.Add(new ResData(widths[i], heights[i], r));
+            }
+        }
+        dropdownResolucao.AddOptions(opcoesDeTexto);
+        dropdownResolucao.RefreshShownValue();
     }
 
     public void ApplyResolution(int index)
@@ -201,17 +268,67 @@ public class SettingsManager : MonoBehaviour
             Screen.SetResolution(res.w, res.h, FullScreenMode.FullScreenWindow, new RefreshRate() { numerator = (uint)res.hz, denominator = 1 });
             Application.targetFrameRate = res.hz; 
             PlayerPrefs.SetInt("Resolution", index);
-            PlayerPrefs.Save();
+        }
+    }
+    
+    public void ApplyQuality(int qualityIndex) 
+    { 
+        int indexInvertido = Mathf.Max(0, (QualitySettings.names.Length - 1) - qualityIndex);
+        QualitySettings.SetQualityLevel(indexInvertido); 
+        PlayerPrefs.SetInt("QualityLevel", qualityIndex); 
+    }
+
+    public void ApplyVSync(bool isVsyncOn) 
+    { 
+        QualitySettings.vSyncCount = isVsyncOn ? 1 : 0; 
+        PlayerPrefs.SetInt("VSync", isVsyncOn ? 1 : 0); 
+    }
+    
+    public void ApplyDificuldade() 
+    { 
+        if (isUpdatingUI) return;
+
+        if (listaDificuldade != null)
+        {
+            PlayerPrefs.SetInt("DificuldadeJogo", listaDificuldade.current); 
         }
     }
 
-    public void ApplyIdioma(int index) { PlayerPrefs.SetInt("Idioma", index); PlayerPrefs.Save(); }
-    public void ApplyQuality(int qualityIndex) { QualitySettings.SetQualityLevel(qualityIndex); PlayerPrefs.SetInt("QualityLevel", qualityIndex); PlayerPrefs.Save(); }
-    public void ApplyDifficulty(int difficultyIndex)
-    {
-        PlayerPrefs.SetInt("DificuldadeJogo", difficultyIndex);
-        PlayerPrefs.Save();
-        Debug.Log("Dificuldade alterada para: " + (difficultyIndex == 0 ? "Easily" : "Normal"));
+    public void ApplyVelocidadeDoBotao() 
+    { 
+        if (isUpdatingUI) return;
+
+        if (listaVelocidade != null)
+        {
+            int speedIndex = listaVelocidade.current;
+            PlayerPrefs.SetInt("PlayerSpeed", speedIndex); 
+            ApplyVelocidadeInterna(speedIndex);
+        }
     }
-    public void ApplyVSync(bool isVsyncOn) { QualitySettings.vSyncCount = isVsyncOn ? 1 : 0; PlayerPrefs.SetInt("VSync", isVsyncOn ? 1 : 0); PlayerPrefs.Save(); }
+
+    private void ApplyVelocidadeInterna(int speedIndex)
+    {
+        FPS_Master player = playerNaCena;
+        if (player == null) player = FPS_Master.Instance;
+        if (player == null) player = FindAnyObjectByType<FPS_Master>();
+
+        if (player != null)
+        {
+            if (speedIndex == 0) 
+            {
+                player.velocidadeAndar = andarLento;
+                player.velocidadeCorrer = correrLento;
+            }
+            else if (speedIndex == 1) 
+            {
+                player.velocidadeAndar = andarNormal;
+                player.velocidadeCorrer = correrNormal;
+            }
+            else if (speedIndex == 2) 
+            {
+                player.velocidadeAndar = andarRapido;
+                player.velocidadeCorrer = correrRapido;
+            }
+        }
+    }
 }

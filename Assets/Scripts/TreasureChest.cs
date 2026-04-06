@@ -4,6 +4,10 @@ using TMPro;
 
 public class TreasureChest : MonoBehaviour
 {
+    [Header("--- BLOQUEADOR ---")]
+    [Tooltip("Coloque o objeto que bloqueia (ex: plasma). Se ficar vazio, funciona normal.")]
+    public GameObject bloqueador;
+
     [Header("Save System")]
     public string uniqueID; 
 
@@ -37,6 +41,13 @@ public class TreasureChest : MonoBehaviour
 
     private bool jaAbriu = false;
     private Collider colisorDoBau;
+    private bool estaOlhando = false; // A trava que faltava pra não bugar o texto
+
+    // Função que checa em tempo real se a parada tá bloqueada
+    private bool TaBloqueado()
+    {
+        return bloqueador != null && bloqueador.activeInHierarchy;
+    }
 
     void Start()
     {
@@ -55,6 +66,16 @@ public class TreasureChest : MonoBehaviour
             {
                 if (tampaDoBau) tampaDoBau.localRotation = Quaternion.Euler(-90, 0, 0);
             }
+        }
+    }
+
+    void Update()
+    {
+        // Monitoramento constante do bloqueador
+        if (TaBloqueado())
+        {
+            if (textoInteragir && textoInteragir.activeSelf) textoInteragir.SetActive(false);
+            if (textoPrecisaChave && textoPrecisaChave.activeSelf) textoPrecisaChave.SetActive(false);
         }
     }
 
@@ -86,26 +107,32 @@ public class TreasureChest : MonoBehaviour
 
     public void AoOlhar()
     {
+        if (TaBloqueado()) return; // Morre aqui se tiver bloqueado
         if (jaAbriu) return;
 
         // Só acende o texto se não tiver parede na frente
         if (ChecarVisaoLimpa())
         {
+            estaOlhando = true;
             if (textoInteragir && !textoInteragir.activeSelf) textoInteragir.SetActive(true);
         }
         else
         {
+            estaOlhando = false;
             if (textoInteragir && textoInteragir.activeSelf) textoInteragir.SetActive(false);
         }
     }
 
     public void AoSair()
     {
+        estaOlhando = false;
         if (textoInteragir) textoInteragir.SetActive(false);
+        if (textoPrecisaChave) textoPrecisaChave.SetActive(false); // Mata o erro se virar as costas
     }
 
     public void Interagir()
     {
+        if (TaBloqueado()) return; // Foda-se o clique se tiver bloqueado
         if (jaAbriu) return;
 
         // Se o cara apertar E através da parede, barra a ação na hora
@@ -185,7 +212,9 @@ public class TreasureChest : MonoBehaviour
             yield return new WaitForSeconds(2f);
             textoPrecisaChave.SetActive(false);
         }
-        if (!jaAbriu && textoInteragir) textoInteragir.SetActive(true);
+        
+        // A MÁGICA: Só liga o texto de interagir de volta se a porra do jogador AINDA estiver olhando
+        if (!jaAbriu && estaOlhando && textoInteragir) textoInteragir.SetActive(true);
     }
 
     IEnumerator SequenciaRecompensa()

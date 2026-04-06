@@ -25,6 +25,7 @@ public class DayNightCycle : MonoBehaviour
     public LensFlareDataSRP flareNight;
     private LensFlareComponentSRP flareComponent;
 
+    // --- PERFIL DE ILUMINAÇÃO (AGORA COM A GRAMA) ---
     [System.Serializable]
     public class LightingProfile 
     {
@@ -32,8 +33,20 @@ public class DayNightCycle : MonoBehaviour
         public VolumeProfile volumeProfile;
         public Color lightColor = Color.white;
         public float lightIntensity = 1.0f;
+        
+        [Header("Fog Padrão da Unity")]
         public Color fogColor = Color.grey;
         public float fogDensity = 0.005f;
+
+        [Header("Gambiarra Fog Customizado (Cilindro)")]
+        public Color customFogColor = Color.grey;
+        [Range(0f, 5f)] public float customFogDensity = 1.0f; 
+
+        [Header("Grama (Shader Graph)")]
+        [Tooltip("Se marcado, ativa a caixinha GrassNormal neste horário.")]
+        public bool enableGrassNormal = false;
+
+        [Space]
         public GameObject objectsGroup;
     }
 
@@ -41,6 +54,15 @@ public class DayNightCycle : MonoBehaviour
     public LightingProfile initialDayProfile;
     public LightingProfile dramaticDayProfile;
     public LightingProfile nightProfile;
+
+    [Header("--- MATERIAL DA GAMBIARRA ---")]
+    public Material horizonFogMaterial; 
+
+    [Header("--- MATERIAIS DA GRAMA ---")]
+    [Tooltip("Arraste os materiais de grama que você quer alterar aqui")]
+    public Material[] grassMaterials;
+    [Tooltip("O nome interno da caixinha no shader. Geralmente é o nome com underline antes.")]
+    public string grassNormalProperty = "_GrassNormal";
 
     [Header("--- GAMEPLAY ---")]
     public bool isNight = false; 
@@ -136,6 +158,29 @@ public class DayNightCycle : MonoBehaviour
             mainLight.intensity = p.lightIntensity;
         }
 
+        if (horizonFogMaterial != null)
+        {
+            horizonFogMaterial.SetColor("_FogColor", p.customFogColor);
+            horizonFogMaterial.SetFloat("_DensityMultiplier", p.customFogDensity);
+        }
+
+        // --- A MÁGICA DA GRAMA AQUI ---
+        if (grassMaterials != null && grassMaterials.Length > 0)
+        {
+            float normalValue = p.enableGrassNormal ? 1f : 0f;
+            foreach (Material mat in grassMaterials)
+            {
+                if (mat != null)
+                {
+                    // Atira com Float e com Keyword pra garantir que vai acertar o jeito que o cara programou
+                    mat.SetFloat(grassNormalProperty, normalValue);
+                    
+                    if (p.enableGrassNormal) mat.EnableKeyword(grassNormalProperty + "_ON");
+                    else mat.DisableKeyword(grassNormalProperty + "_ON");
+                }
+            }
+        }
+
         DynamicGI.UpdateEnvironment();
     }
 
@@ -157,6 +202,28 @@ public class DayNightCycle : MonoBehaviour
             {
                 mainLight.color = p.lightColor;
                 mainLight.intensity = p.lightIntensity;
+            }
+
+            if (horizonFogMaterial != null)
+            {
+                horizonFogMaterial.SetColor("_FogColor", p.customFogColor);
+                horizonFogMaterial.SetFloat("_DensityMultiplier", p.customFogDensity);
+            }
+
+            // --- A MÁGICA DA GRAMA EM TEMPO REAL NO EDITOR ---
+            if (grassMaterials != null && grassMaterials.Length > 0)
+            {
+                float normalValue = p.enableGrassNormal ? 1f : 0f;
+                foreach (Material mat in grassMaterials)
+                {
+                    if (mat != null)
+                    {
+                        mat.SetFloat(grassNormalProperty, normalValue);
+                        
+                        if (p.enableGrassNormal) mat.EnableKeyword(grassNormalProperty + "_ON");
+                        else mat.DisableKeyword(grassNormalProperty + "_ON");
+                    }
+                }
             }
         }
     }

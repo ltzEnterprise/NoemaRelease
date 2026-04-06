@@ -5,8 +5,7 @@ using UnityEngine.Rendering;
 public class AltarActivationCutscene : MonoBehaviour
 {
     [Header("--- GENERAL REFERENCES ---")]
-    public WeaponAltar altarScript; // Mudou de AltarDaArma para WeaponAltar
-    public GameObject playerObjectRyo; 
+    public WeaponAltar altarScript; 
     public Camera playerMainCamera; 
 
     [Header("--- CUTSCENE CAMERAS ---")]
@@ -21,19 +20,18 @@ public class AltarActivationCutscene : MonoBehaviour
 
     [Header("--- TIMING (Shot Durations) ---")]
     public float shot1Duration = 4f;
-    public float shot2Duration = 5f; // Sky shot duration
+    public float shot2Duration = 5f; 
     public float shot3Duration = 3f;
     
     [Header("--- SKY CONFIG ---")]
-    [Tooltip("How long for the sky color to transition?")]
     public float skyTransitionDuration = 2.5f; 
     public float targetExposure = 1.27f; 
 
     [Header("--- MUSIC FADE CONFIG ---")]
     public float fadeOutDuration = 2.5f; 
 
-    // Internal Variables
-    private Material skyboxMaterial;
+    private Material originalSkybox; // Guarda o arquivo original intacto
+    private Material instancedSkybox; // O clone que a gente vai modificar
     private float initialExposure;
     private bool isCam1Recoiling = false;
     private float originalMusicVolume; 
@@ -55,7 +53,7 @@ public class AltarActivationCutscene : MonoBehaviour
         }
     }
 
-    public void IniciarCutscene() // Mantive o nome público caso o WeaponAltar chame assim
+    public void IniciarCutscene() 
     {
         StartCoroutine(CutsceneSequence());
     }
@@ -69,67 +67,83 @@ public class AltarActivationCutscene : MonoBehaviour
             cutsceneMusicSource.Play();
         }
 
-        if (playerObjectRyo) playerObjectRyo.SetActive(false);
+        // TRAVA O PLAYER E DEIXA ELE INVISÍVEL
+        if (FPS_Master.Instance != null) 
+        {
+            FPS_Master.Instance.AlterarEstadoJogador(true, false);
+            FPS_Master.Instance.FicarInvisivelMasFisico(true); 
+        }
+
         if (playerMainCamera) playerMainCamera.gameObject.SetActive(false);
 
-        // Atualizado para usar as referências em INGLÊS do WeaponAltar
         if (altarScript != null && altarScript.visualWeapon != null)
             altarScript.visualWeapon.SetActive(true);
         
-        skyboxMaterial = RenderSettings.skybox;
-        initialExposure = (skyboxMaterial.HasProperty("_Exposure")) ? skyboxMaterial.GetFloat("_Exposure") : 1f;
+        // A MÁGICA PRA NÃO ESTRAGAR SEU ARQUIVO DO CÉU:
+        originalSkybox = RenderSettings.skybox;
+        if (originalSkybox != null)
+        {
+            // Cria uma cópia temporária do material
+            instancedSkybox = new Material(originalSkybox);
+            RenderSettings.skybox = instancedSkybox; // Bota a cópia no céu
+            
+            initialExposure = (instancedSkybox.HasProperty("_Exposure")) ? instancedSkybox.GetFloat("_Exposure") : 1f;
+        }
 
         // === SHOT 1: Recoil ===
-        cam1Recoil.gameObject.SetActive(true);
+        if (cam1Recoil) cam1Recoil.gameObject.SetActive(true);
         isCam1Recoiling = true;
         yield return new WaitForSeconds(shot1Duration);
         isCam1Recoiling = false;
-        cam1Recoil.gameObject.SetActive(false);
+        if (cam1Recoil) cam1Recoil.gameObject.SetActive(false);
 
         // === SHOT 2: Sky ===
-        cam2Sky.gameObject.SetActive(true);
+        if (cam2Sky) cam2Sky.gameObject.SetActive(true);
         if (sfxSkySource) sfxSkySource.Play(); 
 
         float skyTimer = 0f;
         
-        // Loop based on SCENE DURATION
         while (skyTimer < shot2Duration)
         {
             skyTimer += Time.deltaTime;
             
-            // Calc light based on TRANSITION DURATION
             float lightProgress = Mathf.Clamp01(skyTimer / skyTransitionDuration);
-            
             float newExposure = Mathf.Lerp(initialExposure, targetExposure, lightProgress);
             
-            if (skyboxMaterial)
+            if (instancedSkybox && instancedSkybox.HasProperty("_Exposure"))
             {
-                skyboxMaterial.SetFloat("_Exposure", newExposure);
+                instancedSkybox.SetFloat("_Exposure", newExposure);
                 DynamicGI.UpdateEnvironment();
             }
             yield return null; 
         }
         
-        if (skyboxMaterial) skyboxMaterial.SetFloat("_Exposure", targetExposure);
+        if (instancedSkybox && instancedSkybox.HasProperty("_Exposure")) 
+            instancedSkybox.SetFloat("_Exposure", targetExposure);
 
-        cam2Sky.gameObject.SetActive(false);
+        if (cam2Sky) cam2Sky.gameObject.SetActive(false);
 
         // === SHOT 3: Close Up ===
-        cam3CloseAltar.gameObject.SetActive(true);
+        if (cam3CloseAltar) cam3CloseAltar.gameObject.SetActive(true);
         if (sfxCloseWeaponSource) sfxCloseWeaponSource.Play(); 
 
         StartCoroutine(MusicFadeOut());
 
         yield return new WaitForSeconds(shot3Duration);
 
-        cam3CloseAltar.gameObject.SetActive(false);
+        if (cam3CloseAltar) cam3CloseAltar.gameObject.SetActive(false);
 
         // === FINISH ===
-        if (playerObjectRyo) playerObjectRyo.SetActive(true);
         if (playerMainCamera) playerMainCamera.gameObject.SetActive(true);
+        
+        if (FPS_Master.Instance != null) 
+        {
+            FPS_Master.Instance.FicarInvisivelMasFisico(false); 
+            FPS_Master.Instance.AlterarEstadoJogador(false, false);
+        }
 
         if (altarScript != null)
-            altarScript.FinalizeActivation(); // Método atualizado para Inglês
+            altarScript.FinalizeActivation(); 
     }
 
     IEnumerator MusicFadeOut()
@@ -149,5 +163,20 @@ public class AltarActivationCutscene : MonoBehaviour
         cutsceneMusicSource.volume = 0f;
         cutsceneMusicSource.Stop();
         cutsceneMusicSource.volume = originalMusicVolume;
+    }
+
+    // ISSO AQUI PROTEGE O SEU JOGO! Se você der Stop ou a cena recarregar, ele reseta o céu.
+    void OnDestroy()
+    {
+        if (originalSkybox != null)
+        {
+            RenderSettings.skybox = originalSkybox;
+            DynamicGI.UpdateEnvironment();
+        }
+        
+        if (instancedSkybox != null)
+        {
+            Destroy(instancedSkybox); // Joga a cópia fora pra não vazar memória
+        }
     }
 }

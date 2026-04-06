@@ -31,16 +31,18 @@ public class DrawWeaponFeature : ScriptableRendererFeature
             UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
             UniversalRenderingData renderingData = frameData.Get<UniversalRenderingData>();
 
-            // 1. Cria o Buffer de Profundidade Falso e Vazio
             RenderTextureDescriptor cameraDesc = cameraData.cameraTargetDescriptor;
+
             TextureDesc depthDesc = new TextureDesc(cameraDesc.width, cameraDesc.height);
+            depthDesc.dimension = cameraDesc.dimension;       
+            depthDesc.msaaSamples = (MSAASamples)cameraDesc.msaaSamples;   
+            depthDesc.slices = cameraDesc.volumeDepth;        
             depthDesc.depthBufferBits = DepthBits.Depth32;
             depthDesc.name = "WeaponTempDepth";
             depthDesc.clearBuffer = true;
 
             TextureHandle tempDepth = renderGraph.CreateTexture(depthDesc);
 
-            // 2. A CORREÇÃO DO ERRO TÁ AQUI: Setup manual sem depender do RenderingUtils
             SortingSettings sortingSettings = new SortingSettings(cameraData.camera);
             sortingSettings.criteria = SortingCriteria.CommonOpaque;
             
@@ -58,7 +60,7 @@ public class DrawWeaponFeature : ScriptableRendererFeature
             {
                 passData.rendererList = rendererList;
 
-                // 3. Pinta na cor principal, mas usa o Buffer falso para a profundidade!
+                // 3. Pinta na cor principal, mas usa o Buffer falso para a profundidade
                 builder.SetRenderAttachment(resourceData.activeColorTexture, 0, AccessFlags.Write);
                 builder.SetRenderAttachmentDepth(tempDepth, AccessFlags.Write);
                 

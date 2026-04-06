@@ -47,13 +47,13 @@ GraphicsSettings:
   m_FogStripping: 1
   m_InstancingStripping: 0
   m_BrgStripping: 0
-  m_LightmapKeepPlain: 1
+  m_LightmapKeepPlain: 0
   m_LightmapKeepDirCombined: 1
-  m_LightmapKeepDynamicPlain: 1
-  m_LightmapKeepDynamicDirCombined: 1
-  m_LightmapKeepShadowMask: 1
+  m_LightmapKeepDynamicPlain: 0
+  m_LightmapKeepDynamicDirCombined: 0
+  m_LightmapKeepShadowMask: 0
   m_LightmapKeepSubtractive: 1
-  m_FogKeepLinear: 1
+  m_FogKeepLinear: 0
   m_FogKeepExp: 0
   m_FogKeepExp2: 1
   m_AlbedoSwatchInfos: []
@@ -63,5 +63,5 @@ GraphicsSettings:
   m_LightsUseColorTemperature: 1
   m_LogWhenShaderIsCompiled: 0
   m_LightProbeOutsideHullStrategy: 0
-  m_CameraRelativeLightCulling: 1
+  m_CameraRelativeLightCulling: 0
   m_CameraRelativeShadowCulling: 1

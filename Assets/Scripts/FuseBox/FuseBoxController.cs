@@ -1,11 +1,13 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine.Events;
-using UnityEngine.UI;
 
 public class FuseBoxController : MonoBehaviour
 {
+    [Header("--- CONEXÃO DIRETA COM O PC ---")]
+    [Tooltip("Arraste o seu PC Principal aqui para a energia ligar ele direto")]
+    public ComputerController pcPrincipal; 
+
     [Header("--- CONEXÕES ---")]
     public Camera cameraDoJogador; 
 
@@ -57,10 +59,6 @@ public class FuseBoxController : MonoBehaviour
     public AudioSource audioSource;
     public AudioClip somPorta, somErro, somSucesso; 
 
-    [Header("--- EVENTOS ---")]
-    public UnityEvent aoVencerDia;
-    public UnityEvent aoVencerNoite;
-
     // Estados
     private bool interagindo = false;
     private bool resolvidoDia = false;
@@ -83,18 +81,16 @@ public class FuseBoxController : MonoBehaviour
 
     private float tempoUltimoClique = 0f;
     private float cooldownClique = 0.1f; 
-    private float cooldownSairEntrar = 0f; // Trava contra double click do botão E
+    private float cooldownSairEntrar = 0f; 
 
     void Start()
     {
         rotMin = Quaternion.Euler(anguloEulerMin);
         rotMax = Quaternion.Euler(anguloEulerMax);
 
-        // Carrega Save
-        if (PlayerPrefs.GetInt(idSaveLock, 0) == 1)
-        {
-            estaDestrancada = true;
-        }
+        if (PlayerPrefs.GetInt(idSaveLock, 0) == 1) estaDestrancada = true;
+        if (PlayerPrefs.GetInt("FuseBox_Dia_Resolvida", 0) == 1) resolvidoDia = true;
+        if (PlayerPrefs.GetInt("FuseBox_Noite_Resolvida", 0) == 1) resolvidoNoite = true;
 
         if (portaDaCaixa) portaDaCaixa.localEulerAngles = rotacaoPortaFechada;
         if (alavancaMestre) alavancaMestre.localRotation = Quaternion.AngleAxis(anguloBaixo, eixoAlavanca);
@@ -120,7 +116,6 @@ public class FuseBoxController : MonoBehaviour
 
         if (interagindo)
         {
-            // Arrumei essa porra: Só sai com E, e só se o cooldown já tiver passado
             if (Input.GetKeyDown(KeyCode.E) && Time.time > cooldownSairEntrar) Sair();
 
             if (!animandoErro)
@@ -140,7 +135,6 @@ public class FuseBoxController : MonoBehaviour
     {
         if (emCutscene || Time.time < cooldownSairEntrar) return;
 
-        // Se o raycast bater aqui enquanto vc já tá interagindo, ele vai forçar a saída
         if (interagindo)
         {
             Sair();
@@ -155,13 +149,9 @@ public class FuseBoxController : MonoBehaviour
         }
 
         if (InventoryManager.Instance != null && InventoryManager.Instance.itemSelecionado == idPeDeCabra)
-        {
             StartCoroutine(CutsceneAbrirComPeDeCabra());
-        }
         else
-        {
             StartCoroutine(MostrarTextoTrancado());
-        }
     }
 
     IEnumerator MostrarTextoTrancado()
@@ -177,13 +167,9 @@ public class FuseBoxController : MonoBehaviour
         emCutscene = true;
         if (FPS_Master.Instance) FPS_Master.travadoInteracao = true;
 
-        if (faderTelaPreta)
-        {
-            faderTelaPreta.alpha = 1f; 
-            faderTelaPreta.gameObject.SetActive(true);
-        }
-
+        if (faderTelaPreta) { faderTelaPreta.alpha = 1f; faderTelaPreta.gameObject.SetActive(true); }
         if (audioSource && somPeDeCabra) audioSource.PlayOneShot(somPeDeCabra);
+        
         yield return new WaitForSeconds(1.5f); 
 
         estaDestrancada = true;
@@ -191,17 +177,11 @@ public class FuseBoxController : MonoBehaviour
         {
             PlayerPrefs.SetInt(idSaveLock, 1);
             PlayerPrefs.Save();
-            Debug.Log("🔒 FuseBox Destrancada e Salva!");
         }
 
-        if (faderTelaPreta)
-        {
-            faderTelaPreta.alpha = 0f;
-            faderTelaPreta.gameObject.SetActive(false);
-        }
+        if (faderTelaPreta) { faderTelaPreta.alpha = 0f; faderTelaPreta.gameObject.SetActive(false); }
 
         emCutscene = false;
-        
         Entrar();
     }
 
@@ -247,7 +227,6 @@ public class FuseBoxController : MonoBehaviour
     void ExecutarInteracao()
     {
         if (ultimoObjetoValido == null) return;
-
         if (resolvidoDia && !DayNightCycle.Instance.isNight) return;
         if (resolvidoNoite) return;
 
@@ -256,11 +235,7 @@ public class FuseBoxController : MonoBehaviour
         FuseSwitch botao = ultimoObjetoValido.GetComponent<FuseSwitch>();
         if (botao == null) botao = ultimoObjetoValido.GetComponentInParent<FuseSwitch>();
 
-        if (botao != null)
-        {
-            botao.Alternar();
-            return;
-        }
+        if (botao != null) { botao.Alternar(); return; }
 
         if (ultimoObjetoValido == alavancaMestre.gameObject || ultimoObjetoValido.transform.IsChildOf(alavancaMestre))
         {
@@ -296,11 +271,8 @@ public class FuseBoxController : MonoBehaviour
     {
         if (animandoErro) return; 
 
-        float alvoAtual = 0f;
-        
-        if (!resolvidoDia) alvoAtual = voltagemAlvoDia;
-        else if (DayNightCycle.Instance.isNight && !resolvidoNoite) alvoAtual = voltagemAlvoNoite;
-        else return; 
+        float alvoAtual = (!resolvidoDia) ? voltagemAlvoDia : ((DayNightCycle.Instance.isNight && !resolvidoNoite) ? voltagemAlvoNoite : 0f);
+        if (alvoAtual == 0f) return;
 
         if (Mathf.Abs(voltagemAtual - alvoAtual) <= margemDeErro)
         {
@@ -308,26 +280,25 @@ public class FuseBoxController : MonoBehaviour
             if (audioSource && somSucesso) audioSource.PlayOneShot(somSucesso);
             LigarLuz(rendererLuzVerde, corVerdeAcesa);
 
+            // A MÁGICA DA COMUNICAÇÃO COM O PC ESTÁ AQUI
             if (!resolvidoDia)
             {
                 resolvidoDia = true;
-                aoVencerDia.Invoke(); 
-                Debug.Log("FUSEBOX: Dia Resolvido.");
-                
                 PlayerPrefs.SetInt("FuseBox_Dia_Resolvida", 1);
                 PlayerPrefs.Save();
+                
+                // LIGA O DESKTOP DO PC PRA IR PRO MUNDO 2D
+                if (pcPrincipal != null) pcPrincipal.LigarPCProMundo2D(); 
             }
             else
             {
                 resolvidoNoite = true;
-                
                 if (quadExtraNoite) quadExtraNoite.SetActive(true); 
-                
                 PlayerPrefs.SetInt("FuseBox_Noite_Resolvida", 1);
                 PlayerPrefs.Save();
 
-                aoVencerNoite.Invoke();
-                Debug.Log("FUSEBOX: Noite Resolvida. PC Liberado.");
+                // LIGA A SETA DA NOITE NO PC
+                if (pcPrincipal != null) pcPrincipal.LigarPcSetaNoite();
             }
 
             Invoke("Sair", 1.5f);
@@ -393,7 +364,7 @@ public class FuseBoxController : MonoBehaviour
     {
         if (!alavancaMestre) return;
         bool deveEstarEmCima = alavancaSubindo;
-        if (resolvidoDia && DayNightCycle.Instance.isNight && !resolvidoNoite) deveEstarEmCima = false;
+        if (resolvidoDia && DayNightCycle.Instance != null && DayNightCycle.Instance.isNight && !resolvidoNoite) deveEstarEmCima = false;
         
         float anguloAlvo = deveEstarEmCima ? anguloCima : anguloBaixo;
         Quaternion rotAlvo = Quaternion.AngleAxis(anguloAlvo, eixoAlavanca);
@@ -410,18 +381,15 @@ public class FuseBoxController : MonoBehaviour
     public void AoOlhar() { } 
     public void AoSair() { }
 
-    void TocarSomTravado()
-    {
-        if (audioSource && somPorta) audioSource.PlayOneShot(somPorta);
-    }
+    void TocarSomTravado() { if (audioSource && somPorta) audioSource.PlayOneShot(somPorta); }
 
     void Entrar()
     {
-        cooldownSairEntrar = Time.time + 0.2f; // Trava o botão E por 0.2s pra não dar merda
+        cooldownSairEntrar = Time.time + 0.2f; 
         interagindo = true;
         if (audioSource && somPorta) audioSource.PlayOneShot(somPorta);
         
-        if (resolvidoDia && DayNightCycle.Instance.isNight && !resolvidoNoite)
+        if (resolvidoDia && DayNightCycle.Instance != null && DayNightCycle.Instance.isNight && !resolvidoNoite)
         {
             alavancaSubindo = false; 
             DesligarLuz(rendererLuzVerde); 
@@ -434,7 +402,7 @@ public class FuseBoxController : MonoBehaviour
 
     void Sair()
     {
-        cooldownSairEntrar = Time.time + 0.2f; // Trava aqui também
+        cooldownSairEntrar = Time.time + 0.2f; 
         interagindo = false;
         if (FPS_Master.Instance) FPS_Master.travadoInteracao = false;
         Cursor.lockState = CursorLockMode.Locked;

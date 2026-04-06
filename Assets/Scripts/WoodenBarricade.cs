@@ -3,6 +3,10 @@ using System.Collections;
 
 public class WoodenBarricade : MonoBehaviour
 {
+    [Header("--- BLOQUEADOR ---")]
+    [Tooltip("Coloque o objeto que bloqueia (ex: plasma). Se ficar vazio, funciona normal.")]
+    public GameObject bloqueador;
+
     [Header("Configuração")]
     [Tooltip("ID do Pé de Cabra no Gerenciador (Geralmente 1)")]
     public int idDoPeDeCabra = 1; 
@@ -22,7 +26,13 @@ public class WoodenBarricade : MonoBehaviour
     public GameObject portaBloqueada;
 
     private bool emProcesso = false;
-    private bool estaOlhando = false; // <--- A variável que salva a lógica
+    private bool estaOlhando = false;
+
+    // Função que checa em tempo real se a parada tá bloqueada
+    private bool TaBloqueado()
+    {
+        return bloqueador != null && bloqueador.activeInHierarchy;
+    }
 
     void Start()
     {
@@ -31,9 +41,21 @@ public class WoodenBarricade : MonoBehaviour
         if (textoInteragir) textoInteragir.SetActive(false);
     }
 
+    void Update()
+    {
+        // Monitoramento constante: Se ativar o bloqueador, apaga as UIs na mesma hora
+        if (TaBloqueado())
+        {
+            if (textoInteragir && textoInteragir.activeSelf) textoInteragir.SetActive(false);
+            if (textoSemFerramenta && textoSemFerramenta.activeSelf) textoSemFerramenta.SetActive(false);
+        }
+    }
+
     // --- MÉTODOS RAYCAST ---
     public void AoOlhar()
     {
+        if (TaBloqueado()) return; // Morre aqui se tiver bloqueado
+
         if (emProcesso) return;
         
         estaOlhando = true;
@@ -55,6 +77,7 @@ public class WoodenBarricade : MonoBehaviour
 
     public void Interagir()
     {
+        if (TaBloqueado()) return; // Morre aqui se tiver bloqueado
         if (emProcesso) return;
 
         if (VerificarSeTemPeDeCabra())
@@ -63,7 +86,6 @@ public class WoodenBarricade : MonoBehaviour
         }
         else
         {
-            // Troquei o StopAllCoroutines por este para não bugar a quebra da madeira sem querer
             StopCoroutine("MostrarAvisoDeErro"); 
             StartCoroutine("MostrarAvisoDeErro");
         }
@@ -72,9 +94,10 @@ public class WoodenBarricade : MonoBehaviour
 
     bool VerificarSeTemPeDeCabra()
     {
-        if (EstadoGlobal.armasDesbloqueadas != null && idDoPeDeCabra < EstadoGlobal.armasDesbloqueadas.Length)
+        // VERIFICA SE O ITEM TÁ NA MÃO E SELECIONADO AGORA
+        if (InventoryManager.Instance != null)
         {
-            return EstadoGlobal.armasDesbloqueadas[idDoPeDeCabra];
+            return InventoryManager.Instance.itemSelecionado == idDoPeDeCabra;
         }
         return false;
     }

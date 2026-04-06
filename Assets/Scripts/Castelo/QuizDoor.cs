@@ -6,10 +6,6 @@ using System.Collections.Generic;
 
 public class QuizDoor : MonoBehaviour
 {
-    [Header("--- DEMO MODE ---")]
-    public bool modoDemo = true; 
-    public WoodenCastleGate scriptPortaCastelo;
-
     [System.Serializable]
     public class LinhaDeDialogo
     {
@@ -60,6 +56,8 @@ public class QuizDoor : MonoBehaviour
     public AudioClip somErro;
     public AudioClip somVitoriaFinal;
     public AudioClip musicaQuiz;
+    [Tooltip("Marque se o áudio acima for MÚSICA (pausa o ambiente). Desmarque se for EFEITO (toca junto).")]
+    public bool silenciarMusicaBackground = true;
 
     private bool emCena = false;
     private bool jaViuIntro = false;
@@ -72,6 +70,7 @@ public class QuizDoor : MonoBehaviour
     private Coroutine currentFade;
     
     private Vector3 posicaoInicialInteracao;
+    private AudioSource musicaAmbientePausada;
 
     void Start()
     {
@@ -190,6 +189,20 @@ public class QuizDoor : MonoBehaviour
         emCena = true;
         TravarPlayer(true);
         
+        if (silenciarMusicaBackground)
+        {
+            GameObject bgmObj = GameObject.Find("Soundtrack");
+            if (bgmObj != null)
+            {
+                AudioSource bgmSource = bgmObj.GetComponent<AudioSource>();
+                if (bgmSource != null && bgmSource.isPlaying)
+                {
+                    bgmSource.Pause(); 
+                    musicaAmbientePausada = bgmSource;
+                }
+            }
+        }
+
         if (audioSourceMusica) 
         { 
             if (currentFade != null) StopCoroutine(currentFade);
@@ -290,6 +303,12 @@ public class QuizDoor : MonoBehaviour
             currentFade = StartCoroutine(FadeOutMusica(1.5f)); 
         }
 
+        if (musicaAmbientePausada != null)
+        {
+            musicaAmbientePausada.UnPause();
+            musicaAmbientePausada = null;
+        }
+
         RetornarPosicaoSegura();
         TravarPlayer(false);
     }
@@ -299,6 +318,12 @@ public class QuizDoor : MonoBehaviour
         painelQuiz.SetActive(false);
         if (currentFade != null) StopCoroutine(currentFade);
         currentFade = StartCoroutine(FadeOutMusica(2.0f));
+
+        if (musicaAmbientePausada != null)
+        {
+            musicaAmbientePausada.UnPause();
+            musicaAmbientePausada = null;
+        }
 
         if (textoDialogoIntro)
         {
@@ -319,9 +344,6 @@ public class QuizDoor : MonoBehaviour
         yield return new WaitForSeconds(5.0f);
         
         if (painelRecompensa) painelRecompensa.SetActive(false);
-    
-
-        if (modoDemo && scriptPortaCastelo != null) scriptPortaCastelo.FecharPortaAbruptamente();
 
         emCena = false;
         

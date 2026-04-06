@@ -10,28 +10,26 @@ public class InventoryManager : MonoBehaviour
     [Header("--- INVENTÁRIO (Arraste os prefabs aqui) ---")]
     public List<GameObject> itensRegistrados; 
 
-    [Header("--- DEBUG / TESTES (Use no Editor) ---")]
-    public bool modoDebug = true;
+    [Header("--- DEBUG / TESTES (Editor) ---")]
     public bool comecarComTudo = false;
-    public int itemInicialDebug = -1;
-
-    [Header("--- DEBUG / TESTES DA CÂMERA ---")]
-    public bool debug_DarCameraNoStart = false;
     public bool debug_DarUpgradeLuzNoStart = false;
-    public int idDaCamera = 6;
 
-    [Header("Configurações de Gameplay")]
+    [Header("--- CONFIGURAÇÕES DE GAMEPLAY ---")]
     public float delayTroca = 0.2f;
     public int itemSelecionado = -1; 
-    
-    public int idLanterna = 0;
-    
-    [Header("Animação de Saque (Sway)")]
+    [Tooltip("Necessário pro código saber qual item não pode ser desligado enquanto mira")]
+    public int idDaCamera = 6; 
+
+    [Header("--- ANIMAÇÃO DE SAQUE ---")]
     public float forcaDropSaque = 0.4f;
-    public float velocidadeSaque = 10f;
+    [Tooltip("Quanto maior, mais rápido. Ex: 5 = 0.2 segundos pra sacar.")]
+    public float velocidadeSaque = 5f; 
 
     private float tempoParaProximaTroca = 0f;
-    private Vector3 posicaoOriginalLocal;
+    private Vector3[] posicoesOriginais;
+    
+    // Guarda as animações ativas pra uma arma não bugar a outra se você trocar rápido
+    private Coroutine[] corrotinasSaque; 
 
     void Awake()
     {
@@ -62,19 +60,22 @@ public class InventoryManager : MonoBehaviour
 
     void Start()
     {
-        posicaoOriginalLocal = transform.localPosition;
-        
-        if (itensRegistrados == null || itensRegistrados.Count == 0)
-            Debug.LogError("[InventoryManager] ERRO: Lista de itens vazia!");
+        if (itensRegistrados == null || itensRegistrados.Count == 0) return;
 
-        if (modoDebug && Application.isEditor)
+        posicoesOriginais = new Vector3[itensRegistrados.Count];
+        corrotinasSaque = new Coroutine[itensRegistrados.Count]; 
+
+        for (int i = 0; i < itensRegistrados.Count; i++)
         {
-            AplicarDebugInicial();
+            if (itensRegistrados[i] != null)
+            {
+                posicoesOriginais[i] = itensRegistrados[i].transform.localPosition;
+            }
         }
-        else
-        {
-            AtualizarVisual(false);
-        }
+
+        if (Application.isEditor) AplicarDebugInicial();
+        
+        AtualizarVisual(false);
     }
 
     void AplicarDebugInicial()
@@ -87,45 +88,17 @@ public class InventoryManager : MonoBehaviour
             }
         }
 
-        if (debug_DarCameraNoStart)
+        if (debug_DarUpgradeLuzNoStart && RealityCamera.Instance != null)
         {
-            DesbloquearItem(idDaCamera);
+            RealityCamera.Instance.ReceberUpgradeLanterna();
         }
-
-        if (debug_DarUpgradeLuzNoStart)
-        {
-            if (RealityCamera.Instance != null)
-            {
-                RealityCamera.Instance.ReceberUpgradeLanterna();
-            }
-        }
-
-        if (itemInicialDebug >= 0)
-        {
-            DesbloquearItem(itemInicialDebug);
-            itemSelecionado = itemInicialDebug;
-        }
-        else
-        {
-            if (debug_DarCameraNoStart) itemSelecionado = idDaCamera;
-            else itemSelecionado = -1;
-        }
-
-        AtualizarVisual(false);
     }
 
     void Update()
     {
-        transform.localPosition = Vector3.Lerp(transform.localPosition, posicaoOriginalLocal, Time.deltaTime * velocidadeSaque);
-
-        if (FPS_Master.travadoInteracao) return;
-
-        if (Input.GetKeyDown(KeyCode.F)) 
-        {
-            bool cameraNoRosto = RealityCamera.Instance != null && RealityCamera.Instance.modoAtivo;
-            if (!cameraNoRosto) ProcessarAtalhoLanterna();
-        }
+        // O Update agora tá limpo. A animação acontece na Coroutine lá embaixo.
         
+        if (FPS_Master.travadoInteracao) return;
         if (!TemAlgumItem()) return;
 
         float scroll = Input.GetAxis("Mouse ScrollWheel");
@@ -142,7 +115,6 @@ public class InventoryManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.H)) TentarEquipar(-1); 
     }
 
-    // --- A ÚNICA MUDANÇA PARA O FADE DE COLETA FUNCIONAR ---
     public void ReceberItem(int id)
     {
         DesbloquearItem(id);
@@ -160,10 +132,7 @@ public class InventoryManager : MonoBehaviour
         AtualizarVisual(true);
     }
 
-    public void ReceberItemDeVolta(int id)
-    {
-        ReceberItem(id);
-    }
+    public void ReceberItemDeVolta(int id) { ReceberItem(id); }
 
     public void ConsumirItem(int id)
     {
@@ -189,14 +158,6 @@ public class InventoryManager : MonoBehaviour
 
     public void ForcarAtualizacaoUI() => AtualizarVisual(true);
 
-    void ProcessarAtalhoLanterna()
-    {
-        if (itemSelecionado == idLanterna) return;
-
-        if (ItemEstaDesbloqueado(idLanterna))
-            TentarEquipar(idLanterna);
-    }
-
     void NavegarInventario(int direcao)
     {
         int total = itensRegistrados.Count;
@@ -220,8 +181,6 @@ public class InventoryManager : MonoBehaviour
 
     void AtualizarVisual(bool animar = true)
     {
-        if (animar) transform.localPosition = posicaoOriginalLocal + new Vector3(0, -forcaDropSaque, 0);
-
         string nomeParaHUD = "";
         bool cameraEstaNoRosto = RealityCamera.Instance != null && RealityCamera.Instance.modoAtivo;
 
@@ -231,7 +190,7 @@ public class InventoryManager : MonoBehaviour
             
             bool ativar = (i == itemSelecionado);
 
-            // A câmera nunca desliga se estiver no rosto
+            // Mantém a câmera ligada se ela estiver no rosto
             if (i == idDaCamera && cameraEstaNoRosto)
             {
                 ativar = true; 
@@ -243,11 +202,47 @@ public class InventoryManager : MonoBehaviour
             {
                 var idScript = itensRegistrados[i].GetComponent<ItemIdentificador>(); 
                 nomeParaHUD = idScript ? idScript.nomeDoItem : itensRegistrados[i].name;
+
+                if (animar) 
+                {
+                    // Cancela o saque antigo pra não dar conflito se o cara trocar de arma rápido
+                    if (corrotinasSaque[i] != null) StopCoroutine(corrotinasSaque[i]);
+                    
+                    // Inicia o saque perfeito
+                    corrotinasSaque[i] = StartCoroutine(RotinaDeSaque(i));
+                }
             }
         }
 
         if (itemSelecionado == -1) nomeParaHUD = "";
         if (HUDItemNome.Instance != null && animar) HUDItemNome.Instance.MostrarNome(nomeParaHUD);
+    }
+
+    IEnumerator RotinaDeSaque(int index)
+    {
+        Transform itemTransform = itensRegistrados[index].transform;
+        Vector3 posFinal = posicoesOriginais[index];
+        Vector3 posInicial = posFinal + new Vector3(0, -forcaDropSaque, 0);
+
+        // Joga a arma lá embaixo
+        itemTransform.localPosition = posInicial;
+
+        float tempoPercorrido = 0f;
+        
+        // Converte a Velocidade em Segundos. Ex: Velocidade 5 = 0.2s. 
+        float tempoTotal = 1f / Mathf.Max(0.1f, velocidadeSaque); 
+
+        while (tempoPercorrido < tempoTotal)
+        {
+            tempoPercorrido += Time.deltaTime;
+            // Interpola linearmente garantindo precisão absoluta
+            itemTransform.localPosition = Vector3.Lerp(posInicial, posFinal, tempoPercorrido / tempoTotal);
+            yield return null;
+        }
+
+        // Garante a colagem final na posição certa
+        itemTransform.localPosition = posFinal;
+        corrotinasSaque[index] = null;
     }
 
     bool ItemEstaDesbloqueado(int id) 

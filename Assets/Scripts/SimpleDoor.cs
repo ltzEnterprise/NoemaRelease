@@ -9,7 +9,7 @@ public class SimpleDoor : MonoBehaviour
     public float velocidade = 5f; 
 
     [Header("Physics")]
-    public Collider physicsCollider; // O colisor que vai virar fantasma
+    public Collider physicsCollider; 
 
     [Header("Locking")]
     public GameObject blockerObject; 
@@ -24,18 +24,16 @@ public class SimpleDoor : MonoBehaviour
     public AudioClip lockedSound; 
 
     private bool isOpen = false;
+    private bool isMoving = false; // Guarda se a porta tá girando
+    private bool taOlhando = false; // Guarda se o player tá com a mira nela
+
     private Quaternion rotacaoFechada;
     private Quaternion rotacaoAberta;
-    
-    // Trava para impedir o bug do "clique metralhadora" do Raycast
     private float tempoUltimoClique = 0f;
 
     void Start()
     {
-        // Salva a posição inicial exata do mapa
         rotacaoFechada = transform.localRotation;
-        
-        // Calcula a posição aberta
         rotacaoAberta = rotacaoFechada * Quaternion.Euler(0, anguloDeAbertura, 0);
         
         if (interactText) interactText.SetActive(false);
@@ -43,18 +41,21 @@ public class SimpleDoor : MonoBehaviour
 
     public void AoOlhar()
     {
+        taOlhando = true;
         bool isBlocked = (blockerObject != null && blockerObject.activeSelf);
-        if (interactText && !isBlocked) interactText.SetActive(true);
+        
+        // Só acende se não tiver bloqueada E não estiver se mexendo
+        if (interactText && !isBlocked && !isMoving) interactText.SetActive(true);
     }
 
     public void AoSair()
     {
+        taOlhando = false;
         if (interactText) interactText.SetActive(false);
     }
 
     public void Interagir()
     {
-        // Trava de segurança: ignora se clicou muito rápido (0.5s)
         if (Time.time < tempoUltimoClique + 0.5f) return;
         tempoUltimoClique = Time.time;
 
@@ -66,7 +67,6 @@ public class SimpleDoor : MonoBehaviour
             return;
         }
 
-        // Limpa a tela imediatamente ao interagir
         if (interactText) interactText.SetActive(false);
 
         isOpen = !isOpen;
@@ -79,17 +79,21 @@ public class SimpleDoor : MonoBehaviour
     {
         Quaternion alvo = isOpen ? rotacaoAberta : rotacaoFechada;
         
-        // Movimento Slerp (suave e desacelera no final)
         transform.localRotation = Quaternion.Slerp(transform.localRotation, alvo, velocidade * Time.deltaTime);
 
-        // --- SISTEMA DE FANTASMA ---
         if (physicsCollider != null)
         {
-            // Se faltar mais de 1 grau pro alvo, ela ainda tá mexendo
-            bool isMoving = Quaternion.Angle(transform.localRotation, alvo) > 1.0f;
+            // Se faltar mais de 1 grau, ela ainda tá mexendo
+            isMoving = Quaternion.Angle(transform.localRotation, alvo) > 1.0f;
             
-            // Fica intangível pro jogador, mas o Raycast continua vendo
             physicsCollider.isTrigger = isMoving;
+
+            // Se ela terminou de se mexer e o player AINDA tá olhando pra ela, acende o texto
+            if (!isMoving && taOlhando && interactText && !interactText.activeSelf)
+            {
+                bool isBlocked = (blockerObject != null && blockerObject.activeSelf);
+                if (!isBlocked) interactText.SetActive(true);
+            }
         }
     }
 }

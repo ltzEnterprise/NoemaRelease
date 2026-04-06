@@ -13,6 +13,12 @@ public class FPS_Master : MonoBehaviour
     public float forcaPulo = 6f;
     public float gravidade = 20f;
     
+    [Header("Inércia / Deslize")]
+    [Tooltip("Quão rápido o boneco chega na velocidade máxima?")]
+    public float aceleracao = 10f;
+    [Tooltip("Quão rápido o boneco freia quando você solta a tecla?")]
+    public float desaceleracao = 15f;
+    
     [Header("Segurança")]
     public float alturaLimiteVoid = -50f;
     public Transform pontoDeRespawnCentral;
@@ -29,6 +35,11 @@ public class FPS_Master : MonoBehaviour
 
     private CharacterController controller;
     private Vector3 moveDirection = Vector3.zero;
+    
+    // --- VARIÁVEIS DE VELOCIDADE ATUAL ---
+    private float velocidadeAtualX = 0f;
+    private float velocidadeAtualZ = 0f;
+    // ---------------------------------
     
     // --- VARIÁVEL DE CONFIGURAÇÃO ---
     private float sensibilidadeMouse = 2.0f; 
@@ -103,23 +114,46 @@ public class FPS_Master : MonoBehaviour
     {
         if (controller.isGrounded) 
         {
-            float inputX = travadoInteracao ? 0 : Input.GetAxis("Horizontal");
-            float inputZ = travadoInteracao ? 0 : Input.GetAxis("Vertical");
-            float vel = (Input.GetKey(KeyCode.LeftShift) ? velocidadeCorrer : velocidadeAndar);
+            float inputX = 0f;
+            float inputZ = 0f;
+
+            // FORÇA BRUTA NO WASD - IGNORA SETINHAS COMPLETAMENTE
+            if (!travadoInteracao)
+            {
+                if (Input.GetKey(KeyCode.D)) inputX += 1f;
+                if (Input.GetKey(KeyCode.A)) inputX -= 1f;
+                if (Input.GetKey(KeyCode.W)) inputZ += 1f;
+                if (Input.GetKey(KeyCode.S)) inputZ -= 1f;
+
+                // Normaliza pra não andar mais rápido na diagonal
+                Vector2 inputNormalizado = new Vector2(inputX, inputZ).normalized;
+                inputX = inputNormalizado.x;
+                inputZ = inputNormalizado.y;
+            }
+
+            float velAlvo = (Input.GetKey(KeyCode.LeftShift) ? velocidadeCorrer : velocidadeAndar);
+            float alvoX = inputX * velAlvo;
+            float alvoZ = inputZ * velAlvo;
+
+            // --- A MÁGICA DA INÉRCIA (LERP) ---
+            // Se o jogador estiver apertando alguma tecla, usa aceleração. Se não, freia usando desaceleração.
+            float taxaInterpolacao = (inputX != 0 || inputZ != 0) ? aceleracao : desaceleracao;
+
+            velocidadeAtualX = Mathf.Lerp(velocidadeAtualX, alvoX, Time.deltaTime * taxaInterpolacao);
+            velocidadeAtualZ = Mathf.Lerp(velocidadeAtualZ, alvoZ, Time.deltaTime * taxaInterpolacao);
+            // ----------------------------------
 
             Vector3 forward = transform.TransformDirection(Vector3.forward);
             Vector3 right = transform.TransformDirection(Vector3.right);
             
-            float curSpeedX = vel * inputX;
-            float curSpeedY = vel * inputZ;
-            
-            moveDirection.x = (forward.x * curSpeedY) + (right.x * curSpeedX);
-            moveDirection.z = (forward.z * curSpeedY) + (right.z * curSpeedX);
+            // Aplica as velocidades suaves na direção do corpo
+            moveDirection.x = (forward.x * velocidadeAtualZ) + (right.x * velocidadeAtualX);
+            moveDirection.z = (forward.z * velocidadeAtualZ) + (right.z * velocidadeAtualX);
 
             if (!travadoInteracao && Input.GetButton("Jump")) 
                 moveDirection.y = forcaPulo;
             else 
-                moveDirection.y = -5f;
+                moveDirection.y = -5f; // Mantém a pressão pro chão funcionar direito nas ladeiras
         }
         else
         {
@@ -127,6 +161,8 @@ public class FPS_Master : MonoBehaviour
             {
                 moveDirection.x = 0;
                 moveDirection.z = 0;
+                velocidadeAtualX = 0f;
+                velocidadeAtualZ = 0f;
             }
         }
 
@@ -216,6 +252,8 @@ public class FPS_Master : MonoBehaviour
         transform.position = novaPosicao + Vector3.up * 0.1f;
         Physics.SyncTransforms();
         moveDirection = Vector3.zero; 
+        velocidadeAtualX = 0f;
+        velocidadeAtualZ = 0f;
         controller.enabled = estavaAtivo; 
     }
 
@@ -226,6 +264,8 @@ public class FPS_Master : MonoBehaviour
         {
             moveDirection.x = 0;
             moveDirection.z = 0;
+            velocidadeAtualX = 0f;
+            velocidadeAtualZ = 0f;
         }
         if (mostrarCursor) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
         else { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }

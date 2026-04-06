@@ -29,6 +29,7 @@ public class CastleDoor : MonoBehaviour
 
     // Controle interno
     private bool emProcesso = false;
+    private bool estaOlhando = false; // <--- Variável adicionada pra não bugar o texto
 
     void Start()
     {
@@ -46,12 +47,21 @@ public class CastleDoor : MonoBehaviour
     public void AoOlhar()
     {
         if (emProcesso) return;
+        estaOlhando = true;
+
+        // Se o aviso de trancado tiver na tela, não sobrepõe ele com o "Entrar"
+        if (textoBloqueado && textoBloqueado.activeSelf) return;
+
         if (textoInteragir) textoInteragir.SetActive(true);
     }
 
     public void AoSair()
     {
+        estaOlhando = false;
+        
+        // Desliga tudo imediatamente quando virar as costas
         if (textoInteragir) textoInteragir.SetActive(false);
+        if (textoBloqueado) textoBloqueado.SetActive(false);
     }
 
     public void Interagir()
@@ -74,6 +84,7 @@ public class CastleDoor : MonoBehaviour
     {
         if (audioSource && somQuebrarTabua) audioSource.PlayOneShot(somQuebrarTabua);
         if (grupoTabuas) grupoTabuas.SetActive(false);
+        
         // Atualiza visual instantaneamente se o jogador ainda estiver olhando
         if (textoInteragir) textoInteragir.SetActive(true);
     }
@@ -94,8 +105,8 @@ public class CastleDoor : MonoBehaviour
             else
             {
                 if (audioSource && somTrancado) audioSource.PlayOneShot(somTrancado);
-                StopAllCoroutines();
-                StartCoroutine(MostrarAvisoBloqueado());
+                StopCoroutine("MostrarAvisoBloqueado");
+                StartCoroutine("MostrarAvisoBloqueado");
             }
         }
         else
@@ -109,6 +120,7 @@ public class CastleDoor : MonoBehaviour
     {
         emProcesso = true;
         if (textoInteragir) textoInteragir.SetActive(false);
+        if (textoBloqueado) textoBloqueado.SetActive(false);
 
         // Trava o jogador (WASD 0, Gravidade ON)
         if (FPS_Master.Instance != null)
@@ -136,7 +148,7 @@ public class CastleDoor : MonoBehaviour
         {
             FPS_Master.Instance.Teleportar(pontoDestino.position);
             
-            // Ajustamos a rotação (opcional, o FPS_Master não controla rotação no teleporte)
+            // Ajustamos a rotação
             FPS_Master.Instance.transform.rotation = pontoDestino.rotation;
             Physics.SyncTransforms();
         }
@@ -167,8 +179,12 @@ public class CastleDoor : MonoBehaviour
     {
         if (textoInteragir) textoInteragir.SetActive(false);
         if (textoBloqueado) textoBloqueado.SetActive(true);
+        
         yield return new WaitForSeconds(3f);
+        
         if (textoBloqueado) textoBloqueado.SetActive(false);
-        if (!emProcesso && textoInteragir) textoInteragir.SetActive(true);
+        
+        // Só volta o texto original se o jogador ainda estiver com a mira na porta
+        if (!emProcesso && estaOlhando && textoInteragir) textoInteragir.SetActive(true);
     }
 }

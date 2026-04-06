@@ -5,41 +5,47 @@ using System.Collections;
 
 public class DoorWithKeyTeleport : MonoBehaviour
 {
+    [Header("--- BLOQUEADOR ---")]
+    [Tooltip("Coloque o objeto que bloqueia (ex: plasma). Se ficar vazio, funciona normal.")]
+    public GameObject bloqueador;
+
     [Header("--- SAVE SYSTEM ---")]
-    [Tooltip("Dê um nome único. Ex: Porta_Teleporte_01")]
     public string uniqueID = "Porta_Teleporte_01"; 
 
-    [Header("--- DESTINO ---")]
+    [Header("--- DESTINATION ---")]
     public Transform destinationPoint; 
     public float verticalOffset = 0.1f; 
 
-    [Header("--- SISTEMA DE CHAVE ---")]
-    public bool precisaDeChave = true;
-    public string idDaChaveNecessaria = "Chave_Porao";
+    [Header("--- KEY SYSTEM ---")]
+    public bool needsKey = true;
+    public string requiredKeyID = "Chave_Porao";
 
-    [Header("--- UI DA CHAVE (PRA SUMIR) ---")]
-    public GameObject iconeChaveHUD; 
-    
     [Header("--- UI & FEEDBACK ---")]
-    public GameObject textoInteragir; 
-    public GameObject painelMensagemTrancada; 
-    public TextMeshProUGUI textoFeedback; 
+    public GameObject interactText; 
+    public GameObject lockedMessagePanel; 
+    public TextMeshProUGUI feedbackText; 
     public Image fadeImage; 
 
     [Header("--- AUDIO ---")]
     public AudioSource audioSource;
-    public AudioClip somTrancado;
-    public AudioClip somDestrancar;
-    public AudioClip somTeleporte;
+    public AudioClip lockedSound;
+    public AudioClip unlockSound;
+    public AudioClip teleportSound;
 
-    private bool estaAberta = false;
-    private bool emTransicao = false;
-    private bool mostrandoMensagem = false; 
+    private bool isOpen = false;
+    private bool isTransitioning = false;
+    private bool isShowingMessage = false; 
+    private bool taOlhando = false; // 🔥 NOVA TRAVA AQUI 🔥
+
+    private bool TaBloqueado()
+    {
+        return bloqueador != null && bloqueador.activeInHierarchy;
+    }
 
     void Start() 
     {
-        if (textoInteragir) textoInteragir.SetActive(false);
-        if (painelMensagemTrancada) painelMensagemTrancada.SetActive(false);
+        if (interactText) interactText.SetActive(false);
+        if (lockedMessagePanel) lockedMessagePanel.SetActive(false);
         
         if (fadeImage) 
         {
@@ -47,96 +53,104 @@ public class DoorWithKeyTeleport : MonoBehaviour
             fadeImage.color = new Color(0,0,0,0);
         }
 
-        // --- PUXA A INTELIGÊNCIA DO SEU SAVE SYSTEM ---
-        if (PersistenciaManager.Instance != null)
+        if (!Application.isEditor && PersistenciaManager.Instance != null)
         {
-            // Se não tem save, retorna false. Se tiver, retorna o estado da porta.
-            estaAberta = PersistenciaManager.Instance.CarregarEstadoObjeto(uniqueID, false);
-            
-            if (estaAberta)
-            {
-                precisaDeChave = false;
-                if (iconeChaveHUD) iconeChaveHUD.SetActive(false); 
-            }
+            isOpen = PersistenciaManager.Instance.CarregarEstadoObjeto(uniqueID, false);
+            if (isOpen) needsKey = false;
+        }
+    }
+
+    void Update()
+    {
+        if (TaBloqueado() && interactText != null && interactText.activeSelf)
+        {
+            interactText.SetActive(false);
         }
     }
 
     public void AoOlhar()
     {
-        if (emTransicao) return;
-        if (textoInteragir) textoInteragir.SetActive(true);
+        taOlhando = true; // 🔥 Avisa que o player botou a mira na porta 🔥
+
+        if (TaBloqueado()) return; 
+
+        if (isTransitioning || isShowingMessage) return; 
+        
+        if (interactText) interactText.SetActive(true);
     }
 
     public void AoSair()
     {
-        if (textoInteragir) textoInteragir.SetActive(false);
-        if (painelMensagemTrancada) painelMensagemTrancada.SetActive(false);
+        taOlhando = false; // 🔥 Avisa que o player tirou a mira da porta 🔥
+
+        if (interactText) interactText.SetActive(false);
     }
 
     public void Interagir()
     {
-        if (emTransicao) return;
+        if (TaBloqueado()) return; 
 
-        if (!precisaDeChave || estaAberta)
+        if (isTransitioning) return;
+
+        if (!needsKey || isOpen)
         {
-            StartCoroutine(SequenciaTeleporte());
+            StartCoroutine(TeleportSequence());
             return;
         }
 
-        if (KeySystem.TemChave(idDaChaveNecessaria))
+        if (KeySystem.TemChave(requiredKeyID))
         {
-            AbrirPorta();
+            OpenDoor();
         }
-        else if (!mostrandoMensagem)
+        else if (!isShowingMessage)
         {
-            StartCoroutine(FeedbackTrancado());
+            StartCoroutine(LockedFeedback());
         }
     }
 
-    void AbrirPorta()
+    void OpenDoor()
     {
-        estaAberta = true;
-        
-        KeySystem.GastarChave(idDaChaveNecessaria);
-        
-        if (iconeChaveHUD != null) iconeChaveHUD.SetActive(false);
+        isOpen = true;
+        KeySystem.GastarChave(requiredKeyID);
 
-        // --- REGISTRA NO SEU SAVE SYSTEM ---
-        if (PersistenciaManager.Instance != null)
-        {
+        if (!Application.isEditor && PersistenciaManager.Instance != null)
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
-        }
 
-        if (audioSource && somDestrancar) audioSource.PlayOneShot(somDestrancar);
-        
-        StartCoroutine(SequenciaTeleporte());
+        if (audioSource && unlockSound) audioSource.PlayOneShot(unlockSound);
+        StartCoroutine(TeleportSequence());
     }
 
-    IEnumerator FeedbackTrancado()
+    IEnumerator LockedFeedback()
     {
-        mostrandoMensagem = true; 
+        isShowingMessage = true; 
         
-        if (audioSource && somTrancado) audioSource.PlayOneShot(somTrancado);
+        if (interactText) interactText.SetActive(false);
+
+        if (audioSource && lockedSound) audioSource.PlayOneShot(lockedSound);
         
-        if (painelMensagemTrancada) 
+        if (lockedMessagePanel) 
         {
-            painelMensagemTrancada.SetActive(true);
-            if (textoFeedback) textoFeedback.text = "Precisa da " + idDaChaveNecessaria.Replace("_", " ");
+            lockedMessagePanel.SetActive(true);
+            if (feedbackText) feedbackText.text = "Precisa da " + requiredKeyID.Replace("_", " ");
             yield return new WaitForSeconds(2f);
-            painelMensagemTrancada.SetActive(false);
+            lockedMessagePanel.SetActive(false);
         }
         
-        mostrandoMensagem = false; 
+        isShowingMessage = false; 
+
+        // 🔥 O SEGREDO TÁ AQUI: Só acende o texto de novo SE o player ainda estiver olhando pra porta! 🔥
+        if (taOlhando && interactText && !isTransitioning && !TaBloqueado()) 
+        {
+            interactText.SetActive(true);
+        }
     }
 
-    IEnumerator SequenciaTeleporte()
+    IEnumerator TeleportSequence()
     {
-        emTransicao = true;
-        if (textoInteragir) textoInteragir.SetActive(false);
-        
+        isTransitioning = true;
+        if (interactText) interactText.SetActive(false);
         if (FPS_Master.Instance) FPS_Master.Instance.AlterarEstadoJogador(true, false);
-
-        if (audioSource && somTeleporte) audioSource.PlayOneShot(somTeleporte);
+        if (audioSource && teleportSound) audioSource.PlayOneShot(teleportSound);
 
         if (fadeImage) 
         {
@@ -164,6 +178,6 @@ public class DoorWithKeyTeleport : MonoBehaviour
         }
 
         if (FPS_Master.Instance) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-        emTransicao = false;
+        isTransitioning = false;
     }
 }

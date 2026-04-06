@@ -50,10 +50,11 @@ public class AudioPuzzleDoor : MonoBehaviour
     private bool portaResolvida = false;
     private bool jogadorNaPorta = false;
     private bool jaFezCutsceneInicial = false; 
-    private bool dialogoTerminou = false; // Verifica se o jogador deixou o diálogo terminar
+    private bool dialogoTerminou = false; 
     private bool digitandoSenha = false;
     private string inputAtual = "";
     private Vector3 posicaoInicialInteracao; 
+    private bool ignorarProximoInputE = false; // Trava de proteção pro E
 
     // Controle de Áudio Global
     private AudioSource musicaGlobal;
@@ -115,12 +116,15 @@ public class AudioPuzzleDoor : MonoBehaviour
             posicaoInicialInteracao = FPS_Master.Instance.transform.position;
 
         jogadorNaPorta = true;
-        TravarPlayer(true);
+        
+        // Trava o player. Use true, false para não soltar o mouse se não for necessário
+        // mas garante que ele não ative o inventário
+        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
+        
         if (textoInteragir) textoInteragir.SetActive(false);
         
         TrocarParaMusicaDaPorta();
 
-        // Se o diálogo não terminou da última vez, recomeça
         if (!dialogoTerminou) 
         {
             StartCoroutine(SequenciaCutscene(!jaFezCutsceneInicial)); 
@@ -135,8 +139,15 @@ public class AudioPuzzleDoor : MonoBehaviour
     {
         if (!jogadorNaPorta || portaResolvida) return;
 
-        // O 'E' agora sai de qualquer lugar, mesmo no meio da cutscene
-        if (Input.GetKeyDown(KeyCode.E)) 
+        // Se estivermos saindo pelo 'E', esperamos 1 frame
+        if (ignorarProximoInputE)
+        {
+            ignorarProximoInputE = false;
+            return;
+        }
+
+        // Lê o 'E' e também o Escape para garantir que consiga sair
+        if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape)) 
         {
             SairDoPuzzle();
             return;
@@ -220,7 +231,6 @@ public class AudioPuzzleDoor : MonoBehaviour
             textoVisorSenha.color = Color.red;
             yield return new WaitForSeconds(0.6f);
             
-            // Em vez de deixar tentar de novo, limpa tudo e chuta o jogador do puzzle
             inputAtual = "";
             textoVisorSenha.color = Color.white;
             AtualizarVisorSenha();
@@ -230,10 +240,10 @@ public class AudioPuzzleDoor : MonoBehaviour
 
     IEnumerator SequenciaCutscene(bool comBatida)
     {
-        if (textoDialogoCutscene) textoDialogoCutscene.text = ""; // Extermina o "New Text"
+        if (textoDialogoCutscene) textoDialogoCutscene.text = ""; 
         
         dialogoTerminou = false;
-        jaFezCutsceneInicial = true; // Impede que bata na porta de novo
+        jaFezCutsceneInicial = true; 
         
         painelSenha.SetActive(false);
         painelTelaPreta.SetActive(true);
@@ -307,8 +317,15 @@ public class AudioPuzzleDoor : MonoBehaviour
         digitandoSenha = false;
         
         TrocarParaMusicaGlobal();
-        RetornarPosicaoSegura();
-        TravarPlayer(false);
+        
+        // Destrava o Player
+        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
+        
+        // Evita que ele clique sem querer ao sair
+        ignorarProximoInputE = true; 
+        
+        // Joga a mira pra longe um pouquinho pra não reconectar instantaneamente (opcional mas recomendado)
+        if (FPS_Master.Instance != null) FPS_Master.Instance.LimparVisual();
     }
 
     void TrocarParaMusicaDaPorta()
@@ -360,9 +377,6 @@ public class AudioPuzzleDoor : MonoBehaviour
             musicaEntrando.volume = targetVolume;
         }
     }
-
-    void TravarPlayer(bool travar) { if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(travar, false); }
-    void RetornarPosicaoSegura() { if (FPS_Master.Instance != null) FPS_Master.Instance.Teleportar(posicaoInicialInteracao); }
 
     IEnumerator EfeitoDigitar(string frase, float velocidade)
     {

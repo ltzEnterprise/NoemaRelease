@@ -4,6 +4,10 @@ using System.Collections;
 
 public class LadderSystem : MonoBehaviour
 {
+    [Header("--- BLOQUEADOR ---")]
+    [Tooltip("Coloque o objeto que bloqueia (ex: plasma). Se ficar vazio, funciona normal.")]
+    public GameObject bloqueador;
+
     [Header("Configuração")]
     public GameObject visualDaEscada; 
     public int idItemEscada = 3; 
@@ -16,10 +20,25 @@ public class LadderSystem : MonoBehaviour
     [Header("UI")]
     public TextMeshProUGUI textoDeInteracao; // Canvas WorldSpace ou ScreenSpace
 
+    // Função que checa em tempo real se a parada tá bloqueada
+    private bool TaBloqueado()
+    {
+        return bloqueador != null && bloqueador.activeInHierarchy;
+    }
+
     void Start()
     {
         AtualizarEstadoVisual();
         if (textoDeInteracao) textoDeInteracao.gameObject.SetActive(false);
+    }
+
+    void Update()
+    {
+        // Monitoramento constante: Se bloqueou enquanto olhava, desliga a UI
+        if (TaBloqueado() && textoDeInteracao != null && textoDeInteracao.gameObject.activeSelf)
+        {
+            textoDeInteracao.gameObject.SetActive(false);
+        }
     }
 
     void AtualizarEstadoVisual()
@@ -35,6 +54,8 @@ public class LadderSystem : MonoBehaviour
 
     public void NotificarOlhar(bool olhandoParaCima)
     {
+        if (TaBloqueado()) return; // Morre aqui se tiver bloqueado
+
         if (textoDeInteracao == null) return;
 
         textoDeInteracao.gameObject.SetActive(true);
@@ -68,6 +89,8 @@ public class LadderSystem : MonoBehaviour
 
     public void NotificarInteracao(bool clicouEmCima)
     {
+        if (TaBloqueado()) return; // Foda-se o clique se tiver bloqueado
+
         if (!jaFoiColocada)
         {
             // Tenta colocar a escada (só se clicou na base)

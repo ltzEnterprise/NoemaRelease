@@ -9,11 +9,12 @@ using QuantumTek.SimpleMenu;
 public class InterfaceManager : MonoBehaviour
 {
     [Header("--- DEV MODE ---")]
-    [Tooltip("Se ligado, ignora o SistemaGlobal, cria saves falsos e simula a tela de loading de 80% a 100%.")]
     public bool modoDesenvolvedor = false; 
 
-    [Header("--- JANELA DE CONFIRMAÇÃO ---")]
+    [Header("--- REFERÊNCIAS ---")]
+    public GameObject contentOpcoes; 
     public GameObject painelConfirmacaoReset;
+    public GameObject painelConfirmacaoBackup; 
 
     [Header("--- PAINÉIS ---")]
     public GameObject painelMenuPrincipal;
@@ -30,77 +31,88 @@ public class InterfaceManager : MonoBehaviour
     public TextMeshProUGUI[] textosDosSlots;    
     public TextMeshProUGUI[] textosBotaoApagar; 
 
+    [Header("--- TRADUÇÕES DO SCRIPT ---")]
+    public string textoNovoJogo_PT = "NOVO JOGO";
+    public string textoNovoJogo_EN = "NEW GAME";
+    
+    public string textoApagar_PT = "APAGAR";
+    public string textoApagar_EN = "DELETE";
+    
+    public string textoConfirmar_PT = "CONFIRMAR";
+    public string textoConfirmar_EN = "CONFIRM";
+    
+    public string textoApagarSave_PT = "APAGAR SAVE?";
+    public string textoApagarSave_EN = "DELETE SAVE?";
+    
+    public string textoSlot_PT = "SLOT";
+    public string textoSlot_EN = "SLOT";
+
     [Header("--- PAUSE ---")]
     public RawImage imagemCongelada; 
 
     [Header("--- JOGO ---")]
     public FPS_Master playerMaster; 
     public bool isCenaDeJogo = false; 
-    
-    [Tooltip("Marque isso nas fases 2D. Deixa o mouse livre e visível mesmo sendo cena de jogo.")]
     public bool mouseLivreNoJogo = false; 
 
-    [Header("--- ÁUDIO DO MENU ---")]
+    [Header("--- ÁUDIO ---")]
     public AudioSource musicaDoMenu;
-    [Tooltip("Arraste o arquivo da música do menu aqui")]
-    public AudioClip clipeMusicaMenu; // <--- NOVO SLOT PARA O ÁUDIO AQUI
-    [Range(0f, 1f)] public float volumeMaximoMusica = 1f; // <--- CONTROLE DE VOLUME
+    public AudioClip clipeMusicaMenu; 
+    [Range(0f, 1f)] public float volumeMaximoMusica = 1f; 
     public float tempoDeFade = 1.5f;
 
     private bool jogoPausado = false;
     private int slotConfirmacao = -1;
+    private int slotParaRestaurar = -1; 
 
-    public void LigarDesligarPainel(GameObject painel, bool estado)
-    {
-        if (painel == null) return;
-        
-        painel.SetActive(estado);
-        
-        SM_Window janela = painel.GetComponent<SM_Window>();
-        if (janela != null) janela.Toggle(estado);
-
-        if (estado == true)
-        {
-            foreach (Transform filho in painel.transform)
-            {
-                filho.gameObject.SetActive(true);
-            }
-        }
-    }
+    private Vector3 escalaOpcoes = Vector3.one;
+    private bool escalaSalva = false;
+    private bool isProcessandoPause = false; 
 
     void Start()
     {
         Time.timeScale = 1f;
         AudioListener.pause = false;
 
+        if (contentOpcoes != null)
+        {
+            escalaOpcoes = contentOpcoes.transform.localScale;
+            escalaSalva = true;
+        }
+
         ForcarAutoSizeCentral();
 
         LigarDesligarPainel(painelLoading, false);
+        if (painelConfirmacaoBackup) LigarDesligarPainel(painelConfirmacaoBackup, false);
         
         if (imagemCongelada) 
         {
             imagemCongelada.gameObject.SetActive(false);
+            ClearFreezeTexture(); 
             ForcarTelaCheia(imagemCongelada.rectTransform);
+
+            Canvas canvasFundo = imagemCongelada.gameObject.GetComponent<Canvas>();
+            if (canvasFundo == null) canvasFundo = imagemCongelada.gameObject.AddComponent<Canvas>();
+            canvasFundo.overrideSorting = true;
+            canvasFundo.sortingOrder = -100; 
         }
 
         if (isCenaDeJogo)
         {
-            if (mouseLivreNoJogo)
-            {
-                Cursor.lockState = CursorLockMode.None; 
-                Cursor.visible = true; 
-            }
-            else
-            {
-                Cursor.lockState = CursorLockMode.Locked; 
-                Cursor.visible = false; 
-            }
+            Cursor.lockState = mouseLivreNoJogo ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = mouseLivreNoJogo;
 
             if (FPS_Master.Instance != null) FPS_Master.travadoInteracao = false;      
 
             LigarDesligarPainel(painelPause, false);
             LigarDesligarPainel(painelOpcoes, false);
             LigarDesligarPainel(painelMenuPrincipal, false);
+
+            if (painelOpcoes != null)
+            {
+                SettingsManager settings = painelOpcoes.GetComponentInChildren<SettingsManager>(true);
+                if (settings != null) settings.LoadAndApplyAllSettings();
+            }
 
             StartCoroutine(SequenciaInicializacaoJogo());
         }
@@ -115,13 +127,79 @@ public class InterfaceManager : MonoBehaviour
             
             AtualizarTextosSlots();
 
-            // --- INICIA A MÚSICA DO MENU AQUI ---
             if (musicaDoMenu != null && clipeMusicaMenu != null)
             {
                 musicaDoMenu.clip = clipeMusicaMenu;
-                musicaDoMenu.volume = volumeMaximoMusica; // Garante que volta no volume certo
+                musicaDoMenu.volume = volumeMaximoMusica; 
                 musicaDoMenu.loop = true;
                 if (!musicaDoMenu.isPlaying) musicaDoMenu.Play();
+            }
+        }
+    }
+
+    public void LigarDesligarPainel(GameObject painel, bool estado)
+    {
+        if (painel == null) return;
+
+        Animator animPai = painel.GetComponent<Animator>();
+        if (animPai != null) animPai.enabled = false;
+
+        painel.SetActive(estado);
+
+        SM_Window janela = painel.GetComponent<SM_Window>();
+        if (janela != null)
+        {
+            if (janela.content != null)
+            {
+                Animator animContent = janela.content.GetComponent<Animator>();
+                if (animContent != null) animContent.enabled = false;
+                janela.content.gameObject.SetActive(estado);
+            }
+            janela.Toggle(estado);
+        }
+
+        if (painel == painelOpcoes && estado)
+        {
+            if (contentOpcoes != null)
+            {
+                Animator animOpcoes = contentOpcoes.GetComponent<Animator>();
+                if (animOpcoes != null) animOpcoes.enabled = false;
+
+                contentOpcoes.SetActive(true);
+
+                CanvasGroup cg = contentOpcoes.GetComponent<CanvasGroup>();
+                if (cg != null) { cg.alpha = 1f; cg.interactable = true; cg.blocksRaycasts = true; }
+                
+                if (escalaSalva) contentOpcoes.transform.localScale = escalaOpcoes;
+            }
+
+            SettingsManager settings = painel.GetComponentInChildren<SettingsManager>(true);
+            if (settings != null)
+            {
+                settings.enabled = true;
+                settings.LoadAndApplyAllSettings();
+
+                if (settings.controladorDeAbas != null && settings.janelaGameplay != null)
+                {
+                    Animator animTabGroup = settings.controladorDeAbas.GetComponent<Animator>();
+                    if (animTabGroup != null) animTabGroup.enabled = false;
+
+                    settings.controladorDeAbas.ChangeTab(settings.janelaGameplay);
+
+                    Transform tabContent = settings.janelaGameplay.content;
+                    if (tabContent != null)
+                    {
+                        Animator animTab = tabContent.GetComponent<Animator>();
+                        if (animTab != null) animTab.enabled = false;
+
+                        tabContent.gameObject.SetActive(true);
+                        
+                        CanvasGroup cgTab = tabContent.GetComponent<CanvasGroup>();
+                        if (cgTab != null) { cgTab.alpha = 1f; cgTab.interactable = true; cgTab.blocksRaycasts = true; }
+                        
+                        tabContent.localScale = Vector3.one; 
+                    }
+                }
             }
         }
     }
@@ -137,7 +215,6 @@ public class InterfaceManager : MonoBehaviour
 
         if (modoDesenvolvedor)
         {
-            Debug.Log($"[DEV] Testando Loading no Slot {slot}.");
             if (PlayerPrefs.GetInt($"Slot_{slot}_SaveExistente", 0) == 0)
             {
                 string dataAgora = System.DateTime.Now.ToString("dd/MM HH:mm");
@@ -151,15 +228,20 @@ public class InterfaceManager : MonoBehaviour
             return; 
         }
 
-        if (SistemaGlobal.Instance == null) 
+        // 🔥 CORREÇÃO AQUI: Avisa o jogo qual slot você escolheu, mesmo se for Novo Jogo
+        if (SistemaGlobal.Instance != null) 
         {
-            Debug.LogError("SistemaGlobal não encontrado na cena!");
-            return;
-        }
+            SistemaGlobal.Instance.slotAtual = slot; 
 
-        if (SistemaGlobal.Instance.ExisteSave(slot)) 
-        {
-            SistemaGlobal.Instance.CarregarJogo(slot);
+            if (SistemaGlobal.Instance.ExisteSave(slot))
+            {
+                SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = true;
+            }
+            else
+            {
+                // Garante que num Novo Jogo ele não vai tentar te teleportar pra um lugar bizarro
+                SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false; 
+            }
         }
         
         StartCoroutine(RotinaLoadingPorcentagem(nomeDaCenaDoJogo));
@@ -178,10 +260,8 @@ public class InterfaceManager : MonoBehaviour
                 PlayerPrefs.Save();
                 slotConfirmacao = -1;
             }
-            else
-            {
-                slotConfirmacao = slot;
-            }
+            else slotConfirmacao = slot;
+            
             AtualizarTextosSlots();
             return;
         }
@@ -193,15 +273,58 @@ public class InterfaceManager : MonoBehaviour
             SistemaGlobal.Instance.ApagarSave(slot);
             slotConfirmacao = -1;
         }
-        else
-        {
-            slotConfirmacao = slot;
-        }
+        else slotConfirmacao = slot;
+        
         AtualizarTextosSlots();
+    }
+
+    public void CancelarConfirmacaoDelete()
+    {
+        if (slotConfirmacao != -1)
+        {
+            slotConfirmacao = -1;
+            AtualizarTextosSlots();
+        }
+    }
+
+    public void BotaoPedirRestauracao(int slot)
+    {
+        slotParaRestaurar = slot; 
+        LigarDesligarPainel(painelConfirmacaoBackup, true); 
+    }
+
+    public void ConfirmarRestauracaoBackup()
+    {
+        if (slotParaRestaurar != -1 && !modoDesenvolvedor && SistemaGlobal.Instance != null && PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RestaurarBackup(slotParaRestaurar);
+            AtualizarTextosSlots(); 
+        }
+        
+        slotParaRestaurar = -1; 
+        LigarDesligarPainel(painelConfirmacaoBackup, false); 
+    }
+
+    public void CancelarRestauracaoBackup()
+    {
+        slotParaRestaurar = -1; 
+        LigarDesligarPainel(painelConfirmacaoBackup, false); 
     }
 
     void AtualizarTextosSlots()
     {
+        // 1. Descobre qual idioma tá rodando agora
+        int lang = 0;
+        if (LanguageManager.Instance != null) lang = LanguageManager.Instance.currentLanguage;
+        else lang = PlayerPrefs.GetInt("Idioma", 0);
+
+        // 2. Puxa as palavras certas
+        string txtNovo = (lang == 0) ? textoNovoJogo_PT : textoNovoJogo_EN;
+        string txtApagarBtn = (lang == 0) ? textoApagar_PT : textoApagar_EN;
+        string txtConfirmarBtn = (lang == 0) ? textoConfirmar_PT : textoConfirmar_EN;
+        string txtApagarSave = (lang == 0) ? textoApagarSave_PT : textoApagarSave_EN;
+        string txtSlot = (lang == 0) ? textoSlot_PT : textoSlot_EN;
+
         for (int i = 0; i < textosDosSlots.Length; i++)
         {
             if (textosDosSlots[i] == null) continue;
@@ -211,52 +334,48 @@ public class InterfaceManager : MonoBehaviour
             if (modoDesenvolvedor) temSave = (PlayerPrefs.GetInt($"Slot_{slotNum}_SaveExistente", 0) == 1);
             else if (SistemaGlobal.Instance != null) temSave = SistemaGlobal.Instance.ExisteSave(slotNum);
 
+            // Traduz o botão de Apagar/Confirmar
             if (textosBotaoApagar != null && i < textosBotaoApagar.Length && textosBotaoApagar[i] != null)
             {
-                textosBotaoApagar[i].text = (slotConfirmacao == slotNum) ? "<size=70%>CONFIRM</size>" : "DELETE";
+                textosBotaoApagar[i].text = (slotConfirmacao == slotNum) ? txtConfirmarBtn : txtApagarBtn;
             }
 
-            string cabecalho = $"<size=40%>SLOT {slotNum}</size>\n";
+            // Traduz a palavra SLOT
+            string cabecalho = $"<size=40%>{txtSlot} {slotNum}</size>\n";
 
             if (slotConfirmacao == slotNum)
             {
-                textosDosSlots[i].text = cabecalho + "<color=red>DELETE SAVE?</color>";
+                textosDosSlots[i].text = cabecalho + $"<color=red>{txtApagarSave}</color>";
             }
             else if (temSave)
             {
-                string data = "";
-                if (modoDesenvolvedor) data = PlayerPrefs.GetString($"Slot_{slotNum}_Data", "");
-                else if (SistemaGlobal.Instance != null) data = SistemaGlobal.Instance.GetDataSave(slotNum);
-
+                string data = modoDesenvolvedor ? PlayerPrefs.GetString($"Slot_{slotNum}_Data", "") : (SistemaGlobal.Instance != null ? SistemaGlobal.Instance.GetDataSave(slotNum) : "");
                 if (string.IsNullOrEmpty(data)) data = System.DateTime.Now.ToString("dd/MM HH:mm");
                 
                 textosDosSlots[i].text = cabecalho + $"<size=50%>{data}</size>";
             }
-            else
+            else 
             {
-                textosDosSlots[i].text = cabecalho + "NEW GAME";
+                // Traduz o Novo Jogo
+                textosDosSlots[i].text = cabecalho + txtNovo;
             }
         }
     }
 
     void ForcarAutoSizeCentral()
     {
-        if (textosDosSlots != null) 
+        if (textosDosSlots == null) return;
+        foreach (var t in textosDosSlots) 
         {
-            foreach (var t in textosDosSlots) 
-            {
-                if (t != null)
-                {
-                    t.enableAutoSizing = true;
-                    t.fontSizeMin = 10;
-                    t.fontSizeMax = 60; 
-                    t.alignment = TextAlignmentOptions.Center;
-                    t.textWrappingMode = TextWrappingModes.Normal;
-                    t.overflowMode = TextOverflowModes.Truncate;
-                    t.margin = new Vector4(5, 5, 5, 5);
-                    t.rectTransform.localScale = Vector3.one;
-                }
-            }
+            if (t == null) continue;
+            t.enableAutoSizing = true;
+            t.fontSizeMin = 10;
+            t.fontSizeMax = 60; 
+            t.alignment = TextAlignmentOptions.Center;
+            t.textWrappingMode = TextWrappingModes.Normal;
+            t.overflowMode = TextOverflowModes.Truncate;
+            t.margin = new Vector4(5, 5, 5, 5);
+            t.rectTransform.localScale = Vector3.one;
         }
     }
 
@@ -286,7 +405,10 @@ public class InterfaceManager : MonoBehaviour
         LigarDesligarPainel(painelOpcoes, true);
     }
 
-    public void BotaoSair() { Application.Quit(); }
+    public void BotaoSair() 
+    { 
+        Application.Quit(); 
+    }
 
     public void BotaoVoltarGenerico()
     {
@@ -301,67 +423,129 @@ public class InterfaceManager : MonoBehaviour
 
     void Update()
     {
+        if (slotConfirmacao != -1 && Input.GetMouseButtonDown(0))
+        {
+            if (UnityEngine.EventSystems.EventSystem.current != null && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            {
+                CancelarConfirmacaoDelete();
+            }
+        }
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            if (painelConfirmacaoBackup != null && painelConfirmacaoBackup.activeSelf)
+            {
+                CancelarRestauracaoBackup();
+                return;
+            }
+
             if (painelConfirmacaoReset != null && painelConfirmacaoReset.activeSelf)
             {
                 LigarDesligarPainel(painelConfirmacaoReset, false);
                 return; 
             }
 
-            if (isCenaDeJogo)
+            if (painelOpcoes != null && painelOpcoes.activeSelf)
             {
-                if (painelOpcoes != null && painelOpcoes.activeSelf) 
-                    FecharOpcoesVoltar();
-                else 
-                { 
-                    if (jogoPausado) ResumeJogo(); 
-                    else StartCoroutine(PausarComPrint());
-                }
+                FecharOpcoesVoltar();
             }
-            else
+            else if (isCenaDeJogo)
             {
-                if (painelOpcoes != null && painelOpcoes.activeSelf) 
-                    FecharOpcoesVoltar();
-                else if (painelSlots != null && painelSlots.activeSelf) 
-                    BotaoVoltarGenerico();
+                if (isProcessandoPause) return;
+                if (jogoPausado) ResumeJogo(); 
+                else StartCoroutine(PausarComPrint());
+            }
+            else if (painelSlots != null && painelSlots.activeSelf) 
+            {
+                BotaoVoltarGenerico();
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R) && painelOpcoes != null && painelOpcoes.activeSelf)
         {
-            if (painelOpcoes != null && painelOpcoes.activeSelf)
-            {
-                if (painelConfirmacaoReset != null && !painelConfirmacaoReset.activeSelf)
-                {
-                    LigarDesligarPainel(painelConfirmacaoReset, true);
-                }
-            }
+            if (painelConfirmacaoReset != null && !painelConfirmacaoReset.activeSelf)
+                LigarDesligarPainel(painelConfirmacaoReset, true);
         }
     }
     
-    public void FecharJanelaConfirmacao()
+    public void FecharJanelaConfirmacao() { LigarDesligarPainel(painelConfirmacaoReset, false); }
+
+    public void BotaoConfirmarReset()
     {
+        PlayerPrefs.DeleteKey("MouseSensitivity");
+        PlayerPrefs.DeleteKey("PlayerFOV");
+        PlayerPrefs.Save();
+
+        if (FPS_Master.Instance != null) FPS_Master.Instance.CarregarConfiguracoes();
+
+        SettingsManager settings = painelOpcoes.GetComponentInChildren<SettingsManager>(true);
+        if (settings != null) settings.LoadAndApplyAllSettings(); 
+
         LigarDesligarPainel(painelConfirmacaoReset, false);
+    }
+
+    private void ClearFreezeTexture()
+    {
+        if (imagemCongelada != null && imagemCongelada.texture != null)
+        {
+            Texture texCorrompida = imagemCongelada.texture;
+            imagemCongelada.texture = null;
+            Destroy(texCorrompida); 
+        }
     }
 
     IEnumerator PausarComPrint()
     {
+        isProcessandoPause = true; 
         yield return new WaitForEndOfFrame();
+
         if (imagemCongelada != null)
         {
-            if (imagemCongelada.texture != null)
-            {
-                Destroy(imagemCongelada.texture);
-            }
+            ClearFreezeTexture();
 
-            Texture2D texture = ScreenCapture.CaptureScreenshotAsTexture();
+            int width = Screen.width;
+            int height = Screen.height;
+
+            RenderTexture rtTelaCheia = RenderTexture.GetTemporary(width, height, 0);
+            ScreenCapture.CaptureScreenshotIntoRenderTexture(rtTelaCheia);
+            
+            int w1 = width / 2; int h1 = height / 2;
+            RenderTexture rt1 = RenderTexture.GetTemporary(w1, h1, 0);
+            rt1.filterMode = FilterMode.Bilinear;
+            Graphics.Blit(rtTelaCheia, rt1);
+
+            int w2 = w1 / 2; int h2 = h1 / 2;
+            RenderTexture rt2 = RenderTexture.GetTemporary(w2, h2, 0);
+            rt2.filterMode = FilterMode.Bilinear;
+            Graphics.Blit(rt1, rt2);
+
+            int w3 = w2 / 2; int h3 = h2 / 2;
+            RenderTexture rt3 = RenderTexture.GetTemporary(w3, h3, 0);
+            rt3.filterMode = FilterMode.Bilinear;
+            Graphics.Blit(rt2, rt3);
+            
+            RenderTexture.active = rt3;
+            Texture2D texture = new Texture2D(w3, h3, TextureFormat.RGB24, false);
+            texture.filterMode = FilterMode.Bilinear; 
+            texture.ReadPixels(new Rect(0, 0, w3, h3), 0, 0);
+            texture.Apply();
+            
+            RenderTexture.active = null;
+            RenderTexture.ReleaseTemporary(rtTelaCheia);
+            RenderTexture.ReleaseTemporary(rt1);
+            RenderTexture.ReleaseTemporary(rt2);
+            RenderTexture.ReleaseTemporary(rt3);
+
             imagemCongelada.texture = texture;
             imagemCongelada.color = Color.white;
+            imagemCongelada.rectTransform.localScale = new Vector3(1f, -1f, 1f);
+            
             ForcarTelaCheia(imagemCongelada.rectTransform);
             imagemCongelada.gameObject.SetActive(true);
         }
         PausarJogoLogica();
+        
+        isProcessandoPause = false; 
     }
 
     public void PausarJogoLogica()
@@ -378,24 +562,23 @@ public class InterfaceManager : MonoBehaviour
 
     public void ResumeJogo()
     {
+        isProcessandoPause = false; 
         jogoPausado = false;
-        if (imagemCongelada) imagemCongelada.gameObject.SetActive(false);
+        
+        if (imagemCongelada) 
+        {
+            imagemCongelada.gameObject.SetActive(false);
+            ClearFreezeTexture();
+        }
+        
         LigarDesligarPainel(painelOpcoes, false);
         LigarDesligarPainel(painelPause, false);
         Time.timeScale = 1f;
         AudioListener.pause = false;
         if (FPS_Master.Instance != null) FPS_Master.travadoInteracao = false;
 
-        if (mouseLivreNoJogo)
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
-        else
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
+        Cursor.lockState = mouseLivreNoJogo ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = mouseLivreNoJogo;
     }
 
     public void SairParaMenuPrincipal()
@@ -403,9 +586,12 @@ public class InterfaceManager : MonoBehaviour
         Time.timeScale = 1f; 
         AudioListener.pause = false; 
 
+        ClearFreezeTexture();
+
         if (playerMaster != null && SistemaGlobal.Instance != null)
         {
             SistemaGlobal.Instance.SalvarJogo(playerMaster.transform.position, SceneManager.GetActiveScene().name);
+            if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
             PlayerPrefs.Save();
         }
         SceneManager.LoadScene("MenuPrincipal"); 
@@ -414,18 +600,10 @@ public class InterfaceManager : MonoBehaviour
     public void FecharOpcoesVoltar()
     {
         LigarDesligarPainel(painelOpcoes, false);
-        
-        if (isCenaDeJogo) 
-        { 
-            LigarDesligarPainel(painelPause, true);
-        }
-        else
-        {
-            LigarDesligarPainel(painelMenuPrincipal, true);
-        }
+        if (isCenaDeJogo) LigarDesligarPainel(painelPause, true);
+        else LigarDesligarPainel(painelMenuPrincipal, true);
     }
 
-    // --- FADE OUT DA MÚSICA AQUI ---
     IEnumerator FadeOutMusica()
     {
         if (musicaDoMenu == null) yield break;
@@ -433,7 +611,6 @@ public class InterfaceManager : MonoBehaviour
         float volumeInicial = musicaDoMenu.volume;
         float tempoPassado = 0f;
 
-        // Vai descendo o volume devagarinho durante o loading
         while (tempoPassado < tempoDeFade)
         {
             tempoPassado += Time.unscaledDeltaTime;
@@ -445,7 +622,6 @@ public class InterfaceManager : MonoBehaviour
 
     IEnumerator RotinaLoadingPorcentagem(string nomeCena)
     {
-        // 1. Inicia o fade out na mesma hora que clica no slot
         StartCoroutine(FadeOutMusica());
         
         LigarDesligarPainel(painelLoading, true);
@@ -466,13 +642,7 @@ public class InterfaceManager : MonoBehaviour
 
             if (barraDeProgresso) barraDeProgresso.SetFill(progressoVisual);
 
-            if (operacao.progress >= 0.9f && progressoVisual >= 0.79f)
-            {
-                progressoVisual = 0.8f;
-                if (barraDeProgresso) barraDeProgresso.SetFill(progressoVisual);
-                break;
-            }
-
+            if (operacao.progress >= 0.9f && progressoVisual >= 0.79f) break;
             yield return null;
         }
 
@@ -481,9 +651,7 @@ public class InterfaceManager : MonoBehaviour
         {
             tempoExtra += Time.unscaledDeltaTime;
             progressoVisual = Mathf.Lerp(0.8f, 1f, tempoExtra / 2f); 
-            
             if (barraDeProgresso) barraDeProgresso.SetFill(progressoVisual);
-            
             yield return null;
         }
 
@@ -492,7 +660,6 @@ public class InterfaceManager : MonoBehaviour
 
     IEnumerator RotinaLoadingDevMode()
     {
-        // Também faz fade out se carregar pelo modo desenvolvedor
         StartCoroutine(FadeOutMusica());
         
         LigarDesligarPainel(painelLoading, true);
@@ -508,32 +675,36 @@ public class InterfaceManager : MonoBehaviour
         {
             tempoExtra += Time.unscaledDeltaTime;
             progressoVisual = Mathf.Lerp(0.8f, 1f, tempoExtra / 2f); 
-            
             if (barraDeProgresso) barraDeProgresso.SetFill(progressoVisual);
-            
             yield return null;
         }
 
         LigarDesligarPainel(painelLoading, false);
         LigarDesligarPainel(painelSlots, true);
-        
         AtualizarTextosSlots(); 
     }
 
     IEnumerator SequenciaInicializacaoJogo()
     {
         yield return new WaitForEndOfFrame();
+        
         if (SistemaGlobal.Instance != null && playerMaster != null && SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar)
         {
-            int slot = SistemaGlobal.Instance.slotAtual;
-            string p = "Slot_" + slot;
+            SistemaGlobal.Instance.CarregarJogo(SistemaGlobal.Instance.slotAtual);
+            
+            string p = "Slot_" + SistemaGlobal.Instance.slotAtual;
+            
             if (PlayerPrefs.HasKey(p + "_PosX"))
             {
                 float x = PlayerPrefs.GetFloat(p + "_PosX");
                 float y = PlayerPrefs.GetFloat(p + "_PosY");
                 float z = PlayerPrefs.GetFloat(p + "_PosZ");
-                if (x != 0 || y != 0 || z != 0) playerMaster.Teleportar(new Vector3(x, y + 0.1f, z));
+                playerMaster.Teleportar(new Vector3(x, y + 0.1f, z));
             }
+            
+            SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false; 
         }
     }
+
+    private void OnDestroy() { ClearFreezeTexture(); }
 }

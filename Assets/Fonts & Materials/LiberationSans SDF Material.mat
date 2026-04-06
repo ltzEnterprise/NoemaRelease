@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: LiberationSans SDF Material
+  m_Shader: {fileID: 4800000, guid: fe393ace9b354375a9cb14cdbbc28be4, type: 3}
+  m_Parent: {fileID: 2100000, guid: d5bdf1fdd40938946988fa06e7c35c36, type: 2}
+  m_ModifiedSerializedProperties: 2
+  m_ValidKeywords:
+  - OUTLINE_ON
+  m_InvalidKeywords: []
+  m_LightmapFlags: 1
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 28684132378477856, guid: 7d43c7264c2035a479200f7d2fc9cc3b, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _FaceDilate: 0
+    - _OutlineSoftness: 0
+    - _OutlineWidth: 0.19
+    - _ScaleRatioB: 1
+    - _ScaleRatioC: 0.73125
+    m_Colors:
+    - _FaceColor: {r: 0.10083661, g: 0.11129843, b: 0.20754719, a: 0.95686275}
+    - _OutlineColor: {r: 0.008143453, g: 0.018805582, b: 0.5754717, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
