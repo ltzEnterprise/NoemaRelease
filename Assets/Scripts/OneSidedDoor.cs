@@ -32,8 +32,10 @@ public class OneSidedDoor : MonoBehaviour
     private Quaternion rotacaoFechada;
     private Quaternion rotacaoAberta;
     
-    // Trava do Raycast
+    // Trava do Raycast e UI
     private float tempoUltimoClique = 0f;
+    private bool estaOlhando = false;
+    private bool mostrandoErro = false;
 
     void Start()
     {
@@ -46,17 +48,27 @@ public class OneSidedDoor : MonoBehaviour
 
     public void AoOlhar()
     {
-        if (interactText) interactText.SetActive(true);
+        estaOlhando = true;
+        // Só acende o botão de interação se não tiver uma mensagem de erro na cara do jogador
+        if (!mostrandoErro && interactText) interactText.SetActive(true);
     }
 
     public void AoSair()
     {
+        estaOlhando = false;
         if (interactText) interactText.SetActive(false);
+        
+        // Limpa a tela caso o jogador vire de costas rápido durante o erro
+        if (lockedMessage) lockedMessage.SetActive(false);
     }
 
     public void Interagir()
     {
         if (Time.time < tempoUltimoClique + 0.5f) return;
+        
+        // TRAVA ANTI-SPAM: Impede o cara de ficar apertando E e sobrepondo áudio/coroutine de erro
+        if (mostrandoErro) return; 
+
         tempoUltimoClique = Time.time;
 
         if (interactText) interactText.SetActive(false);
@@ -116,9 +128,18 @@ public class OneSidedDoor : MonoBehaviour
 
     IEnumerator ShowLockedMessage()
     {
+        mostrandoErro = true;
+
         if (audioSource && lockedSound) audioSource.PlayOneShot(lockedSound);
         if (lockedMessage) lockedMessage.SetActive(true);
+        
         yield return new WaitForSeconds(2.0f);
+        
         if (lockedMessage) lockedMessage.SetActive(false);
+        
+        mostrandoErro = false;
+
+        // A MÁGICA AQUI: Devolve o botão de interagir se o cara AINDA tiver olhando pra porta
+        if (estaOlhando && interactText) interactText.SetActive(true);
     }
 }

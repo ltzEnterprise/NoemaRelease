@@ -5655,7 +5655,6 @@ GameObject:
   - component: {fileID: 6505565716451215198}
   - component: {fileID: 905941863983922732}
   - component: {fileID: 6122558056235253226}
-  - component: {fileID: 1367777069827130962}
   m_Layer: 13
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -5800,24 +5799,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_MaxRayIntersections: 0
---- !u!114 &1367777069827130962
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1747968648136480995}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1cffc9c76d0e19b4eba94efa660adbde, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerInteracao
-  distanciaInteracao: 3
-  tempoDeTolerancia: 0.15
-  camadasInteracao:
-    serializedVersion: 2
-    m_Bits: 8
-  miraUI: {fileID: 0}
 --- !u!1 &2348466212401189285
 GameObject:
   m_ObjectHideFlags: 0
@@ -11951,6 +11932,8 @@ MonoBehaviour:
   velocidadeCorrer: 30
   forcaPulo: 6
   gravidade: 20
+  aceleracao: 10
+  desaceleracao: 15
   alturaLimiteVoid: -50
   pontoDeRespawnCentral: {fileID: 0}
   cameraJogador: {fileID: 1184622398119754726}
@@ -17324,15 +17307,11 @@ MonoBehaviour:
   - {fileID: 3338065040527993245}
   - {fileID: 2653601614489663957}
   - {fileID: 7075566238909441327}
-  modoDebug: 1
   comecarComTudo: 1
-  itemInicialDebug: 6
-  debug_DarCameraNoStart: 1
   debug_DarUpgradeLuzNoStart: 1
-  idDaCamera: 6
   delayTroca: 0.2
   itemSelecionado: -1
-  idLanterna: 6
+  idDaCamera: 6
   forcaDropSaque: 0.4
   velocidadeSaque: 10
 --- !u!1 &7746311156453938047

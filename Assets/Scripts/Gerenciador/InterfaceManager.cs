@@ -228,7 +228,9 @@ public class InterfaceManager : MonoBehaviour
             return; 
         }
 
-        // 🔥 CORREÇÃO AQUI: Avisa o jogo qual slot você escolheu, mesmo se for Novo Jogo
+        // 🔥 LÓGICA DE CENA MÁGICA: Decide aqui pra qual cena o jogo vai carregar 🔥
+        string cenaAlvo = nomeDaCenaDoJogo; 
+
         if (SistemaGlobal.Instance != null) 
         {
             SistemaGlobal.Instance.slotAtual = slot; 
@@ -236,15 +238,22 @@ public class InterfaceManager : MonoBehaviour
             if (SistemaGlobal.Instance.ExisteSave(slot))
             {
                 SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = true;
+                
+                // Se existe save, pega a cena que ele parou. Se bugar e não achar, usa a padrão.
+                string cenaSalva = PlayerPrefs.GetString($"Slot_{slot}_Cena", "");
+                if (!string.IsNullOrEmpty(cenaSalva))
+                {
+                    cenaAlvo = cenaSalva;
+                }
             }
             else
             {
-                // Garante que num Novo Jogo ele não vai tentar te teleportar pra um lugar bizarro
+                // Novo jogo
                 SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false; 
             }
         }
         
-        StartCoroutine(RotinaLoadingPorcentagem(nomeDaCenaDoJogo));
+        StartCoroutine(RotinaLoadingPorcentagem(cenaAlvo));
     }
 
     public void BotaoApagarSlot(int slot)
@@ -591,6 +600,10 @@ public class InterfaceManager : MonoBehaviour
         if (playerMaster != null && SistemaGlobal.Instance != null)
         {
             SistemaGlobal.Instance.SalvarJogo(playerMaster.transform.position, SceneManager.GetActiveScene().name);
+            
+            // 🔥 GARANTIA ABSOLUTA DE SALVAR A CENA QUE O CARA PAROU 🔥
+            PlayerPrefs.SetString($"Slot_{SistemaGlobal.Instance.slotAtual}_Cena", SceneManager.GetActiveScene().name);
+            
             if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
             PlayerPrefs.Save();
         }

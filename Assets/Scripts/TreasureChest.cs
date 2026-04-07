@@ -4,10 +4,6 @@ using TMPro;
 
 public class TreasureChest : MonoBehaviour
 {
-    [Header("--- BLOQUEADOR ---")]
-    [Tooltip("Coloque o objeto que bloqueia (ex: plasma). Se ficar vazio, funciona normal.")]
-    public GameObject bloqueador;
-
     [Header("Save System")]
     public string uniqueID; 
 
@@ -40,14 +36,8 @@ public class TreasureChest : MonoBehaviour
     public AudioClip somTrancado;
 
     private bool jaAbriu = false;
-    private Collider colisorDoBau;
     private bool estaOlhando = false; // A trava que faltava pra não bugar o texto
-
-    // Função que checa em tempo real se a parada tá bloqueada
-    private bool TaBloqueado()
-    {
-        return bloqueador != null && bloqueador.activeInHierarchy;
-    }
+    private bool mostrandoErro = false; // Trava pro erro não bugar se spammar o clique
 
     void Start()
     {
@@ -55,8 +45,6 @@ public class TreasureChest : MonoBehaviour
         if(textoPrecisaChave) textoPrecisaChave.SetActive(false);
         if(painelFimDemo) painelFimDemo.SetActive(false); 
         if(painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
-
-        colisorDoBau = GetComponent<Collider>();
 
         // CARREGA ESTADO
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
@@ -69,57 +57,18 @@ public class TreasureChest : MonoBehaviour
         }
     }
 
-    void Update()
-    {
-        // Monitoramento constante do bloqueador
-        if (TaBloqueado())
-        {
-            if (textoInteragir && textoInteragir.activeSelf) textoInteragir.SetActive(false);
-            if (textoPrecisaChave && textoPrecisaChave.activeSelf) textoPrecisaChave.SetActive(false);
-        }
-    }
-
-    // --- O RADAR ANTI-PAREDE TÁ AQUI ---
-    bool ChecarVisaoLimpa()
-    {
-        Camera cam = Camera.main;
-        if (cam == null) return false;
-
-        // Pega o centro exato do baú para evitar que o raio bata no chão e falhe
-        Vector3 centroDoBau = colisorDoBau != null ? colisorDoBau.bounds.center : transform.position;
-        Vector3 direcao = centroDoBau - cam.transform.position;
-        float distancia = direcao.magnitude;
-
-        RaycastHit hit;
-        // Dispara um raio do seu olho pro centro do baú. Ignora Triggers invisíveis.
-        if (Physics.Raycast(cam.transform.position, direcao, out hit, distancia, ~0, QueryTriggerInteraction.Ignore))
-        {
-            // Se o raio bateu em algo que NÃO é o baú ou a tampa dele, tem uma parede no meio
-            if (hit.transform != transform && !hit.transform.IsChildOf(transform))
-            {
-                return false; 
-            }
-        }
-        return true; // Visão 100% limpa, sem paredes
-    }
-
     // --- SISTEMA RAYCAST ---
 
     public void AoOlhar()
     {
-        if (TaBloqueado()) return; // Morre aqui se tiver bloqueado
         if (jaAbriu) return;
+        
+        estaOlhando = true;
 
-        // Só acende o texto se não tiver parede na frente
-        if (ChecarVisaoLimpa())
+        // Só acende o botão E se não estiver tocando a animação de erro de chave
+        if (!mostrandoErro && textoInteragir) 
         {
-            estaOlhando = true;
-            if (textoInteragir && !textoInteragir.activeSelf) textoInteragir.SetActive(true);
-        }
-        else
-        {
-            estaOlhando = false;
-            if (textoInteragir && textoInteragir.activeSelf) textoInteragir.SetActive(false);
+            textoInteragir.SetActive(true);
         }
     }
 
@@ -127,16 +76,11 @@ public class TreasureChest : MonoBehaviour
     {
         estaOlhando = false;
         if (textoInteragir) textoInteragir.SetActive(false);
-        if (textoPrecisaChave) textoPrecisaChave.SetActive(false); // Mata o erro se virar as costas
     }
 
     public void Interagir()
     {
-        if (TaBloqueado()) return; // Foda-se o clique se tiver bloqueado
-        if (jaAbriu) return;
-
-        // Se o cara apertar E através da parede, barra a ação na hora
-        if (!ChecarVisaoLimpa()) return;
+        if (jaAbriu || mostrandoErro) return;
 
         if (!requerChave)
         {
@@ -151,7 +95,6 @@ public class TreasureChest : MonoBehaviour
             else
             {
                 if(audioSource && somTrancado) audioSource.PlayOneShot(somTrancado);
-                StopAllCoroutines();
                 StartCoroutine(AvisoChaveFaltando());
             }
         }
@@ -205,7 +148,10 @@ public class TreasureChest : MonoBehaviour
 
     IEnumerator AvisoChaveFaltando()
     {
+        mostrandoErro = true;
+
         if (textoInteragir) textoInteragir.SetActive(false);
+        
         if (textoPrecisaChave)
         {
             textoPrecisaChave.SetActive(true);
@@ -213,8 +159,13 @@ public class TreasureChest : MonoBehaviour
             textoPrecisaChave.SetActive(false);
         }
         
+        mostrandoErro = false;
+
         // A MÁGICA: Só liga o texto de interagir de volta se a porra do jogador AINDA estiver olhando
-        if (!jaAbriu && estaOlhando && textoInteragir) textoInteragir.SetActive(true);
+        if (!jaAbriu && estaOlhando && textoInteragir) 
+        {
+            textoInteragir.SetActive(true);
+        }
     }
 
     IEnumerator SequenciaRecompensa()

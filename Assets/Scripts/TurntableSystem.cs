@@ -56,8 +56,11 @@ public class TurntableSystem : MonoBehaviour
     private int currentDiskID = 0; 
     private bool isPlaying = false;
     
-    // A MÁGICA QUE MATA O DOUBLE TRIGGER TÁ AQUI
+    // Travas da UI de Interação
     private float tempoBloqueio = 0f; 
+    private bool estaOlhando = false;
+    private bool mostrandoErro = false;
+    private Coroutine rotinaErro;
 
     // Sistema de Raio de Áudio
     private AudioSource globalSoundtrack;
@@ -184,13 +187,17 @@ public class TurntableSystem : MonoBehaviour
 
     public void AoOlhar() 
     { 
-        if (interactText) interactText.SetActive(true); 
+        estaOlhando = true;
+        // Só acende se não tiver mostrando a mensagem de erro na cara
+        if (!mostrandoErro && interactText) interactText.SetActive(true); 
+        
         if (currentDiskID != 0 && !temManivela && textoFaltaManivela) 
             textoFaltaManivela.SetActive(true);
     }
     
     public void AoSair() 
     { 
+        estaOlhando = false;
         if (interactText) interactText.SetActive(false); 
         if (noDiskText) noDiskText.SetActive(false); 
         if (textoFaltaManivela) textoFaltaManivela.SetActive(false);
@@ -198,9 +205,12 @@ public class TurntableSystem : MonoBehaviour
 
     public void Interagir()
     {
-        // SE AINDA TÁ NO COOLDOWN DO ÚLTIMO CLIQUE, IGNORA PRA NÃO EJETAR JUNTO
         if (Time.unscaledTime < tempoBloqueio) return;
-        tempoBloqueio = Time.unscaledTime + 0.5f; // Meio segundo de trava de segurança
+        
+        // Anti-spam de erro
+        if (mostrandoErro) return;
+
+        tempoBloqueio = Time.unscaledTime + 0.5f; 
 
         int itemInHand = InventoryManager.Instance != null ? InventoryManager.Instance.itemSelecionado : -1;
 
@@ -245,7 +255,8 @@ public class TurntableSystem : MonoBehaviour
         }
         else
         {
-            StartCoroutine(ShowErrorFeedback());
+            if (rotinaErro != null) StopCoroutine(rotinaErro);
+            rotinaErro = StartCoroutine(ShowErrorFeedback());
         }
     }
 
@@ -389,10 +400,16 @@ public class TurntableSystem : MonoBehaviour
 
     IEnumerator ShowErrorFeedback()
     {
+        mostrandoErro = true;
         if (interactText) interactText.SetActive(false);
+
         if (noDiskText) noDiskText.SetActive(true);
         yield return new WaitForSeconds(2.0f);
         if (noDiskText) noDiskText.SetActive(false);
+
+        mostrandoErro = false;
+        // MÁGICA: Reativa o texto principal se o player continuar olhando
+        if (estaOlhando && interactText) interactText.SetActive(true);
     }
 
     [ContextMenu("Generate Unique ID")]

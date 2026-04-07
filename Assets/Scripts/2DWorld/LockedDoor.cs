@@ -24,7 +24,7 @@ public class LockedDoor : MonoBehaviour
     void VerificarAbertura(GameObject objetoQueBateu)
     {
         // 1. Lógica da Chave (Normal)
-        if (objetoQueBateu.CompareTag(tagDaChave))
+        if (objetoQueBateu.CompareTag("Key"))
         {
             AbrirPorta();
             Destroy(objetoQueBateu); 

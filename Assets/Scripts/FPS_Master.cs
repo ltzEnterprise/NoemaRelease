@@ -58,16 +58,11 @@ public class FPS_Master : MonoBehaviour
         controller = GetComponent<CharacterController>();
         spawnPosInicial = (pontoDeRespawnCentral != null) ? pontoDeRespawnCentral.position : transform.position;
         
-        // Puxa a câmera logo de cara se você esquecer de arrastar no Inspector
         if (cameraJogador == null) cameraJogador = Camera.main;
 
-        // --- A MÁGICA PRA NÃO "SNAPAR" A VISÃO ---
         if (cameraJogador != null)
         {
-            // Pega a rotação que você configurou no Editor antes de dar Play
             rotacaoX = cameraJogador.transform.localEulerAngles.x;
-            
-            // A Unity as vezes lê -10 graus como 350. Isso aqui converte pra não bugar a trava de 90 graus da cabeça
             if (rotacaoX > 180f) rotacaoX -= 360f; 
         }
         
@@ -88,8 +83,6 @@ public class FPS_Master : MonoBehaviour
         {
             cameraJogador.fieldOfView = fovSalvo;
         }
-        
-        Debug.Log($"[PLAYER] Configurações Carregadas: Sensibilidade = {sensibilidadeMouse} | FOV = {fovSalvo}");
     }
 
     void Update() 
@@ -117,7 +110,6 @@ public class FPS_Master : MonoBehaviour
             float inputX = 0f;
             float inputZ = 0f;
 
-            // FORÇA BRUTA NO WASD - IGNORA SETINHAS COMPLETAMENTE
             if (!travadoInteracao)
             {
                 if (Input.GetKey(KeyCode.D)) inputX += 1f;
@@ -125,7 +117,6 @@ public class FPS_Master : MonoBehaviour
                 if (Input.GetKey(KeyCode.W)) inputZ += 1f;
                 if (Input.GetKey(KeyCode.S)) inputZ -= 1f;
 
-                // Normaliza pra não andar mais rápido na diagonal
                 Vector2 inputNormalizado = new Vector2(inputX, inputZ).normalized;
                 inputX = inputNormalizado.x;
                 inputZ = inputNormalizado.y;
@@ -135,25 +126,21 @@ public class FPS_Master : MonoBehaviour
             float alvoX = inputX * velAlvo;
             float alvoZ = inputZ * velAlvo;
 
-            // --- A MÁGICA DA INÉRCIA (LERP) ---
-            // Se o jogador estiver apertando alguma tecla, usa aceleração. Se não, freia usando desaceleração.
             float taxaInterpolacao = (inputX != 0 || inputZ != 0) ? aceleracao : desaceleracao;
 
             velocidadeAtualX = Mathf.Lerp(velocidadeAtualX, alvoX, Time.deltaTime * taxaInterpolacao);
             velocidadeAtualZ = Mathf.Lerp(velocidadeAtualZ, alvoZ, Time.deltaTime * taxaInterpolacao);
-            // ----------------------------------
 
             Vector3 forward = transform.TransformDirection(Vector3.forward);
             Vector3 right = transform.TransformDirection(Vector3.right);
             
-            // Aplica as velocidades suaves na direção do corpo
             moveDirection.x = (forward.x * velocidadeAtualZ) + (right.x * velocidadeAtualX);
             moveDirection.z = (forward.z * velocidadeAtualZ) + (right.z * velocidadeAtualX);
 
             if (!travadoInteracao && Input.GetButton("Jump")) 
                 moveDirection.y = forcaPulo;
             else 
-                moveDirection.y = -5f; // Mantém a pressão pro chão funcionar direito nas ladeiras
+                moveDirection.y = -5f; 
         }
         else
         {
@@ -176,10 +163,8 @@ public class FPS_Master : MonoBehaviour
     {
         if (cameraJogador == null) return;
 
-        // O Mouse X vira o corpo inteiro pros lados (e ele já respeita a rotação Y inicial que tá no Editor)
         transform.Rotate(0, Input.GetAxis("Mouse X") * sensibilidadeMouse, 0);
         
-        // Aplica o movimento do mouse na rotação inicial que a gente salvou lá no Awake
         rotacaoX -= Input.GetAxis("Mouse Y") * sensibilidadeMouse;
         rotacaoX = Mathf.Clamp(rotacaoX, -90f, 90f);
         
@@ -192,32 +177,45 @@ public class FPS_Master : MonoBehaviour
 
         Ray raio = cameraJogador.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0)); 
         RaycastHit hit;
-        bool detectou = Physics.Raycast(raio, out hit, distanciaInteracao, camadasInteracao, QueryTriggerInteraction.Ignore);
+        
+        // 🔥 A CORREÇÃO DA CAGADA: Junta a camada de Interação com a camada 0 (Default das paredes).
+        // Assim ele não atravessa parede, MAS TAMBÉM não bate no seu próprio corpo/câmera!
+        int mascaraSegura = camadasInteracao.value | (1 << 0);
+        
+        bool bateuEmAlgo = Physics.Raycast(raio, out hit, distanciaInteracao, mascaraSegura, QueryTriggerInteraction.Ignore);
+        bool achouInterativo = false;
 
-        if (detectou)
+        if (bateuEmAlgo)
         {
-            Transform objAtual = hit.transform;
-            timerDesaparecer = tempoDeTolerancia; 
+            // O raio bateu em algo. Agora a gente confere: A layer desse objeto tá na sua lista de 'camadasInteracao'?
+            if ((camadasInteracao.value & (1 << hit.transform.gameObject.layer)) > 0)
+            {
+                achouInterativo = true;
+                Transform objAtual = hit.transform;
+                timerDesaparecer = tempoDeTolerancia; 
 
-            if (objAtual != ultimoObjeto)
-            {
-                bool ehParente = (ultimoObjeto != null) && (objAtual.IsChildOf(ultimoObjeto) || ultimoObjeto.IsChildOf(objAtual));
-                if (!ehParente)
+                if (objAtual != ultimoObjeto)
                 {
-                    if (ultimoObjeto != null) ultimoObjeto.SendMessageUpwards("AoSair", SendMessageOptions.DontRequireReceiver);
-                    objAtual.SendMessageUpwards("AoOlhar", SendMessageOptions.DontRequireReceiver);
-                    ultimoObjeto = objAtual;
+                    bool ehParente = (ultimoObjeto != null) && (objAtual.IsChildOf(ultimoObjeto) || ultimoObjeto.IsChildOf(objAtual));
+                    if (!ehParente)
+                    {
+                        if (ultimoObjeto != null) ultimoObjeto.SendMessageUpwards("AoSair", SendMessageOptions.DontRequireReceiver);
+                        objAtual.SendMessageUpwards("AoOlhar", SendMessageOptions.DontRequireReceiver);
+                        ultimoObjeto = objAtual;
+                    }
+                    else ultimoObjeto = objAtual; 
                 }
-                else ultimoObjeto = objAtual; 
-            }
-            if (miraUI) miraUI.color = Color.red;
-            
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                objAtual.SendMessageUpwards("Interagir", SendMessageOptions.DontRequireReceiver);
+                if (miraUI) miraUI.color = Color.red;
+                
+                if (Input.GetKeyDown(KeyCode.E))
+                {
+                    objAtual.SendMessageUpwards("Interagir", SendMessageOptions.DontRequireReceiver);
+                }
             }
         }
-        else
+
+        // Se o raio bateu numa parede (achouInterativo = false) OU não bateu em nada no mapa
+        if (!achouInterativo)
         {
             if (timerDesaparecer > 0)
             {

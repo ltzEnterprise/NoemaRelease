@@ -10,29 +10,19 @@ public class ReceiverDoor : MonoBehaviour
     [Tooltip("Arrasta o objeto visual da porta aqui")]
     public Transform doorVisual; 
 
-    public enum TipoAbertura { DeslizarParaLado, EncolherNaBorda }
-    [Tooltip("Deslizar move a porta. Encolher cria um pivô automático na borda e aperta a malha.")]
-    public TipoAbertura modoAbertura = TipoAbertura.DeslizarParaLado;
+    public enum LadoSumir { Esquerda, Direita, Cima, Baixo }
+    [Tooltip("Para qual lado a porta deve 'sumir' (encolher)?")]
+    public LadoSumir direcaoParaSumir = LadoSumir.Esquerda;
 
-    public enum LadoAbertura { Esquerda, Direita, Cima, Baixo }
-    [Tooltip("Para que lado a porta deve ir? Ou onde fica a borda que está presa à parede?")]
-    public LadoAbertura lado = LadoAbertura.Esquerda;
-
-    [Header("Animation Settings")]
+    [Header("Animação")]
     public float speed = 5f;
 
-    [Header("Sounds")]
+    [Header("Áudio")]
     public AudioSource audioSource;
     public AudioClip openSound;
     public AudioClip closeSound;
 
     private bool shouldBeOpen = false;
-    
-    // Variáveis para o modo Deslizar
-    private Vector3 posicaoFechada;
-    private Vector3 posicaoAberta;
-
-    // Variáveis para o modo Encolher
     private Transform pivotAutomatico;
     private Vector3 escalaFechada;
     private Vector3 escalaAberta;
@@ -43,91 +33,61 @@ public class ReceiverDoor : MonoBehaviour
 
         if (doorVisual != null)
         {
-            // 1. Identificar a borda/tamanho real da porta lendo a malha 3D
-            Vector3 tamanhoLocal = Vector3.one;
+            // 1. Identificar a borda real lendo a malha 3D
+            Vector3 tamanhoLocal = doorVisual.localScale;
             MeshFilter mf = doorVisual.GetComponentInChildren<MeshFilter>();
             
             if (mf != null)
             {
                 tamanhoLocal = mf.sharedMesh.bounds.size;
-                // Multiplicamos pela escala para ter o tamanho exato na cena
-                tamanhoLocal.Scale(doorVisual.localScale);
+                tamanhoLocal.Scale(doorVisual.localScale); // Ajusta pela escala que tá na cena
             }
+
+            // 2. Cria o Pivô Invisível na borda exata da porta
+            pivotAutomatico = new GameObject(doorVisual.name + "_PivotSumico").transform;
+            pivotAutomatico.SetParent(doorVisual.parent);
+            
+            Vector3 posicaoDaBorda = doorVisual.localPosition;
+            
+            // Puxa o pivô pra extremidade
+            if (direcaoParaSumir == LadoSumir.Esquerda) posicaoDaBorda.x -= tamanhoLocal.x / 2f;
+            else if (direcaoParaSumir == LadoSumir.Direita) posicaoDaBorda.x += tamanhoLocal.x / 2f;
+            else if (direcaoParaSumir == LadoSumir.Cima) posicaoDaBorda.y += tamanhoLocal.y / 2f;
+            else if (direcaoParaSumir == LadoSumir.Baixo) posicaoDaBorda.y -= tamanhoLocal.y / 2f;
+
+            pivotAutomatico.localPosition = posicaoDaBorda;
+            pivotAutomatico.localRotation = doorVisual.localRotation;
+            
+            // Coloca a porta como filha do pivô
+            doorVisual.SetParent(pivotAutomatico);
+
+            escalaFechada = pivotAutomatico.localScale;
+            escalaAberta = escalaFechada;
+
+            // Define qual eixo vai "sumir" virando zero
+            if (direcaoParaSumir == LadoSumir.Esquerda || direcaoParaSumir == LadoSumir.Direita)
+                escalaAberta.x = 0f;
             else
-            {
-                // Se for um modelo sem MeshFilter nativo, usa a escala
-                tamanhoLocal = doorVisual.localScale;
-            }
-
-            if (modoAbertura == TipoAbertura.DeslizarParaLado)
-            {
-                posicaoFechada = doorVisual.localPosition;
-                posicaoAberta = posicaoFechada;
-
-                // Move exatamente o tamanho do modelo
-                if (lado == LadoAbertura.Esquerda) posicaoAberta.x -= tamanhoLocal.x;
-                else if (lado == LadoAbertura.Direita) posicaoAberta.x += tamanhoLocal.x;
-                else if (lado == LadoAbertura.Cima) posicaoAberta.y += tamanhoLocal.y;
-                else if (lado == LadoAbertura.Baixo) posicaoAberta.y -= tamanhoLocal.y;
-            }
-            else if (modoAbertura == TipoAbertura.EncolherNaBorda)
-            {
-                // 2. Cria um "Pivô" real na borda exata. Animação 100% nativa da Unity e sem gambiarras.
-                pivotAutomatico = new GameObject(doorVisual.name + "_Pivot").transform;
-                pivotAutomatico.SetParent(doorVisual.parent);
-                
-                Vector3 posicaoDaBorda = doorVisual.localPosition;
-                
-                // Puxa o pivô exatamente para a extremidade da porta
-                if (lado == LadoAbertura.Esquerda) posicaoDaBorda.x -= tamanhoLocal.x / 2f;
-                else if (lado == LadoAbertura.Direita) posicaoDaBorda.x += tamanhoLocal.x / 2f;
-                else if (lado == LadoAbertura.Cima) posicaoDaBorda.y += tamanhoLocal.y / 2f;
-                else if (lado == LadoAbertura.Baixo) posicaoDaBorda.y -= tamanhoLocal.y / 2f;
-
-                pivotAutomatico.localPosition = posicaoDaBorda;
-                pivotAutomatico.localRotation = doorVisual.localRotation;
-                
-                // Coloca a porta dentro deste novo pivô.
-                doorVisual.SetParent(pivotAutomatico);
-
-                escalaFechada = pivotAutomatico.localScale;
-                escalaAberta = escalaFechada;
-
-                if (lado == LadoAbertura.Esquerda || lado == LadoAbertura.Direita)
-                    escalaAberta.x = 0f;
-                else
-                    escalaAberta.y = 0f;
-            }
+                escalaAberta.y = 0f;
         }
 
         int estadoSalvo = PlayerPrefs.GetInt(doorID, 0); 
         shouldBeOpen = (estadoSalvo == 1);
 
         // Aplica o estado guardado imediatamente
-        if (doorVisual != null)
+        if (pivotAutomatico != null)
         {
-            if (modoAbertura == TipoAbertura.DeslizarParaLado)
-                doorVisual.localPosition = shouldBeOpen ? posicaoAberta : posicaoFechada;
-            else if (pivotAutomatico != null)
-                pivotAutomatico.localScale = shouldBeOpen ? escalaAberta : escalaFechada;
+            pivotAutomatico.localScale = shouldBeOpen ? escalaAberta : escalaFechada;
         }
     }
 
     void Update()
     {
-        if (doorVisual == null) return;
+        if (pivotAutomatico == null) return;
 
-        // Lógica de Animação perfeitamente limpa
-        if (modoAbertura == TipoAbertura.DeslizarParaLado)
-        {
-            Vector3 alvo = shouldBeOpen ? posicaoAberta : posicaoFechada;
-            doorVisual.localPosition = Vector3.Lerp(doorVisual.localPosition, alvo, Time.deltaTime * speed);
-        }
-        else if (modoAbertura == TipoAbertura.EncolherNaBorda && pivotAutomatico != null)
-        {
-            Vector3 alvo = shouldBeOpen ? escalaAberta : escalaFechada;
-            pivotAutomatico.localScale = Vector3.Lerp(pivotAutomatico.localScale, alvo, Time.deltaTime * speed);
-        }
+        // Animação cravada: encolhe até sumir no eixo certo
+        Vector3 alvo = shouldBeOpen ? escalaAberta : escalaFechada;
+        pivotAutomatico.localScale = Vector3.Lerp(pivotAutomatico.localScale, alvo, Time.deltaTime * speed);
     }
 
     public void SetState(bool shouldOpen) 

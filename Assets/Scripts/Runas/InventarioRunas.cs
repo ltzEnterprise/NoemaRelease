@@ -24,13 +24,12 @@ public class InventarioRunas : MonoBehaviour
     [HideInInspector] public Vector3 ultimaPosicaoSalva;
     [HideInInspector] public bool deveCarregarPosicao = false;
 
-private void Awake() 
+    private void Awake() 
     { 
         if (Instance == null) 
         {
             Instance = this;
             
-            // --- A MÁGICA AQUI ---
             // Tira o objeto de dentro de qualquer "pai" e joga ele na raiz da cena
             transform.SetParent(null); 
             
@@ -38,6 +37,11 @@ private void Awake()
             SceneManager.sceneLoaded += OnSceneLoaded;
         } 
         else Destroy(gameObject);
+    }
+
+    private void Start()
+    {
+        CarregarRunasDoSave();
     }
 
     private void OnDestroy()
@@ -60,6 +64,23 @@ private void Awake()
         }
     }
 
+    // CARREGA AS RUNAS QUANDO O JOGO ABRE
+    private void CarregarRunasDoSave()
+    {
+        if (Application.isEditor || PersistenciaManager.Instance == null) return;
+
+        foreach (var slot in configuracaoRunas)
+        {
+            // Lê do PersistenciaManager se a runa tá lá
+            bool temRuna = PersistenciaManager.Instance.ObterEstado("Runa_" + slot.nomeIdentificador);
+            if (temRuna && !runasNaMao.Contains(slot.data))
+            {
+                runasNaMao.Add(slot.data);
+            }
+        }
+        StartCoroutine(RedesenharRunasNaTela());
+    }
+
     public void SalvarPosicaoAtual(Vector3 posicao)
     {
         ultimaPosicaoSalva = posicao;
@@ -79,7 +100,13 @@ private void Awake()
                 
                 AtualizarUI(slot.data.icone);
 
-                // CORREÇÃO: Usa DayNightCycle
+                // --- SALVA A RUNA IMEDIATAMENTE NO DISCO ---
+                if (!Application.isEditor && PersistenciaManager.Instance != null)
+                {
+                    PersistenciaManager.Instance.RegistrarEstado("Runa_" + nome, true);
+                    PersistenciaManager.Instance.SalvarTudo();
+                }
+
                 if (runasNaMao.Count == 3 && DayNightCycle.Instance != null)
                 {
                     DayNightCycle.Instance.ChangeTo(DayNightCycle.TimeState.DramaticDay); 
@@ -103,5 +130,15 @@ private void Awake()
     {
         runasNaMao.Clear();
         if (AreaDasRunas.Instance != null) AreaDasRunas.Instance.LimparTodasAsRunasDaTela();
+
+        // --- ZERA AS RUNAS DO SAVE ---
+        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        {
+            foreach (var slot in configuracaoRunas)
+            {
+                PersistenciaManager.Instance.RegistrarEstado("Runa_" + slot.nomeIdentificador, false);
+            }
+            PersistenciaManager.Instance.SalvarTudo();
+        }
     }
 }

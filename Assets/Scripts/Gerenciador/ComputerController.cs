@@ -56,6 +56,9 @@ public class ComputerController : MonoBehaviour
     private bool modoRunaAtivo;
     private bool cutsceneRodando = false; 
 
+    private bool estaOlhando = false;
+    private float tempoUltimoClique = 0f;
+
     void Start()
     {
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
@@ -75,7 +78,6 @@ public class ComputerController : MonoBehaviour
             if (pixelURPFeature != null) pixelURPFeature.SetActive(false);
         }
 
-        // CARREGA A PROGRESSÃO DIRETO DO SAVE
         if (PlayerPrefs.GetInt("PC_" + idDoComputador + "_Queimado", 0) == 1)
         {
             pcQueimado = true;
@@ -107,7 +109,13 @@ public class ComputerController : MonoBehaviour
 
     public void AoOlhar()
     {
+        estaOlhando = true;
         if (pcQueimado || cutsceneRodando) return; 
+
+        // 🔥 O ASSASSINO DE TEXTO PISCANDO 🔥
+        // Se as telas estiverem desativadas e não for o modo da runa, o PC tá desligado. Não mostra NADA.
+        bool pcTemEnergia = telaDesktop.activeSelf || telaBonusNoite.activeSelf || modoRunaAtivo;
+        if (!pcTemEnergia) return;
 
         if (modoRunaAtivo && textoInteragirRuna) textoInteragirRuna.SetActive(true);
         else if (!modoRunaAtivo && textoInteragirPC) textoInteragirPC.SetActive(true);
@@ -115,6 +123,7 @@ public class ComputerController : MonoBehaviour
 
     public void AoSair()
     {
+        estaOlhando = false;
         if (textoInteragirPC) textoInteragirPC.SetActive(false);
         if (textoInteragirRuna) textoInteragirRuna.SetActive(false);
     }
@@ -187,37 +196,25 @@ public class ComputerController : MonoBehaviour
         StartCoroutine(SequenciaDeAberturaDaCena());
     }
 
-    // ========================================================
-    // ROTINA BLINDADA: FORÇA A TELA PRETA APARECER CUSTE O QUE CUSTAR
-    // ========================================================
     private IEnumerator SequenciaDeAberturaDaCena()
     {
-        Debug.Log("[PC] Iniciando Cutscene Pós-Crash...");
         cutsceneRodando = true;
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
 
-        yield return new WaitForSecondsRealtime(tempoTelaAzul); // Usa Realtime pra ignorar pause
+        yield return new WaitForSecondsRealtime(tempoTelaAzul); 
         if (telaAzulUITransicao) telaAzulUITransicao.SetActive(false);
 
-        // 1. FORÇA O PAINEL A LIGAR PRIMEIRO DE TUDO!
         if (painelUpgradeCamera != null)
         {
-            // Força o Canvas pai a ligar (caso a Unity tenha desativado por engano)
             Canvas canvasPai = painelUpgradeCamera.GetComponentInParent<Canvas>(true);
             if (canvasPai != null) canvasPai.gameObject.SetActive(true);
 
             painelUpgradeCamera.SetActive(true);
-            painelUpgradeCamera.transform.SetAsLastSibling(); // Joga pra frente de todas as outras UIs
-            Debug.Log("[PC] A TELA DE UPGRADE FOI FORÇADA A LIGAR AGORA.");
-        }
-        else
-        {
-            Debug.LogError("[PC ERROR] O SLOT DO 'Painel Upgrade Camera' TÁ VAZIO NO INSPECTOR!");
+            painelUpgradeCamera.transform.SetAsLastSibling(); 
         }
 
         if (audioSourcePC != null && somUpgradeCamera != null) audioSourcePC.PlayOneShot(somUpgradeCamera);
 
-        // 2. BLOCO PROTEGIDO: Se o inventário der erro, a tela preta NÃO some.
         try
         {
             if (InventoryManager.Instance != null)
@@ -230,33 +227,34 @@ public class ComputerController : MonoBehaviour
                 RealityCamera.Instance.ReceberUpgradeLanterna();
             }
         }
-        catch (System.Exception e)
-        {
-            Debug.LogError("[PC WARNING] Deu erro no Inventário/Câmera, mas a Tela Preta vai continuar! Erro: " + e.Message);
-        }
+        catch (System.Exception) { }
 
-        // 3. FICA NA TELA PELO TEMPO QUE VOCÊ MANDOU
         yield return new WaitForSecondsRealtime(tempoPainelUpgrade);
         
-        // 4. DESLIGA A TELA PRETA
         if (painelUpgradeCamera) painelUpgradeCamera.SetActive(false);
 
-        Debug.Log("[PC] Fim da Cutscene. Devolvendo controle.");
         cutsceneRodando = false;
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
         if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
+
+        if (estaOlhando) AoOlhar();
     }
 
     public void Interagir()
     {
         if (pcQueimado || cutsceneRodando) return; 
 
+        if (Time.unscaledTime < tempoUltimoClique + 0.5f) return;
+        tempoUltimoClique = Time.unscaledTime;
+
         if (modoRunaAtivo)
         {
+            AoSair(); 
             StartCoroutine(SequenciaPegarRuna());
         }
         else if (telaDesktop.activeSelf || telaBonusNoite.activeSelf)
         {
+            AoSair(); 
             StartCoroutine(SequenciaEntradaMatrix());
         }
         else
@@ -270,7 +268,6 @@ public class ComputerController : MonoBehaviour
     {
         cutsceneRodando = true;
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
-        AoSair(); 
 
         if (audioSourcePC && somPegarRuna) audioSourcePC.PlayOneShot(somPegarRuna);
         if (InventarioRunas.Instance != null) InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);

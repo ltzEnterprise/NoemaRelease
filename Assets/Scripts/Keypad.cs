@@ -39,13 +39,14 @@ public class Keypad : MonoBehaviour
 
     private string inputAtual = "";
     private bool jogadorUsando = false; 
-    private bool jaResolveuPrincipal = false; // Garante que não vai te dar a runa 2 vezes se digitar a senha de novo
+    private bool jaResolveuPrincipal = false; 
     
     private float tempoUltimoClique = 0f;
     private float cooldownClique = 0.2f; 
 
     private Coroutine rotinaReset;
     private bool aguardandoLimpeza = false;
+    private bool estaOlhando = false; // Trava contra ghost text
 
     // Função que checa em tempo real se a parada tá bloqueada
     private bool TaBloqueado()
@@ -71,31 +72,39 @@ public class Keypad : MonoBehaviour
 
     public void AoOlhar() 
     { 
-        if (TaBloqueado()) return; // Se tiver bloqueado, o texto nem aparece
+        estaOlhando = true;
+        if (TaBloqueado()) return; 
 
-        // O painel NUNCA MAIS trava, então o texto sempre aparece se não tiver usando
         if (!jogadorUsando && textoInteragirProprio) 
             textoInteragirProprio.SetActive(true); 
     }
 
     public void AoSair() 
     { 
+        estaOlhando = false;
         if (textoInteragirProprio) 
             textoInteragirProprio.SetActive(false); 
     }
 
     public void Interagir()
     {
-        if (TaBloqueado()) return; // Se tiver bloqueado, foda-se o clique
+        if (TaBloqueado()) return; 
         if (!jogadorUsando) EntrarModoKeypad();
     }
 
     void Update()
     {
-        // Monitoramento constante: Se ativar o bloqueador na cara do jogador, apaga o texto na hora
+        // Monitoramento constante: Se ativar o bloqueador na cara do jogador, apaga o texto
         if (TaBloqueado() && textoInteragirProprio && textoInteragirProprio.activeSelf)
         {
             textoInteragirProprio.SetActive(false);
+        }
+
+        // SE O JOGADOR ESTIVER USANDO O KEYPAD E O BLOQUEADOR APARECER...
+        if (jogadorUsando && TaBloqueado())
+        {
+            SairModoKeypad(); // EJETA O JOGADOR!
+            return;
         }
 
         if (!jogadorUsando) return;
@@ -115,6 +124,8 @@ public class Keypad : MonoBehaviour
 
     void ProcessarCliqueMouse()
     {
+        if (cameraFixaKeypad == null) return;
+
         Ray raio = cameraFixaKeypad.ScreenPointToRay(Input.mousePosition);
         RaycastHit[] hits = Physics.RaycastAll(raio, 100f);
         System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
@@ -137,18 +148,23 @@ public class Keypad : MonoBehaviour
         jogadorUsando = true;
         if (textoInteragirProprio) textoInteragirProprio.SetActive(false);
 
-        if (pontoDeRetorno != null)
+        if (pontoDeRetorno != null && FPS_Master.Instance != null)
         {
             FPS_Master.Instance.Teleportar(pontoDeRetorno.position);
         }
 
-        FPS_Master.Instance.FicarInvisivelMasFisico(true);
-
-        if(FPS_Master.Instance.cameraJogador) 
+        if (FPS_Master.Instance != null)
         {
-            FPS_Master.Instance.cameraJogador.enabled = false;
-            var listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
-            if(listener) listener.enabled = false;
+            FPS_Master.Instance.FicarInvisivelMasFisico(true);
+
+            if(FPS_Master.Instance.cameraJogador) 
+            {
+                FPS_Master.Instance.cameraJogador.enabled = false;
+                var listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
+                if(listener) listener.enabled = false;
+            }
+
+            FPS_Master.Instance.AlterarEstadoJogador(true, true);
         }
 
         if(cameraFixaKeypad) 
@@ -157,8 +173,6 @@ public class Keypad : MonoBehaviour
             var listener = cameraFixaKeypad.GetComponent<AudioListener>();
             if(listener) listener.enabled = true;
         }
-        
-        FPS_Master.Instance.AlterarEstadoJogador(true, true);
     }
 
     void SairModoKeypad()
@@ -172,15 +186,22 @@ public class Keypad : MonoBehaviour
             if(listener) listener.enabled = false;
         }
 
-        if(FPS_Master.Instance.cameraJogador) 
+        if (FPS_Master.Instance != null)
         {
-            FPS_Master.Instance.cameraJogador.enabled = true;
-            var listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
-            if(listener) listener.enabled = true;
+            if(FPS_Master.Instance.cameraJogador) 
+            {
+                FPS_Master.Instance.cameraJogador.enabled = true;
+                var listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
+                if(listener) listener.enabled = true;
+            }
+
+            FPS_Master.Instance.FicarInvisivelMasFisico(false);
+            FPS_Master.Instance.AlterarEstadoJogador(false, false);
         }
 
-        FPS_Master.Instance.FicarInvisivelMasFisico(false);
-        FPS_Master.Instance.AlterarEstadoJogador(false, false);
+        // Acende o texto se estiver olhando assim q soltar o ESC
+        if (estaOlhando && textoInteragirProprio && !TaBloqueado()) 
+            textoInteragirProprio.SetActive(true);
     }
 
     public void AddInput(string numero)
@@ -254,13 +275,13 @@ public class Keypad : MonoBehaviour
             {
                 if (InventoryManager.Instance != null)
                 {
-                    InventoryManager.Instance.ReceberItem(idDaManivela); // Dá pro inventário
-                    InventoryManager.Instance.TentarEquipar(idDaManivela); // Força ele a segurar a manivela na hora
+                    InventoryManager.Instance.ReceberItem(idDaManivela); 
+                    InventoryManager.Instance.TentarEquipar(idDaManivela); 
                 }
                 
                 if (manivelaFlutuante != null)
                 {
-                    manivelaFlutuante.SetActive(false); // Apaga a manivela flutuante do cenário
+                    manivelaFlutuante.SetActive(false); 
                 }
             }
         }

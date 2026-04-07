@@ -3,10 +3,10 @@ using UnityEngine;
 public static class EstadoGlobal
 {
     // Arrays de Dados
-    public static bool[] armasDesbloqueadas = new bool[15]; // Aumentei pra 15 pra garantir espaço pra tudo
+    public static bool[] armasDesbloqueadas = new bool[15]; // Aumentado pra 15 pra garantir espaço pra tudo
     public static bool[] casasResolvidas = new bool[10]; 
 
-    // Variáveis Especiais (Agora moram aqui para não quebrar)
+    // Variáveis Especiais (Mantidas aqui para não quebrar scripts antigos)
     public static bool temAChave = false; 
     public static bool temDiscoRuna = false; 
 
@@ -18,7 +18,7 @@ public static class EstadoGlobal
         temAChave = false;
         temDiscoRuna = false;
 
-        Debug.Log("Estado Global Resetado.");
+        Debug.Log("[EstadoGlobal] Todas as variáveis foram resetadas.");
     }
 
     public static void SalvarNoSlot(int slot)

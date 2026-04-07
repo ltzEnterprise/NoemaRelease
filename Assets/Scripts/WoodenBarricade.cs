@@ -27,6 +27,8 @@ public class WoodenBarricade : MonoBehaviour
 
     private bool emProcesso = false;
     private bool estaOlhando = false;
+    private bool mostrandoErro = false;
+    private Coroutine rotinaErro;
 
     // Função que checa em tempo real se a parada tá bloqueada
     private bool TaBloqueado()
@@ -51,19 +53,23 @@ public class WoodenBarricade : MonoBehaviour
         }
     }
 
+    // 🔥 O TESTAMENTO: Se essa madeira sumir do mapa, apaga os textos da tela à força 🔥
+    void OnDisable()
+    {
+        if (textoInteragir) textoInteragir.SetActive(false);
+        if (textoSemFerramenta) textoSemFerramenta.SetActive(false);
+    }
+
     // --- MÉTODOS RAYCAST ---
     public void AoOlhar()
     {
-        if (TaBloqueado()) return; // Morre aqui se tiver bloqueado
+        if (TaBloqueado()) return; 
 
         if (emProcesso) return;
         
         estaOlhando = true;
 
-        // Se a mensagem de erro já estiver na tela, não sobrepõe ela com o texto de interagir
-        if (textoSemFerramenta && textoSemFerramenta.activeSelf) return;
-
-        if (textoInteragir) textoInteragir.SetActive(true);
+        if (!mostrandoErro && textoInteragir) textoInteragir.SetActive(true);
     }
 
     public void AoSair()
@@ -77,8 +83,9 @@ public class WoodenBarricade : MonoBehaviour
 
     public void Interagir()
     {
-        if (TaBloqueado()) return; // Morre aqui se tiver bloqueado
+        if (TaBloqueado()) return; 
         if (emProcesso) return;
+        if (mostrandoErro) return; // Anti-spam do botão de erro
 
         if (VerificarSeTemPeDeCabra())
         {
@@ -86,8 +93,8 @@ public class WoodenBarricade : MonoBehaviour
         }
         else
         {
-            StopCoroutine("MostrarAvisoDeErro"); 
-            StartCoroutine("MostrarAvisoDeErro");
+            if (rotinaErro != null) StopCoroutine(rotinaErro);
+            rotinaErro = StartCoroutine(MostrarAvisoDeErro());
         }
     }
     // -----------------------
@@ -104,15 +111,18 @@ public class WoodenBarricade : MonoBehaviour
 
     IEnumerator MostrarAvisoDeErro()
     {
+        mostrandoErro = true;
+
         if (textoInteragir) textoInteragir.SetActive(false);
         if (textoSemFerramenta) textoSemFerramenta.SetActive(true);
         
         yield return new WaitForSeconds(2f);
         
         if (textoSemFerramenta) textoSemFerramenta.SetActive(false);
-        
-        // O SEGREDO AQUI: Só reativa o texto se o jogador AINDA estiver olhando
-        if (!emProcesso && estaOlhando && textoInteragir) 
+        mostrandoErro = false;
+
+        // Só reativa o texto se o jogador AINDA estiver olhando E se não estiver bloqueado
+        if (!emProcesso && estaOlhando && textoInteragir && !TaBloqueado()) 
         {
             textoInteragir.SetActive(true);
         }
@@ -121,6 +131,7 @@ public class WoodenBarricade : MonoBehaviour
     IEnumerator QuebrarBarricada()
     {
         emProcesso = true;
+
         if (textoInteragir) textoInteragir.SetActive(false);
         if (textoSemFerramenta) textoSemFerramenta.SetActive(false);
 
@@ -142,6 +153,6 @@ public class WoodenBarricade : MonoBehaviour
         if (FPS_Master.Instance != null)
             FPS_Master.Instance.AlterarEstadoJogador(false, false);
             
-        gameObject.SetActive(false); // Some com a barricada
+        gameObject.SetActive(false); 
     }
 }

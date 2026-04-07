@@ -8,22 +8,12 @@ public class SaveableItem : MonoBehaviour
     [Header("Configuração")]
     public bool salvarPosicao = false;
 
-    private bool inicializado = false;
-    private bool estaSaindoDoJogo = false;
-
-    void Awake()
-    {
-        Application.quitting += () => { estaSaindoDoJogo = true; };
-    }
-
     void Start()
     {
         if (string.IsNullOrEmpty(uniqueID)) return;
+        if (Application.isEditor) return; // Trava do editor
 
-        // TRAVA DO EDITOR: Não lê save sujo do HD se você estiver testando na Unity.
-        // Assim as coisas sempre começam no estado padrão que você deixou na Scene.
-        if (Application.isEditor) return;
-
+        // MÁGICA DE CARREGAMENTO: Se estiver desligado no Save, ele desliga AQUI.
         if (PersistenciaManager.Instance != null)
         {
             bool estadoSalvo = PersistenciaManager.Instance.CarregarEstadoObjeto(uniqueID, gameObject.activeSelf);
@@ -31,7 +21,7 @@ public class SaveableItem : MonoBehaviour
             if (gameObject.activeSelf != estadoSalvo)
             {
                 gameObject.SetActive(estadoSalvo);
-                if (!estadoSalvo) return; 
+                if (!estadoSalvo) return; // Se for pra ficar desligado, morre o script aqui.
             }
 
             if (salvarPosicao && estadoSalvo)
@@ -39,44 +29,29 @@ public class SaveableItem : MonoBehaviour
                 PersistenciaManager.Instance.CarregarTransform(uniqueID, transform);
             }
         }
-
-        inicializado = true;
     }
 
-    void OnDisable()
+    // FUNÇÃO MANUAL PRA SALVAR (Você chama isso quando ele for destruído/pego no jogo)
+    public void ForcarSaveDesligado()
     {
-        if (!inicializado) return;
-        if (estaSaindoDoJogo) return;
-        if (!gameObject.scene.isLoaded) return; 
-        
-        // TRAVA DO EDITOR: Se você apertar STOP na Unity, ele não salva a morte do objeto.
-        if (Application.isEditor) return; 
-
-        SalvarMeuEstado(false);
-    }
-    
-    void OnDestroy()
-    {
-        if (!inicializado) return;
-        if (estaSaindoDoJogo) return;
-        if (!gameObject.scene.isLoaded) return;
-        
-        // TRAVA DO EDITOR: Mesma coisa aqui.
-        if (Application.isEditor) return; 
-
-        SalvarMeuEstado(false); 
-    }
-
-    void SalvarMeuEstado(bool estaAtivo)
-    {
+        if (Application.isEditor) return;
         if (PersistenciaManager.Instance != null)
         {
-            PersistenciaManager.Instance.RegistrarEstado(uniqueID, estaAtivo);
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID, false);
+            PersistenciaManager.Instance.SalvarTudo(); // Salva na hora pro disco
+        }
+        gameObject.SetActive(false);
+    }
 
-            if (estaAtivo && salvarPosicao)
-            {
-                PersistenciaManager.Instance.SalvarTransform(uniqueID, transform);
-            }
+    // FUNÇÃO PRA SALVAR POSIÇÃO 
+    public void SalvarPosicaoAtual()
+    {
+        if (Application.isEditor) return;
+        if (PersistenciaManager.Instance != null && salvarPosicao)
+        {
+            PersistenciaManager.Instance.SalvarTransform(uniqueID, transform);
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID, gameObject.activeSelf);
+            PersistenciaManager.Instance.SalvarTudo();
         }
     }
 
