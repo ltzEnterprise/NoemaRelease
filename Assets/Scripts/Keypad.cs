@@ -28,8 +28,8 @@ public class Keypad : MonoBehaviour
 
     [Header("Recompensa: Manivela da Vitrola")]
     public bool darManivelaAoAcertar = false;
-    public int idDaManivela = 3; // O ID da manivela no seu InventoryManager
-    public GameObject manivelaFlutuante; // Arraste a manivela que roda no mapa aqui
+    public int idDaManivela = 3; 
+    public GameObject manivelaFlutuante; 
 
     [Header("Feedback")]
     public GameObject textoInteragirProprio; 
@@ -46,9 +46,8 @@ public class Keypad : MonoBehaviour
 
     private Coroutine rotinaReset;
     private bool aguardandoLimpeza = false;
-    private bool estaOlhando = false; // Trava contra ghost text
+    private bool estaOlhando = false; 
 
-    // Função que checa em tempo real se a parada tá bloqueada
     private bool TaBloqueado()
     {
         return bloqueador != null && bloqueador.activeInHierarchy;
@@ -94,16 +93,14 @@ public class Keypad : MonoBehaviour
 
     void Update()
     {
-        // Monitoramento constante: Se ativar o bloqueador na cara do jogador, apaga o texto
         if (TaBloqueado() && textoInteragirProprio && textoInteragirProprio.activeSelf)
         {
             textoInteragirProprio.SetActive(false);
         }
 
-        // SE O JOGADOR ESTIVER USANDO O KEYPAD E O BLOQUEADOR APARECER...
         if (jogadorUsando && TaBloqueado())
         {
-            SairModoKeypad(); // EJETA O JOGADOR!
+            SairModoKeypad(); 
             return;
         }
 
@@ -188,6 +185,9 @@ public class Keypad : MonoBehaviour
 
         if (FPS_Master.Instance != null)
         {
+            // 🔥 CORREÇÃO: Liga o corpo ANTES de ligar a câmera pra não ter risco de colisão bugada
+            FPS_Master.Instance.FicarInvisivelMasFisico(false);
+            
             if(FPS_Master.Instance.cameraJogador) 
             {
                 FPS_Master.Instance.cameraJogador.enabled = true;
@@ -195,11 +195,10 @@ public class Keypad : MonoBehaviour
                 if(listener) listener.enabled = true;
             }
 
-            FPS_Master.Instance.FicarInvisivelMasFisico(false);
+            // Destrava o personagem
             FPS_Master.Instance.AlterarEstadoJogador(false, false);
         }
 
-        // Acende o texto se estiver olhando assim q soltar o ESC
         if (estaOlhando && textoInteragirProprio && !TaBloqueado()) 
             textoInteragirProprio.SetActive(true);
     }
@@ -267,10 +266,11 @@ public class Keypad : MonoBehaviour
             if (darRunaAoAcertar && InventarioRunas.Instance != null)
             {
                 InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
+                
+                // Independente da UI, o jogador é solto
                 if (painelAvisoRuna) StartCoroutine(MostrarAvisoRuna());
             }
 
-            // --- A MÁGICA DA MANIVELA AQUI ---
             if (darManivelaAoAcertar)
             {
                 if (InventoryManager.Instance != null)
@@ -316,9 +316,23 @@ public class Keypad : MonoBehaviour
         rotinaReset = StartCoroutine(ResetDisplayDelay());
     }
 
-    IEnumerator DelaySaida() { yield return new WaitForSeconds(1.5f); SairModoKeypad(); }
-    IEnumerator MostrarAvisoRuna() { painelAvisoRuna.SetActive(true); yield return new WaitForSeconds(3f); painelAvisoRuna.SetActive(false); }
-    void AtualizarDisplay() { if (displayTexto != null) { displayTexto.text = inputAtual; displayTexto.color = Color.white; } }
+    IEnumerator DelaySaida() 
+    { 
+        yield return new WaitForSeconds(1.5f); 
+        SairModoKeypad(); 
+    }
+    
+    IEnumerator MostrarAvisoRuna() 
+    { 
+        painelAvisoRuna.SetActive(true); 
+        yield return new WaitForSeconds(3f); 
+        painelAvisoRuna.SetActive(false); 
+    }
+    
+    void AtualizarDisplay() 
+    { 
+        if (displayTexto != null) { displayTexto.text = inputAtual; displayTexto.color = Color.white; } 
+    }
     
     IEnumerator ResetDisplayDelay() 
     { 

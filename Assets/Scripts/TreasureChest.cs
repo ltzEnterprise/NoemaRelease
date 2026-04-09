@@ -10,20 +10,25 @@ public class TreasureChest : MonoBehaviour
     [Header("Configurações Básicas")]
     public Transform tampaDoBau; 
     public string nomeDaRunaNesteBau; 
+
+    [Header("Recompensa: Item de Inventário")]
+    public bool darItemInventario = false;
+    public int idDoItemInventario = 0;
+    
+    [Header("O Seu Painel Novo")]
+    public GameObject painelCustomizadoDaRecompensa; 
     
     [Header("--- SISTEMA DE CHAVE ---")]
     public bool requerChave = false;  
-    [Tooltip("ID da chave necessária (Ex: Chave_Porao)")]
     public string idChaveNecessaria; 
 
     [Header("--- DEMO MODE ---")]
-    [Tooltip("Se marcado, abrir este baú FINALIZA A DEMO.")]
     public bool finalizaDemo = false;
     public GameObject painelFimDemo; 
     public string nomeCenaMenu = "Menu";
     public float tempoParaVoltarMenu = 5f;
 
-    [Header("UI & Mensagens")]
+    [Header("UI & Mensagens (Suas Variáveis Antigas)")]
     public GameObject textoInteragir; 
     public GameObject textoPrecisaChave; 
     public GameObject painelPretoRecompensa;     
@@ -36,8 +41,8 @@ public class TreasureChest : MonoBehaviour
     public AudioClip somTrancado;
 
     private bool jaAbriu = false;
-    private bool estaOlhando = false; // A trava que faltava pra não bugar o texto
-    private bool mostrandoErro = false; // Trava pro erro não bugar se spammar o clique
+    private bool estaOlhando = false; 
+    private bool mostrandoErro = false; 
 
     void Start()
     {
@@ -45,8 +50,8 @@ public class TreasureChest : MonoBehaviour
         if(textoPrecisaChave) textoPrecisaChave.SetActive(false);
         if(painelFimDemo) painelFimDemo.SetActive(false); 
         if(painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
+        if(painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
 
-        // CARREGA ESTADO
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
             jaAbriu = PersistenciaManager.Instance.ObterEstado(uniqueID);
@@ -57,15 +62,11 @@ public class TreasureChest : MonoBehaviour
         }
     }
 
-    // --- SISTEMA RAYCAST ---
-
     public void AoOlhar()
     {
         if (jaAbriu) return;
-        
         estaOlhando = true;
 
-        // Só acende o botão E se não estiver tocando a animação de erro de chave
         if (!mostrandoErro && textoInteragir) 
         {
             textoInteragir.SetActive(true);
@@ -99,7 +100,6 @@ public class TreasureChest : MonoBehaviour
             }
         }
     }
-    // -----------------------
 
     void AbrirBau()
     {
@@ -128,6 +128,16 @@ public class TreasureChest : MonoBehaviour
         if (InventarioRunas.Instance != null && !string.IsNullOrEmpty(nomeDaRunaNesteBau))
         {
             InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRunaNesteBau);
+        }
+
+        if (darItemInventario && InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.ReceberItem(idDoItemInventario);
+        }
+
+        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.SalvarTudo();
         }
 
         StartCoroutine(SequenciaRecompensa());
@@ -161,7 +171,6 @@ public class TreasureChest : MonoBehaviour
         
         mostrandoErro = false;
 
-        // A MÁGICA: Só liga o texto de interagir de volta se a porra do jogador AINDA estiver olhando
         if (!jaAbriu && estaOlhando && textoInteragir) 
         {
             textoInteragir.SetActive(true);
@@ -170,12 +179,22 @@ public class TreasureChest : MonoBehaviour
 
     IEnumerator SequenciaRecompensa()
     {
+        // Liga a sua UI antiga (se tiver)
         if(painelPretoRecompensa) painelPretoRecompensa.SetActive(true);
-        if(textoRecompensa) textoRecompensa.text = "Você pegou a " + nomeDaRunaNesteBau + "!";
         
-        yield return new WaitForSeconds(3f);
+        // Escreve o texto antigo (se tiver)
+        if(textoRecompensa && !string.IsNullOrEmpty(nomeDaRunaNesteBau)) 
+            textoRecompensa.text = "Você pegou a " + nomeDaRunaNesteBau + "!";
+            
+        // LIGA O SEU PAINEL NOVO
+        if(painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(true);
         
+        // Fica exatos 3 segundos
+        yield return new WaitForSecondsRealtime(3f);
+        
+        // Desliga a porra toda
         if(painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
+        if(painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
 
         if (finalizaDemo)
         {

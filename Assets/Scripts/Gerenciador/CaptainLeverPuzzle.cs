@@ -24,8 +24,10 @@ public class CaptainLeverPuzzle : MonoBehaviour
     public GameObject painelRecompensa; 
     public string nomeDaRuna = "Runa_Pirata"; 
     
-    [Tooltip("Objeto do mapa que vai aparecer quando pegar a runa")]
+    [Tooltip("Objeto do mapa que vai aparecer quando resolver o puzzle principal")]
     public GameObject itemRecompensaAparecer; 
+    [Tooltip("Objeto do mapa que vai SUMIR quando resolver o puzzle principal")]
+    public GameObject itemEsconderNaRuna; 
     
     public UnityEvent onPuzzleSolved; 
 
@@ -33,6 +35,12 @@ public class CaptainLeverPuzzle : MonoBehaviour
     [Tooltip("Marque as caixas correspondentes às alavancas que devem ser ativadas.")]
     public List<bool> secretCombination; 
     public GameObject quadSegredo; 
+    
+    [Tooltip("Objeto do mapa que vai aparecer quando resolver o segredo")]
+    public GameObject itemRecompensaAparecerSegredo;
+    [Tooltip("Objeto do mapa que vai SUMIR quando resolver o segredo")]
+    public GameObject itemEsconderNoSegredo;
+    
     public AudioClip somSegredo;
     
     private AudioSource audioSource;
@@ -51,8 +59,9 @@ public class CaptainLeverPuzzle : MonoBehaviour
         if (quadSegredo) quadSegredo.SetActive(false);
         if (painelRecompensa) painelRecompensa.SetActive(false);
         
-        // Garante que o item recompensa comece invisível, a menos que o save diga o contrário
+        // Garante que os itens comecem no estado padrão antes de ler o save
         if (itemRecompensaAparecer) itemRecompensaAparecer.SetActive(false);
+        if (itemRecompensaAparecerSegredo) itemRecompensaAparecerSegredo.SetActive(false);
 
         CarregarSave();
     }
@@ -67,11 +76,14 @@ public class CaptainLeverPuzzle : MonoBehaviour
         if (isSolved)
         {
             if (itemRecompensaAparecer) itemRecompensaAparecer.SetActive(true);
+            if (itemEsconderNaRuna) itemEsconderNaRuna.SetActive(false);
         }
 
         if (isSecretSolved)
         {
             if (quadSegredo) quadSegredo.SetActive(true);
+            if (itemRecompensaAparecerSegredo) itemRecompensaAparecerSegredo.SetActive(true);
+            if (itemEsconderNoSegredo) itemEsconderNoSegredo.SetActive(false);
         }
     }
 
@@ -140,11 +152,19 @@ public class CaptainLeverPuzzle : MonoBehaviour
         if (InventarioRunas.Instance != null) InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
         if (onPuzzleSolved != null) onPuzzleSolved.Invoke();
 
-        // --- A MÁGICA AQUI: Faz o objeto aparecer e salva o estado ---
         if (itemRecompensaAparecer) itemRecompensaAparecer.SetActive(true);
+        if (itemEsconderNaRuna) itemEsconderNaRuna.SetActive(false);
 
         if (PersistenciaManager.Instance != null)
+        {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_resolvido", true);
+            
+            // Grava o estado extra dos objetos, caso precisem ser lidos em outro lugar
+            if (itemRecompensaAparecer) PersistenciaManager.Instance.RegistrarEstado(itemRecompensaAparecer.name, true);
+            if (itemEsconderNaRuna) PersistenciaManager.Instance.RegistrarEstado(itemEsconderNaRuna.name, false);
+            
+            PersistenciaManager.Instance.SalvarTudo();
+        }
 
         resetando = true;
         Invoke("ResetarAlavancas", 1.5f);
@@ -169,9 +189,19 @@ public class CaptainLeverPuzzle : MonoBehaviour
         if (somSegredo && audioSource) audioSource.PlayOneShot(somSegredo);
         if (quadSegredo) quadSegredo.SetActive(true);
 
-        // Salva que o segredo foi resolvido
+        if (itemRecompensaAparecerSegredo) itemRecompensaAparecerSegredo.SetActive(true);
+        if (itemEsconderNoSegredo) itemEsconderNoSegredo.SetActive(false);
+
         if (PersistenciaManager.Instance != null)
+        {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_segredo", true);
+            
+            // Grava o estado extra dos objetos, caso precisem ser lidos em outro lugar
+            if (itemRecompensaAparecerSegredo) PersistenciaManager.Instance.RegistrarEstado(itemRecompensaAparecerSegredo.name, true);
+            if (itemEsconderNoSegredo) PersistenciaManager.Instance.RegistrarEstado(itemEsconderNoSegredo.name, false);
+            
+            PersistenciaManager.Instance.SalvarTudo();
+        }
     }
 
     [ContextMenu("Generate Unique ID")]
