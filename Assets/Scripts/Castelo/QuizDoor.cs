@@ -9,7 +9,12 @@ public class QuizDoor : MonoBehaviour
     [System.Serializable]
     public class LinhaDeDialogo
     {
+        [Tooltip("Texto em Português (Original)")]
         [TextArea] public string texto;
+        
+        [Tooltip("Texto em Inglês")]
+        [TextArea] public string textoEN;
+        
         public float tamanhoDaFonte = 36f;
         public float velocidadeDigitar = 0.04f;
         public float tempoDeEsperaApos = 1.5f;
@@ -18,9 +23,20 @@ public class QuizDoor : MonoBehaviour
     [System.Serializable]
     public class PerguntaQuiz
     {
+        [Tooltip("Enunciado em Português (Original)")]
         [TextArea] public string enunciado; 
+        
+        [Tooltip("Enunciado em Inglês")]
+        [TextArea] public string enunciadoEN; 
+        
         public float tamanhoDaFonte = 36f; 
+        
+        [Tooltip("Alternativas em Português (Original)")]
         public string[] alternativas = new string[4]; 
+        
+        [Tooltip("Alternativas em Inglês")]
+        public string[] alternativasEN = new string[4]; 
+        
         [Range(0, 3)] public int indiceCorreta; 
     }
 
@@ -173,10 +189,18 @@ public class QuizDoor : MonoBehaviour
         if(audioSourceSFX) audioSourceSFX.PlayOneShot(somPortaAbrindo);
         yield return new WaitForSeconds(1f);
 
+        // Verifica a língua atual
+        int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
+
         foreach (LinhaDeDialogo linha in introducao)
         {
             if (textoDialogoIntro) textoDialogoIntro.fontSize = linha.tamanhoDaFonte; 
-            yield return StartCoroutine(EfeitoDigitar(linha.texto, linha.velocidadeDigitar, textoDialogoIntro));
+            
+            // Pega o texto correto com fallback de segurança
+            string textoParaExibir = (lang == 0) ? linha.texto : linha.textoEN;
+            if (lang == 1 && string.IsNullOrEmpty(textoParaExibir)) textoParaExibir = linha.texto;
+
+            yield return StartCoroutine(EfeitoDigitar(textoParaExibir, linha.velocidadeDigitar, textoDialogoIntro));
             yield return new WaitForSeconds(linha.tempoDeEsperaApos);
         }
 
@@ -242,16 +266,28 @@ public class QuizDoor : MonoBehaviour
         int sorteio = Random.Range(0, perguntasDaRodada.Count);
         perguntaAtual = perguntasDaRodada[sorteio];
 
+        int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
+
         if (textoEnunciado) 
         {
-            textoEnunciado.text = perguntaAtual.enunciado;
+            // Configura o enunciado traduzido
+            string enunciadoExibir = (lang == 0) ? perguntaAtual.enunciado : perguntaAtual.enunciadoEN;
+            if (lang == 1 && string.IsNullOrEmpty(enunciadoExibir)) enunciadoExibir = perguntaAtual.enunciado;
+
+            textoEnunciado.text = enunciadoExibir;
             textoEnunciado.fontSize = perguntaAtual.tamanhoDaFonte; 
         }
 
         for (int i = 0; i < 4; i++)
         {
             if (i < textosDosBotoes.Length && textosDosBotoes[i] != null) 
-                textosDosBotoes[i].text = perguntaAtual.alternativas[i];
+            {
+                // Configura as alternativas traduzidas
+                string altExibir = (lang == 0) ? perguntaAtual.alternativas[i] : perguntaAtual.alternativasEN[i];
+                if (lang == 1 && string.IsNullOrEmpty(altExibir)) altExibir = perguntaAtual.alternativas[i];
+                
+                textosDosBotoes[i].text = altExibir;
+            }
         }
     }
 
@@ -264,10 +300,14 @@ public class QuizDoor : MonoBehaviour
     IEnumerator ProcessarResposta(int indice)
     {
         aguardandoResposta = false;
+        int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
 
         if (indice == perguntaAtual.indiceCorreta)
         {
-            if(textoFeedback) { textoFeedback.text = "CORRETO"; textoFeedback.color = Color.green; }
+            if(textoFeedback) { 
+                textoFeedback.text = (lang == 0) ? "CORRETO" : "CORRECT"; 
+                textoFeedback.color = Color.green; 
+            }
             if(audioSourceSFX) audioSourceSFX.PlayOneShot(somAcerto);
             
             acertosConsecutivos++;
@@ -282,7 +322,10 @@ public class QuizDoor : MonoBehaviour
         }
         else
         {
-            if(textoFeedback) { textoFeedback.text = "VOCÊ FALHOU..."; textoFeedback.color = Color.red; }
+            if(textoFeedback) { 
+                textoFeedback.text = (lang == 0) ? "VOCÊ FALHOU..." : "YOU FAILED..."; 
+                textoFeedback.color = Color.red; 
+            }
             if(audioSourceSFX) audioSourceSFX.PlayOneShot(somErro);
 
             acertosConsecutivos = 0;
@@ -327,10 +370,13 @@ public class QuizDoor : MonoBehaviour
 
         if (textoDialogoIntro)
         {
+            int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
+            string textoVitoria = (lang == 0) ? "Você acertou todas as perguntas." : "You answered all questions correctly.";
+
             painelTelaPreta.SetActive(true);
             textoDialogoIntro.gameObject.SetActive(true);
             textoDialogoIntro.text = "";
-            yield return StartCoroutine(EfeitoDigitar("Você acertou todas as perguntas.", 0.05f, textoDialogoIntro));
+            yield return StartCoroutine(EfeitoDigitar(textoVitoria, 0.05f, textoDialogoIntro));
             yield return new WaitForSeconds(2.0f);
             textoDialogoIntro.gameObject.SetActive(false);
             painelTelaPreta.SetActive(false);

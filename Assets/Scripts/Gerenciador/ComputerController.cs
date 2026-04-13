@@ -107,18 +107,30 @@ public class ComputerController : MonoBehaviour
         }
     }
 
+    // 🔥 CÓDIGO CORRIGIDO: TRAVA DE ENERGIA REMOVIDA 🔥
     public void AoOlhar()
     {
         estaOlhando = true;
-        if (pcQueimado || cutsceneRodando) return; 
 
-        // 🔥 O ASSASSINO DE TEXTO PISCANDO 🔥
-        // Se as telas estiverem desativadas e não for o modo da runa, o PC tá desligado. Não mostra NADA.
-        bool pcTemEnergia = telaDesktop.activeSelf || telaBonusNoite.activeSelf || modoRunaAtivo;
-        if (!pcTemEnergia) return;
+        // Só apaga se o PC já era de vez ou tá em historinha
+        if (pcQueimado || cutsceneRodando) 
+        {
+            if (textoInteragirPC) textoInteragirPC.SetActive(false);
+            if (textoInteragirRuna) textoInteragirRuna.SetActive(false);
+            return;
+        }
 
-        if (modoRunaAtivo && textoInteragirRuna) textoInteragirRuna.SetActive(true);
-        else if (!modoRunaAtivo && textoInteragirPC) textoInteragirPC.SetActive(true);
+        // Caso contrário, mostra o texto normal pro jogador poder interagir!
+        if (modoRunaAtivo)
+        {
+            if (textoInteragirPC) textoInteragirPC.SetActive(false);
+            if (textoInteragirRuna) textoInteragirRuna.SetActive(true);
+        }
+        else
+        {
+            if (textoInteragirRuna) textoInteragirRuna.SetActive(false);
+            if (textoInteragirPC) textoInteragirPC.SetActive(true);
+        }
     }
 
     public void AoSair()
@@ -199,6 +211,8 @@ public class ComputerController : MonoBehaviour
     private IEnumerator SequenciaDeAberturaDaCena()
     {
         cutsceneRodando = true;
+        AoSair(); 
+
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
 
         yield return new WaitForSecondsRealtime(tempoTelaAzul); 

@@ -2,9 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
-using System.Collections; 
+using System.Collections;
 using System.Collections.Generic;
-using QuantumTek.SimpleMenu; 
+using QuantumTek.SimpleMenu;
 
 public class InterfaceManager : MonoBehaviour
 {
@@ -61,13 +61,19 @@ public class InterfaceManager : MonoBehaviour
     [Range(0f, 1f)] public float volumeMaximoMusica = 1f; 
     public float tempoDeFade = 1.5f;
 
-    private bool jogoPausado = false;
+    [HideInInspector] public bool jogoPausado = false;
+    
     private int slotConfirmacao = -1;
     private int slotParaRestaurar = -1; 
 
     private Vector3 escalaOpcoes = Vector3.one;
     private bool escalaSalva = false;
     private bool isProcessandoPause = false; 
+
+    private enum EstadoInterface { Menu, Slots, Opcoes, Jogando, Pausado, Loading }
+    private EstadoInterface estadoAtual;
+    private Coroutine loadingAtual;
+    private Coroutine fadeAtual;
 
     void Start()
     {
@@ -99,6 +105,7 @@ public class InterfaceManager : MonoBehaviour
 
         if (isCenaDeJogo)
         {
+            estadoAtual = EstadoInterface.Jogando;
             Cursor.lockState = mouseLivreNoJogo ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = mouseLivreNoJogo;
 
@@ -118,6 +125,7 @@ public class InterfaceManager : MonoBehaviour
         }
         else
         {
+            estadoAtual = EstadoInterface.Menu;
             Cursor.lockState = CursorLockMode.None;   
             Cursor.visible = true;                    
 
@@ -224,11 +232,11 @@ public class InterfaceManager : MonoBehaviour
             }
             
             AtualizarTextosSlots();
-            StartCoroutine(RotinaLoadingDevMode());
+            if (loadingAtual != null) StopCoroutine(loadingAtual);
+            loadingAtual = StartCoroutine(RotinaLoadingDevMode());
             return; 
         }
 
-        // 🔥 LÓGICA DE CENA MÁGICA: Decide aqui pra qual cena o jogo vai carregar 🔥
         string cenaAlvo = nomeDaCenaDoJogo; 
 
         if (SistemaGlobal.Instance != null) 
@@ -239,21 +247,29 @@ public class InterfaceManager : MonoBehaviour
             {
                 SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = true;
                 
-                // Se existe save, pega a cena que ele parou. Se bugar e não achar, usa a padrão.
-                string cenaSalva = PlayerPrefs.GetString($"Slot_{slot}_Cena", "");
+                string cenaSalva = "";
+                if (PersistenciaManager.Instance != null)
+                {
+                    cenaSalva = PersistenciaManager.Instance.ObterString($"Slot_{slot}_Cena");
+                }
+                
                 if (!string.IsNullOrEmpty(cenaSalva))
                 {
                     cenaAlvo = cenaSalva;
                 }
+                else
+                {
+                    Debug.LogWarning("[SAVE] Cena não encontrada no Save. Usando cena padrão.");
+                }
             }
             else
             {
-                // Novo jogo
                 SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false; 
             }
         }
         
-        StartCoroutine(RotinaLoadingPorcentagem(cenaAlvo));
+        if (loadingAtual != null) StopCoroutine(loadingAtual);
+        loadingAtual = StartCoroutine(RotinaLoadingPorcentagem(cenaAlvo));
     }
 
     public void BotaoApagarSlot(int slot)
@@ -307,6 +323,9 @@ public class InterfaceManager : MonoBehaviour
         if (slotParaRestaurar != -1 && !modoDesenvolvedor && SistemaGlobal.Instance != null && PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RestaurarBackup(slotParaRestaurar);
+
+            PersistenciaManager.Instance.SalvarTudo();
+
             AtualizarTextosSlots(); 
         }
         
@@ -322,12 +341,10 @@ public class InterfaceManager : MonoBehaviour
 
     void AtualizarTextosSlots()
     {
-        // 1. Descobre qual idioma tá rodando agora
         int lang = 0;
         if (LanguageManager.Instance != null) lang = LanguageManager.Instance.currentLanguage;
         else lang = PlayerPrefs.GetInt("Idioma", 0);
 
-        // 2. Puxa as palavras certas
         string txtNovo = (lang == 0) ? textoNovoJogo_PT : textoNovoJogo_EN;
         string txtApagarBtn = (lang == 0) ? textoApagar_PT : textoApagar_EN;
         string txtConfirmarBtn = (lang == 0) ? textoConfirmar_PT : textoConfirmar_EN;
@@ -343,13 +360,11 @@ public class InterfaceManager : MonoBehaviour
             if (modoDesenvolvedor) temSave = (PlayerPrefs.GetInt($"Slot_{slotNum}_SaveExistente", 0) == 1);
             else if (SistemaGlobal.Instance != null) temSave = SistemaGlobal.Instance.ExisteSave(slotNum);
 
-            // Traduz o botão de Apagar/Confirmar
             if (textosBotaoApagar != null && i < textosBotaoApagar.Length && textosBotaoApagar[i] != null)
             {
                 textosBotaoApagar[i].text = (slotConfirmacao == slotNum) ? txtConfirmarBtn : txtApagarBtn;
             }
 
-            // Traduz a palavra SLOT
             string cabecalho = $"<size=40%>{txtSlot} {slotNum}</size>\n";
 
             if (slotConfirmacao == slotNum)
@@ -365,12 +380,12 @@ public class InterfaceManager : MonoBehaviour
             }
             else 
             {
-                // Traduz o Novo Jogo
                 textosDosSlots[i].text = cabecalho + txtNovo;
             }
         }
     }
 
+    // 🔥 FUNÇÃO RESTAURADA E NO LUGAR CERTO
     void ForcarAutoSizeCentral()
     {
         if (textosDosSlots == null) return;
@@ -393,12 +408,14 @@ public class InterfaceManager : MonoBehaviour
         if (rt == null) return;
         rt.anchorMin = Vector2.zero; 
         rt.anchorMax = Vector2.one;  
+        rt.pivot = new Vector2(0.5f, 0.5f); 
         rt.sizeDelta = Vector2.zero; 
         rt.anchoredPosition = Vector2.zero; 
     }
 
     public void BotaoJogar_AbreSlots()
     {
+        estadoAtual = EstadoInterface.Slots;
         slotConfirmacao = -1;
         LigarDesligarPainel(painelMenuPrincipal, false);
         LigarDesligarPainel(painelOpcoes, false);
@@ -408,6 +425,7 @@ public class InterfaceManager : MonoBehaviour
 
     public void AbrirOpcoes()
     {
+        estadoAtual = EstadoInterface.Opcoes;
         LigarDesligarPainel(painelMenuPrincipal, false);
         LigarDesligarPainel(painelPause, false);
         LigarDesligarPainel(painelSlots, false);
@@ -421,9 +439,10 @@ public class InterfaceManager : MonoBehaviour
 
     public void BotaoVoltarGenerico()
     {
-        if (painelOpcoes != null && painelOpcoes.activeSelf) FecharOpcoesVoltar();
-        else if (painelSlots != null && painelSlots.activeSelf)
+        if (estadoAtual == EstadoInterface.Opcoes) FecharOpcoesVoltar();
+        else if (estadoAtual == EstadoInterface.Slots)
         {
+            estadoAtual = EstadoInterface.Menu;
             slotConfirmacao = -1;
             LigarDesligarPainel(painelSlots, false);
             LigarDesligarPainel(painelMenuPrincipal, true);
@@ -450,30 +469,38 @@ public class InterfaceManager : MonoBehaviour
 
             if (painelConfirmacaoReset != null && painelConfirmacaoReset.activeSelf)
             {
-                LigarDesligarPainel(painelConfirmacaoReset, false);
+                FecharJanelaConfirmacao();
                 return; 
             }
 
-            if (painelOpcoes != null && painelOpcoes.activeSelf)
-            {
-                FecharOpcoesVoltar();
-            }
-            else if (isCenaDeJogo)
-            {
-                if (isProcessandoPause) return;
-                if (jogoPausado) ResumeJogo(); 
-                else StartCoroutine(PausarComPrint());
-            }
-            else if (painelSlots != null && painelSlots.activeSelf) 
-            {
-                BotaoVoltarGenerico();
-            }
+            HandleEscape();
         }
 
-        if (Input.GetKeyDown(KeyCode.R) && painelOpcoes != null && painelOpcoes.activeSelf)
+        if (Input.GetKeyDown(KeyCode.R) && estadoAtual == EstadoInterface.Opcoes)
         {
             if (painelConfirmacaoReset != null && !painelConfirmacaoReset.activeSelf)
                 LigarDesligarPainel(painelConfirmacaoReset, true);
+        }
+    }
+
+    private void HandleEscape()
+    {
+        if (estadoAtual == EstadoInterface.Loading) return;
+
+        switch (estadoAtual)
+        {
+            case EstadoInterface.Opcoes:
+                FecharOpcoesVoltar();
+                break;
+            case EstadoInterface.Jogando:
+                if (!isProcessandoPause) StartCoroutine(PausarComPrint());
+                break;
+            case EstadoInterface.Pausado:
+                if (!isProcessandoPause) ResumeJogo();
+                break;
+            case EstadoInterface.Slots:
+                BotaoVoltarGenerico();
+                break;
         }
     }
     
@@ -490,76 +517,54 @@ public class InterfaceManager : MonoBehaviour
         SettingsManager settings = painelOpcoes.GetComponentInChildren<SettingsManager>(true);
         if (settings != null) settings.LoadAndApplyAllSettings(); 
 
-        LigarDesligarPainel(painelConfirmacaoReset, false);
-    }
-
-    private void ClearFreezeTexture()
-    {
-        if (imagemCongelada != null && imagemCongelada.texture != null)
-        {
-            Texture texCorrompida = imagemCongelada.texture;
-            imagemCongelada.texture = null;
-            Destroy(texCorrompida); 
-        }
+        FecharJanelaConfirmacao();
     }
 
     IEnumerator PausarComPrint()
     {
         isProcessandoPause = true; 
-        yield return new WaitForEndOfFrame();
-
+        
         if (imagemCongelada != null)
         {
-            ClearFreezeTexture();
-
-            int width = Screen.width;
-            int height = Screen.height;
-
-            RenderTexture rtTelaCheia = RenderTexture.GetTemporary(width, height, 0);
-            ScreenCapture.CaptureScreenshotIntoRenderTexture(rtTelaCheia);
-            
-            int w1 = width / 2; int h1 = height / 2;
-            RenderTexture rt1 = RenderTexture.GetTemporary(w1, h1, 0);
-            rt1.filterMode = FilterMode.Bilinear;
-            Graphics.Blit(rtTelaCheia, rt1);
-
-            int w2 = w1 / 2; int h2 = h1 / 2;
-            RenderTexture rt2 = RenderTexture.GetTemporary(w2, h2, 0);
-            rt2.filterMode = FilterMode.Bilinear;
-            Graphics.Blit(rt1, rt2);
-
-            int w3 = w2 / 2; int h3 = h2 / 2;
-            RenderTexture rt3 = RenderTexture.GetTemporary(w3, h3, 0);
-            rt3.filterMode = FilterMode.Bilinear;
-            Graphics.Blit(rt2, rt3);
-            
-            RenderTexture.active = rt3;
-            Texture2D texture = new Texture2D(w3, h3, TextureFormat.RGB24, false);
-            texture.filterMode = FilterMode.Bilinear; 
-            texture.ReadPixels(new Rect(0, 0, w3, h3), 0, 0);
-            texture.Apply();
-            
-            RenderTexture.active = null;
-            RenderTexture.ReleaseTemporary(rtTelaCheia);
-            RenderTexture.ReleaseTemporary(rt1);
-            RenderTexture.ReleaseTemporary(rt2);
-            RenderTexture.ReleaseTemporary(rt3);
-
-            imagemCongelada.texture = texture;
-            imagemCongelada.color = Color.white;
-            imagemCongelada.rectTransform.localScale = new Vector3(1f, -1f, 1f);
-            
-            ForcarTelaCheia(imagemCongelada.rectTransform);
-            imagemCongelada.gameObject.SetActive(true);
+            yield return new WaitForEndOfFrame();
+            CapturarTela();
         }
-        PausarJogoLogica();
         
+        PausarJogoLogica();
         isProcessandoPause = false; 
+    }
+
+    private void CapturarTela()
+    {
+        ClearFreezeTexture();
+
+        int width = Screen.width;
+        int height = Screen.height;
+
+        RenderTexture rt = RenderTexture.GetTemporary(width, height, 0);
+        ScreenCapture.CaptureScreenshotIntoRenderTexture(rt);
+
+        RenderTexture.active = rt;
+
+        Texture2D tex = new Texture2D(width, height, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+        tex.Apply();
+
+        RenderTexture.active = null;
+        RenderTexture.ReleaseTemporary(rt);
+
+        imagemCongelada.texture = tex;
+        
+        imagemCongelada.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        imagemCongelada.rectTransform.localScale = new Vector3(1f, -1f, 1f);
+        
+        imagemCongelada.gameObject.SetActive(true);
     }
 
     public void PausarJogoLogica()
     {
-        jogoPausado = true;
+        estadoAtual = EstadoInterface.Pausado;
+        jogoPausado = true; 
         LigarDesligarPainel(painelPause, true);
         Time.timeScale = 0f;
         AudioListener.pause = true; 
@@ -571,8 +576,9 @@ public class InterfaceManager : MonoBehaviour
 
     public void ResumeJogo()
     {
+        estadoAtual = EstadoInterface.Jogando;
         isProcessandoPause = false; 
-        jogoPausado = false;
+        jogoPausado = false; 
         
         if (imagemCongelada) 
         {
@@ -601,10 +607,15 @@ public class InterfaceManager : MonoBehaviour
         {
             SistemaGlobal.Instance.SalvarJogo(playerMaster.transform.position, SceneManager.GetActiveScene().name);
             
-            // 🔥 GARANTIA ABSOLUTA DE SALVAR A CENA QUE O CARA PAROU 🔥
-            PlayerPrefs.SetString($"Slot_{SistemaGlobal.Instance.slotAtual}_Cena", SceneManager.GetActiveScene().name);
-            
-            if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
+            if (PersistenciaManager.Instance != null)
+            {
+                PersistenciaManager.Instance.SalvarString($"Slot_{SistemaGlobal.Instance.slotAtual}_Cena", SceneManager.GetActiveScene().name);
+                
+                if (!PersistenciaManager.Instance.ModoSemSave())
+                {
+                    PersistenciaManager.Instance.SalvarTudo();
+                }
+            }
             PlayerPrefs.Save();
         }
         SceneManager.LoadScene("MenuPrincipal"); 
@@ -613,8 +624,16 @@ public class InterfaceManager : MonoBehaviour
     public void FecharOpcoesVoltar()
     {
         LigarDesligarPainel(painelOpcoes, false);
-        if (isCenaDeJogo) LigarDesligarPainel(painelPause, true);
-        else LigarDesligarPainel(painelMenuPrincipal, true);
+        if (isCenaDeJogo) 
+        {
+            estadoAtual = EstadoInterface.Pausado;
+            LigarDesligarPainel(painelPause, true);
+        }
+        else 
+        {
+            estadoAtual = EstadoInterface.Menu;
+            LigarDesligarPainel(painelMenuPrincipal, true);
+        }
     }
 
     IEnumerator FadeOutMusica()
@@ -635,7 +654,10 @@ public class InterfaceManager : MonoBehaviour
 
     IEnumerator RotinaLoadingPorcentagem(string nomeCena)
     {
-        StartCoroutine(FadeOutMusica());
+        estadoAtual = EstadoInterface.Loading;
+        
+        if (fadeAtual != null) StopCoroutine(fadeAtual);
+        fadeAtual = StartCoroutine(FadeOutMusica());
         
         LigarDesligarPainel(painelLoading, true);
         LigarDesligarPainel(painelSlots, false);
@@ -673,7 +695,10 @@ public class InterfaceManager : MonoBehaviour
 
     IEnumerator RotinaLoadingDevMode()
     {
-        StartCoroutine(FadeOutMusica());
+        estadoAtual = EstadoInterface.Loading;
+        
+        if (fadeAtual != null) StopCoroutine(fadeAtual);
+        fadeAtual = StartCoroutine(FadeOutMusica());
         
         LigarDesligarPainel(painelLoading, true);
         LigarDesligarPainel(painelSlots, false);
@@ -695,6 +720,7 @@ public class InterfaceManager : MonoBehaviour
         LigarDesligarPainel(painelLoading, false);
         LigarDesligarPainel(painelSlots, true);
         AtualizarTextosSlots(); 
+        estadoAtual = EstadoInterface.Slots;
     }
 
     IEnumerator SequenciaInicializacaoJogo()
@@ -706,12 +732,26 @@ public class InterfaceManager : MonoBehaviour
             SistemaGlobal.Instance.CarregarJogo(SistemaGlobal.Instance.slotAtual);
             
             string p = "Slot_" + SistemaGlobal.Instance.slotAtual;
+            float x = 0, y = 0, z = 0;
+            bool achouPos = false;
             
-            if (PlayerPrefs.HasKey(p + "_PosX"))
+            if (PersistenciaManager.Instance != null && PersistenciaManager.Instance.TemFloat(p + "_PosX"))
             {
-                float x = PlayerPrefs.GetFloat(p + "_PosX");
-                float y = PlayerPrefs.GetFloat(p + "_PosY");
-                float z = PlayerPrefs.GetFloat(p + "_PosZ");
+                x = PersistenciaManager.Instance.ObterFloat(p + "_PosX");
+                y = PersistenciaManager.Instance.ObterFloat(p + "_PosY");
+                z = PersistenciaManager.Instance.ObterFloat(p + "_PosZ");
+                achouPos = true;
+            }
+            else if (PlayerPrefs.HasKey(p + "_PosX"))
+            {
+                x = PlayerPrefs.GetFloat(p + "_PosX");
+                y = PlayerPrefs.GetFloat(p + "_PosY");
+                z = PlayerPrefs.GetFloat(p + "_PosZ");
+                achouPos = true;
+            }
+            
+            if (achouPos)
+            {
                 playerMaster.Teleportar(new Vector3(x, y + 0.1f, z));
             }
             
@@ -719,5 +759,15 @@ public class InterfaceManager : MonoBehaviour
         }
     }
 
-    private void OnDestroy() { ClearFreezeTexture(); }
+    private void ClearFreezeTexture()
+    {
+        if (imagemCongelada != null && imagemCongelada.texture != null)
+        {
+            Texture texCorrompida = imagemCongelada.texture;
+            imagemCongelada.texture = null;
+            Destroy(texCorrompida); 
+        }
+    }
+
+    private void OnDisable() => ClearFreezeTexture();
 }

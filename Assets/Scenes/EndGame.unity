@@ -129,7 +129,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1665944840560174750, guid: 62337a461f3212645a447d079bb8f208, type: 3}
       propertyPath: m_Volume
-      value: 0.025
+      value: 0.015
       objectReference: {fileID: 0}
     - target: {fileID: 2638472309697138380, guid: 62337a461f3212645a447d079bb8f208, type: 3}
       propertyPath: miraUI
@@ -398,6 +398,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7185046737490253869}
     m_Modifications:
+    - target: {fileID: 354295618000831008, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 3925360558145101030}
+    - target: {fileID: 354295618000831008, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: FecharJanelaConfirmacao
+      objectReference: {fileID: 0}
     - target: {fileID: 2555256036449098165, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -417,6 +425,14 @@ PrefabInstance:
     - target: {fileID: 3784367113677415959, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3816221498609806534, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_Target
+      value: 
+      objectReference: {fileID: 3925360558145101030}
+    - target: {fileID: 3816221498609806534, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
+      value: FecharJanelaConfirmacao
       objectReference: {fileID: 0}
     - target: {fileID: 4001340167222488179, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
       propertyPath: m_LocalPosition.x
@@ -5037,6 +5053,7 @@ MonoBehaviour:
   clipeMusicaMenu: {fileID: 0}
   volumeMaximoMusica: 1
   tempoDeFade: 1.5
+  jogoPausado: 0
 --- !u!222 &4082728577426287243
 CanvasRenderer:
   m_ObjectHideFlags: 0

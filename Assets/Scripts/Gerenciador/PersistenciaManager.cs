@@ -1,19 +1,17 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
-using UnityEngine.SceneManagement; // Adicionado para lidar com a cena do jogador
+using System;
 
-[System.Serializable]
-public class DadosDeSave
-{
-    public List<string> chavesInt = new List<string>();
-    public List<int> valoresInt = new List<int>();
+[Serializable] public class IntEntry { public string k; public int v; }
+[Serializable] public class FloatEntry { public string k; public float v; }
+[Serializable] public class StringEntry { public string k; public string v; }
 
-    public List<string> chavesFloat = new List<string>();
-    public List<float> valoresFloat = new List<float>();
-    
-    public List<string> chavesString = new List<string>(); // Novo: Para salvar o nome da cena!
-    public List<string> valoresString = new List<string>();
+[Serializable]
+public class DadosDeSave {
+    public List<IntEntry> ints = new List<IntEntry>();
+    public List<FloatEntry> floats = new List<FloatEntry>();
+    public List<StringEntry> strings = new List<StringEntry>();
 }
 
 public class PersistenciaManager : MonoBehaviour
@@ -21,252 +19,305 @@ public class PersistenciaManager : MonoBehaviour
     public static PersistenciaManager Instance;
 
     private Dictionary<string, bool> estadosObjetosRAM = new Dictionary<string, bool>();
+    private Dictionary<string, int> cacheInt = new Dictionary<string, int>();
+    private Dictionary<string, float> cacheFloat = new Dictionary<string, float>();
+    private Dictionary<string, string> cacheString = new Dictionary<string, string>();
 
-    private DadosDeSave dadosAtuais = new DadosDeSave();
+    private DadosDeSave dadosParaSerializar = new DadosDeSave();
+
     private int slotCarregado = -1;
-    
-    public string DiretorioSaves => Application.persistentDataPath + "/Saves";
+    private bool inicializado = false;
 
-    public bool ModoSemSave()
-    {
-        if (SistemaGlobal.Instance == null) return true;
-        if (SistemaGlobal.Instance.slotAtual <= 0) return true;
-        return false;
-    }
+    private float ultimoSaveTempo = 0f;
+    private float intervaloMinimoSave = 2f;
 
-    private void Awake()
+    public string DiretorioSaves => Path.Combine(Application.persistentDataPath, "Saves");
+
+    void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
-            if (transform.parent == null) DontDestroyOnLoad(gameObject);
-            
+
+            if (transform.parent == null)
+                DontDestroyOnLoad(gameObject);
+
             if (!Directory.Exists(DiretorioSaves))
-            {
                 Directory.CreateDirectory(DiretorioSaves);
-            }
+
+            inicializado = true;
         }
-        else
+        else Destroy(gameObject);
+    }
+
+    // =========================
+    // AUTO SAVE
+    // =========================
+    void OnApplicationQuit() => SalvarTudo();
+
+    void OnApplicationFocus(bool focus)
+    {
+        if (!focus && Time.unscaledTime - ultimoSaveTempo > intervaloMinimoSave)
         {
-            Destroy(gameObject);
+            SalvarTudo();
+            ultimoSaveTempo = Time.unscaledTime;
         }
     }
 
-    private string GetCaminhoSave(int slot) 
-    { 
-        return DiretorioSaves + $"/SaveData_Slot_{slot}.save"; 
-    }
-    
-    private string GetCaminhoBackup(int slot) 
-    { 
-        return DiretorioSaves + $"/SaveData_Slot_{slot}_Backup.save"; 
-    }
+    public bool ModoSemSave() =>
+        SistemaGlobal.Instance == null || SistemaGlobal.Instance.slotAtual <= 0;
 
+    // =========================
+    // LOAD
+    // =========================
     private void GarantirDadosCarregados()
     {
         if (ModoSemSave()) return;
-        
+
         int slot = SistemaGlobal.Instance.slotAtual;
-        if (slotCarregado != slot)
-        {
-            slotCarregado = slot;
+
+        if (slotCarregado != slot && slot > 0)
             CarregarDoDisco(slot);
-        }
+    }
+
+    private void GarantirListasValidas()
+    {
+        if (dadosParaSerializar.ints == null) dadosParaSerializar.ints = new List<IntEntry>();
+        if (dadosParaSerializar.floats == null) dadosParaSerializar.floats = new List<FloatEntry>();
+        if (dadosParaSerializar.strings == null) dadosParaSerializar.strings = new List<StringEntry>();
     }
 
     private void CarregarDoDisco(int slot)
     {
-        string caminho = GetCaminhoSave(slot);
-        if (File.Exists(caminho))
+        slotCarregado = slot;
+
+        string caminho = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
+
+        if (!File.Exists(caminho))
+        {
+            ResetarDicionarios();
+            return;
+        }
+
+        try
         {
             string json = File.ReadAllText(caminho);
-            dadosAtuais = JsonUtility.FromJson<DadosDeSave>(json);
+            dadosParaSerializar = JsonUtility.FromJson<DadosDeSave>(json);
+
+            if (dadosParaSerializar == null)
+            {
+                ResetarDicionarios();
+                return;
+            }
+
+            GarantirListasValidas();
+            SincronizarListasParaCache();
         }
-        else
+        catch (Exception e)
         {
-            dadosAtuais = new DadosDeSave();
+            Debug.LogError("[SAVE] Erro ao carregar: " + e.Message);
+            TentarBackup(slot);
         }
     }
 
-    // --- TIPOS BÁSICOS DE SAVE ---
-    private void SalvarInt(string chave, int valor)
+    private void TentarBackup(int slot)
     {
-        GarantirDadosCarregados();
-        int idx = dadosAtuais.chavesInt.IndexOf(chave);
-        if (idx >= 0) dadosAtuais.valoresInt[idx] = valor;
-        else { dadosAtuais.chavesInt.Add(chave); dadosAtuais.valoresInt.Add(valor); }
+        string caminho = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json.bak");
+
+        if (!File.Exists(caminho))
+        {
+            ResetarDicionarios();
+            return;
+        }
+
+        try
+        {
+            dadosParaSerializar = JsonUtility.FromJson<DadosDeSave>(File.ReadAllText(caminho));
+            GarantirListasValidas();
+            SincronizarListasParaCache();
+        }
+        catch
+        {
+            ResetarDicionarios();
+        }
     }
 
-    private bool TemInt(string chave) { GarantirDadosCarregados(); return dadosAtuais.chavesInt.Contains(chave); }
-    private int ObterInt(string chave) { GarantirDadosCarregados(); int idx = dadosAtuais.chavesInt.IndexOf(chave); return idx >= 0 ? dadosAtuais.valoresInt[idx] : 0; }
-
-    private void SalvarFloat(string chave, float valor)
+    private void SincronizarListasParaCache()
     {
-        GarantirDadosCarregados();
-        int idx = dadosAtuais.chavesFloat.IndexOf(chave);
-        if (idx >= 0) dadosAtuais.valoresFloat[idx] = valor;
-        else { dadosAtuais.chavesFloat.Add(chave); dadosAtuais.valoresFloat.Add(valor); }
+        cacheInt.Clear();
+        foreach (var e in dadosParaSerializar.ints)
+            cacheInt[e.k] = e.v;
+
+        cacheFloat.Clear();
+        foreach (var e in dadosParaSerializar.floats)
+            cacheFloat[e.k] = e.v;
+
+        cacheString.Clear();
+        foreach (var e in dadosParaSerializar.strings)
+            cacheString[e.k] = e.v;
     }
 
-    private bool TemFloat(string chave) { GarantirDadosCarregados(); return dadosAtuais.chavesFloat.Contains(chave); }
-    private float ObterFloat(string chave) { GarantirDadosCarregados(); int idx = dadosAtuais.chavesFloat.IndexOf(chave); return idx >= 0 ? dadosAtuais.valoresFloat[idx] : 0f; }
-
-    private void SalvarString(string chave, string valor)
+    private void ResetarDicionarios()
     {
-        GarantirDadosCarregados();
-        int idx = dadosAtuais.chavesString.IndexOf(chave);
-        if (idx >= 0) dadosAtuais.valoresString[idx] = valor;
-        else { dadosAtuais.chavesString.Add(chave); dadosAtuais.valoresString.Add(valor); }
+        cacheInt.Clear();
+        cacheFloat.Clear();
+        cacheString.Clear();
+        estadosObjetosRAM.Clear(); // 🔥 CORREÇÃO: Limpa a RAM velha para não bugar um Novo Jogo!
+
+        dadosParaSerializar = new DadosDeSave();
+        GarantirListasValidas();
     }
 
-    public bool TemString(string chave) { GarantirDadosCarregados(); return dadosAtuais.chavesString.Contains(chave); }
-    public string ObterString(string chave) { GarantirDadosCarregados(); int idx = dadosAtuais.chavesString.IndexOf(chave); return idx >= 0 ? dadosAtuais.valoresString[idx] : ""; }
+    // =========================
+    // SAVE
+    // =========================
+    public void SalvarTudo()
+    {
+        if (!inicializado || ModoSemSave()) return;
 
-    // --- LÓGICA DE OBJETOS E TRANSFORMS ---
+        int slot = SistemaGlobal.Instance.slotAtual;
+        if (slot <= 0) return;
+
+        try
+        {
+            dadosParaSerializar.ints.Clear();
+            foreach (var kv in cacheInt)
+                dadosParaSerializar.ints.Add(new IntEntry { k = kv.Key, v = kv.Value });
+
+            dadosParaSerializar.floats.Clear();
+            foreach (var kv in cacheFloat)
+                dadosParaSerializar.floats.Add(new FloatEntry { k = kv.Key, v = kv.Value });
+
+            dadosParaSerializar.strings.Clear();
+            foreach (var kv in cacheString)
+                dadosParaSerializar.strings.Add(new StringEntry { k = kv.Key, v = kv.Value });
+
+            string json = JsonUtility.ToJson(dadosParaSerializar, true);
+            string caminho = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
+
+            if (File.Exists(caminho))
+                File.Copy(caminho, caminho + ".bak", true);
+
+            File.WriteAllText(caminho, json);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[SAVE] Erro ao salvar: " + e.Message);
+        }
+    }
+
+    // =========================
+    // API
+    // =========================
+    public void SalvarInt(string k, int v) { GarantirDadosCarregados(); cacheInt[k] = v; }
+    public int ObterInt(string k) { GarantirDadosCarregados(); return cacheInt.TryGetValue(k, out int v) ? v : 0; }
+
+    public void SalvarFloat(string k, float v) { GarantirDadosCarregados(); cacheFloat[k] = v; }
+    public float ObterFloat(string k) { GarantirDadosCarregados(); return cacheFloat.TryGetValue(k, out float v) ? v : 0f; }
+
+    public void SalvarString(string k, string v) { GarantirDadosCarregados(); cacheString[k] = v ?? ""; }
+    public string ObterString(string k) { GarantirDadosCarregados(); return cacheString.TryGetValue(k, out string v) ? v : ""; }
+
+    public bool TemFloat(string k)
+    {
+        GarantirDadosCarregados();
+        return cacheFloat.ContainsKey(k);
+    }
+
+    // 🔥 NOVA FUNÇÃO: Responde se o objeto de fato tem algum save pra ele ou não
+    public bool TemEstadoSalvo(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return false;
+        GarantirDadosCarregados();
+        if (cacheInt.ContainsKey(id + "_Active")) return true;
+        if (estadosObjetosRAM.ContainsKey(id)) return true;
+        return false;
+    }
+
     public void RegistrarEstado(string id, bool estado)
     {
         if (string.IsNullOrEmpty(id)) return;
-        
-        if (estadosObjetosRAM.ContainsKey(id)) estadosObjetosRAM[id] = estado;
-        else estadosObjetosRAM.Add(id, estado);
-        
-        if (ModoSemSave()) return;
-        
-        SalvarInt(GetChave(id, "Active"), estado ? 1 : 0);
+
+        estadosObjetosRAM[id] = estado;
+        SalvarInt(id + "_Active", estado ? 1 : 0);
     }
 
     public bool ObterEstado(string id)
     {
         if (string.IsNullOrEmpty(id)) return false;
-        
-        if (!ModoSemSave())
-        {
-            string chave = GetChave(id, "Active");
-            if (TemInt(chave)) return ObterInt(chave) == 1;
-        }
-        
+
+        GarantirDadosCarregados();
+
+        if (cacheInt.TryGetValue(id + "_Active", out int v))
+            return v == 1;
+
         return estadosObjetosRAM.ContainsKey(id) && estadosObjetosRAM[id];
     }
 
-    public bool CarregarEstadoObjeto(string id, bool valorPadrao)
+    // =========================
+    // RESTORE BACKUP
+    // =========================
+    public void RestaurarBackup(int slot)
     {
-        if (string.IsNullOrEmpty(id)) return valorPadrao;
-        if (ModoSemSave()) return valorPadrao;
-        
-        string chave = GetChave(id, "Active");
-        if (TemInt(chave)) return ObterInt(chave) == 1;
-        
-        return valorPadrao;
+        string path = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
+        string backup = path + ".bak";
+
+        if (!File.Exists(backup))
+        {
+            Debug.LogWarning("[SAVE] Backup não encontrado.");
+            return;
+        }
+
+        try
+        {
+            File.Copy(backup, path, true);
+
+            slotCarregado = -1;
+            ResetarDicionarios();
+
+            CarregarDoDisco(slot);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[SAVE] Erro ao restaurar backup: " + e.Message);
+        }
     }
 
     public void SalvarTransform(string id, Transform t)
     {
-        if (ModoSemSave()) return;
-        
-        string chave = GetChave(id, "Pos");
-        SalvarFloat(chave + "X", t.position.x);
-        SalvarFloat(chave + "Y", t.position.y);
-        SalvarFloat(chave + "Z", t.position.z);
-        SalvarFloat(chave + "RotX", t.rotation.eulerAngles.x);
-        SalvarFloat(chave + "RotY", t.rotation.eulerAngles.y);
-        SalvarFloat(chave + "RotZ", t.rotation.eulerAngles.z);
-        
-        // NOVO: Toda vez que salva um transform, salva a cena em que ele tá!
-        SalvarString(chave + "Cena", SceneManager.GetActiveScene().name); 
+        SalvarFloat(id + "_x", t.position.x);
+        SalvarFloat(id + "_y", t.position.y);
+        SalvarFloat(id + "_z", t.position.z);
     }
 
     public void CarregarTransform(string id, Transform t)
     {
-        if (ModoSemSave()) return;
-        
-        string chave = GetChave(id, "Pos");
-        if (!TemFloat(chave + "X")) return;
-        
-        Vector3 pos = new Vector3(ObterFloat(chave + "X"), ObterFloat(chave + "Y"), ObterFloat(chave + "Z"));
-        Vector3 rot = new Vector3(ObterFloat(chave + "RotX"), ObterFloat(chave + "RotY"), ObterFloat(chave + "RotZ"));
-        
-        // Teleporte seguro cravado usando a função do próprio FPS_Master pra não brigar com física
-        if (t.CompareTag("Player") && FPS_Master.Instance != null)
+        if (cacheFloat.ContainsKey(id + "_x"))
         {
-            FPS_Master.Instance.Teleportar(pos);
-            t.rotation = Quaternion.Euler(rot);
-        }
-        else
-        {
-            t.position = pos;
-            t.rotation = Quaternion.Euler(rot);
+            t.position = new Vector3(
+                ObterFloat(id + "_x"),
+                ObterFloat(id + "_y"),
+                ObterFloat(id + "_z")
+            );
         }
     }
-
-    private string GetChave(string id, string tipo)
+    
+    // =========================
+    // COMPATIBILIDADE COM SCRIPTS ANTIGOS
+    // =========================
+    public bool CarregarEstadoObjeto(string id, bool valorPadrao)
     {
-        int slot = SistemaGlobal.Instance.slotAtual;
-        return $"Slot_{slot}_{id}_{tipo}";
+        if (!TemEstadoSalvo(id)) return valorPadrao;
+        return ObterEstado(id);
     }
 
-    public void SalvarTudo()
+    public bool CarregarEstadoObjeto(string id)
     {
-        if (ModoSemSave()) return;
-        
-        GarantirDadosCarregados();
-        
-        int slot = SistemaGlobal.Instance.slotAtual;
-        string caminhoOriginal = GetCaminhoSave(slot);
-        string caminhoBackup = GetCaminhoBackup(slot);
-
-        if (File.Exists(caminhoOriginal))
-        {
-            File.Copy(caminhoOriginal, caminhoBackup, true);
-            string dataAtual = PlayerPrefs.GetString($"Slot_{slot}_Data", "");
-            PlayerPrefs.SetString($"Slot_{slot}_Backup_Data", dataAtual);
-        }
-
-        string json = JsonUtility.ToJson(dadosAtuais, true); 
-        File.WriteAllText(caminhoOriginal, json);
-
-        string novaData = System.DateTime.Now.ToString("dd/MM HH:mm");
-        PlayerPrefs.SetString($"Slot_{slot}_Data", novaData);
-        PlayerPrefs.SetInt($"Slot_{slot}_SaveExistente", 1);
-        
-        PlayerPrefs.Save();
-        
-        if (GameManager.Instance != null) 
-        {
-            GameManager.Instance.SalvarProgresso();
-        }
+        return ObterEstado(id);
     }
 
-    public void RestaurarBackup(int slot)
+    public void LimparDicionario()
     {
-        string caminhoOriginal = GetCaminhoSave(slot);
-        string caminhoBackup = GetCaminhoBackup(slot);
-        string caminhoTemp = DiretorioSaves + $"/SaveData_Slot_{slot}_Temp.save";
-
-        if (File.Exists(caminhoBackup))
-        {
-            if (File.Exists(caminhoTemp)) File.Delete(caminhoTemp);
-            if (File.Exists(caminhoOriginal)) File.Move(caminhoOriginal, caminhoTemp); 
-            File.Move(caminhoBackup, caminhoOriginal); 
-            if (File.Exists(caminhoTemp)) File.Move(caminhoTemp, caminhoBackup); 
-
-            string dataAtual = PlayerPrefs.GetString($"Slot_{slot}_Data", "");
-            string dataBackup = PlayerPrefs.GetString($"Slot_{slot}_Backup_Data", "");
-            
-            PlayerPrefs.SetString($"Slot_{slot}_Data", dataBackup);
-            PlayerPrefs.SetString($"Slot_{slot}_Backup_Data", dataAtual);
-            PlayerPrefs.Save();
-
-            Debug.Log($"[SAVE] Backup do slot {slot} restaurado e datas trocadas!");
-
-            if (!ModoSemSave() && SistemaGlobal.Instance != null && SistemaGlobal.Instance.slotAtual == slot)
-            {
-                CarregarDoDisco(slot);
-            }
-        }
-    }
-
-    public void LimparDicionario() 
-    { 
-        estadosObjetosRAM.Clear(); 
+        ResetarDicionarios();
     }
 }

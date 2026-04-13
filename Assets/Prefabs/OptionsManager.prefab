@@ -7327,6 +7327,34 @@ MonoBehaviour:
   textSFX: {fileID: 7317282750632915556}
   textFOV: {fileID: 2380968294825278741}
   textSensibilidade: {fileID: 1241119545250097205}
+  qualidades_PT:
+  - Baixo
+  - "M\xE9dio"
+  - Alto
+  qualidades_EN:
+  - Low
+  - Medium
+  - High
+  dificuldades_PT:
+  - "F\xE1cil"
+  - Normal
+  dificuldades_EN:
+  - Easy
+  - Normal
+  velocidades_PT:
+  - Lento
+  - Normal
+  - "R\xE1pido"
+  velocidades_EN:
+  - Slow
+  - Normal
+  - Fast
+  idiomas_PT:
+  - "Portugu\xEAs"
+  - "Ingl\xEAs"
+  idiomas_EN:
+  - Portuguese
+  - English
 --- !u!1 &4521393266209506853
 GameObject:
   m_ObjectHideFlags: 0

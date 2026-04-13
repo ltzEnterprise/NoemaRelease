@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.SceneManagement;
+using System.IO; // <--- CERTIFIQUE-SE DE TER ESSA LINHA NO TOPO
 
 public class DevToolsEditor
 {
@@ -8,14 +9,32 @@ public class DevToolsEditor
     [MenuItem("Hacks/Reset All Saves")]
     public static void ResetarSaveGeral()
     {
-        // Apaga configurações e slots
+        // A) Apaga PlayerPrefs (Configurações básicas)
         PlayerPrefs.DeleteAll();
         PlayerPrefs.Save();
 
-        // Apaga o estado global da memória rodando (Seu código original mantido)
-        // EstadoGlobal.ResetarTudo(); 
+        // B) Apaga os arquivos JSON do PersistenciaManager
+        // Usamos o mesmo caminho que o seu Manager usa
+        string diretorioSaves = Path.Combine(Application.persistentDataPath, "Saves");
 
-        Debug.LogWarning(" TODOS OS SAVES E DADOS FORAM APAGADOS DO SISTEMA ");
+        if (Directory.Exists(diretorioSaves))
+        {
+            // Deleta a pasta e tudo dentro dela
+            Directory.Delete(diretorioSaves, true);
+            // Cria de novo vazia para o sistema não dar erro de "pasta não encontrada"
+            Directory.CreateDirectory(diretorioSaves);
+            
+            Debug.Log("<color=cyan>[DEV TOOLS]</color> Pasta de arquivos JSON deletada.");
+        }
+
+        // C) Se você estiver com o jogo aberto no Editor, limpa a memória RAM agora
+        if (Application.isPlaying && PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.LimparDicionario();
+            Debug.Log("<color=cyan>[DEV TOOLS]</color> Cache da memória RAM limpo.");
+        }
+
+        Debug.LogWarning(" !!! TODOS OS SAVES (PLAYERPREFS E JSON) FORAM APAGADOS DO SISTEMA !!! ");
     }
 
     // 2. LIMPACÃO SUPREMA DE MISSING SCRIPTS (CENA + PREFABS)

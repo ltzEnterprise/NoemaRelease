@@ -31,8 +31,6 @@ Shader "Custom/PlasmaDoorURP"
         
         LOD 100
         
-        // CORREÇÃO: Blend de transparência tradicional. Permite usar a barra de opacidade
-        // sem estourar as cores para branco puro.
         Blend SrcAlpha OneMinusSrcAlpha 
         ZWrite Off
         Cull Off 
@@ -59,7 +57,7 @@ Shader "Custom/PlasmaDoorURP"
                 float4 positionCS : SV_POSITION;
                 float2 uvMain : TEXCOORD0;
                 float2 uvSec : TEXCOORD1;
-                float2 uvOrig : TEXCOORD2; // Guarda a UV original parada para a máscara de borda
+                float2 uvOrig : TEXCOORD2; 
                 float3 normalWS : TEXCOORD3;
                 float3 viewDirWS : TEXCOORD4;
             };
@@ -88,7 +86,6 @@ Shader "Custom/PlasmaDoorURP"
                 
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 
-                // UV original guardada sem sofrer alterações de movimento
                 output.uvOrig = input.uv;
                 
                 float tempo = _Time.y;
@@ -97,7 +94,9 @@ Shader "Custom/PlasmaDoorURP"
                 
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
-                output.viewDirWS = GetWorldSpaceViewDir(vertexInput.positionWS);
+                
+                // MUDANÇA 1: Já pega a ViewDir normalizada de forma segura direto da Unity
+                output.viewDirWS = GetWorldSpaceNormalizeViewDir(vertexInput.positionWS);
                 
                 return output;
             }
@@ -111,8 +110,7 @@ Shader "Custom/PlasmaDoorURP"
                 float2 uvDistorcida = input.uvMain + (corSecundaria.rg - 0.5) * _Distortion;
                 half4 corPrincipal = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uvDistorcida);
                 
-                // 3. A NOVA CORREÇÃO: Em vez de multiplicar (que destrói os detalhes se usares azul), 
-                // vamos somá-las e dividi-las a meio. Detalhes perfeitos.
+                // 3. Mistura das cores
                 half3 plasmaMisto = (corPrincipal.rgb + corSecundaria.rgb) * 0.5;
                 
                 // 4. Pulso mais gentil
@@ -121,21 +119,19 @@ Shader "Custom/PlasmaDoorURP"
                 // 5. Aplicar a cor baseada na nova barra de Intensidade
                 half3 plasmaBase = plasmaMisto * _Color.rgb * pulso * _PlasmaIntensity;
                 
-                // 6. Efeito de borda do campo de forças (Fresnel)
-                float fresnelTerm = pow(1.0 - saturate(dot(normalize(input.normalWS), normalize(input.viewDirWS))), _FresnelPower);
+                // MUDANÇA 2: SafeNormalize na normal e usando o ViewDir seguro. Adeus explosão do Bloom!
+                float fresnelTerm = pow(1.0 - saturate(dot(SafeNormalize(input.normalWS), input.viewDirWS)), _FresnelPower);
                 half3 brilhoBorda = fresnelTerm * _FresnelColor.rgb;
                 
                 // ==========================================================
-                // 7. O TRUQUE PARA ESCONDER OS CORTES DA TEXTURA
-                // Usamos o PI (3.14159) na UV original. Isto cria uma máscara 
-                // que é 100% preta nas extremidades do teu modelo e 100% branca no meio.
+                // 7. MÁSCARA PARA ESCONDER OS CORTES DA TEXTURA
                 float mascaraX = sin(input.uvOrig.x * 3.14159);
                 float mascaraY = sin(input.uvOrig.y * 3.14159);
                 float mascaraDeBorda = pow(mascaraX * mascaraY, _EdgeFade);
                 // ==========================================================
 
-                // 8. O canal Alfa (Transparência) junta a tua barra de Opacidade com a máscara das bordas
-                float alphaFinal = _Opacity * mascaraDeBorda;
+                // MUDANÇA 3: Saturate aqui garante que o Alfa nunca passe de 1.0 (evita bugs de blend na URP)
+                float alphaFinal = saturate(_Opacity * mascaraDeBorda);
                 
                 half3 corFinal = plasmaBase + brilhoBorda;
                 

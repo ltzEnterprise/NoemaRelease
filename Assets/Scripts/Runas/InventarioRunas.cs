@@ -18,6 +18,10 @@ public class InventarioRunas : MonoBehaviour
     [Header("Configuração das Runas")]
     public List<SlotConfigRuna> configuracaoRunas = new List<SlotConfigRuna>();
 
+    [Header("--- CONTROLE DE CENAS ---")]
+    [Tooltip("Nome da cena 2D onde as runas NÃO devem aparecer na tela.")]
+    public string nomeDaCena2D = "Mundo2D";
+
     [Header("Runas Atualmente Coletadas")]
     public List<RunaData> runasNaMao = new List<RunaData>();
 
@@ -29,10 +33,7 @@ public class InventarioRunas : MonoBehaviour
         if (Instance == null) 
         {
             Instance = this;
-            
-            // Tira o objeto de dentro de qualquer "pai" e joga ele na raiz da cena
             transform.SetParent(null); 
-            
             DontDestroyOnLoad(gameObject); 
             SceneManager.sceneLoaded += OnSceneLoaded;
         } 
@@ -51,6 +52,11 @@ public class InventarioRunas : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        // 🔥 A MÁGICA TÁ AQUI: Se for a cena 2D, aborta o desenho da UI.
+        // As runas continuam salvas na lista 'runasNaMao', só não vão pra tela.
+        if (scene.name == nomeDaCena2D) return;
+
+        // Se for a cena 3D, desenha tudo que tá guardado na memória.
         StartCoroutine(RedesenharRunasNaTela());
     }
 
@@ -71,14 +77,18 @@ public class InventarioRunas : MonoBehaviour
 
         foreach (var slot in configuracaoRunas)
         {
-            // Lê do PersistenciaManager se a runa tá lá
             bool temRuna = PersistenciaManager.Instance.ObterEstado("Runa_" + slot.nomeIdentificador);
             if (temRuna && !runasNaMao.Contains(slot.data))
             {
                 runasNaMao.Add(slot.data);
             }
         }
-        StartCoroutine(RedesenharRunasNaTela());
+
+        // Também protege no Start caso o jogo comece direto no 2D por algum motivo
+        if (SceneManager.GetActiveScene().name != nomeDaCena2D)
+        {
+            StartCoroutine(RedesenharRunasNaTela());
+        }
     }
 
     public void SalvarPosicaoAtual(Vector3 posicao)
@@ -98,7 +108,11 @@ public class InventarioRunas : MonoBehaviour
                 runasNaMao.Add(slot.data);
                 if (slot.eventoParaColetar != null) slot.eventoParaColetar.Invoke();
                 
-                AtualizarUI(slot.data.icone);
+                // Só desenha a UI nova se não estiver no mundo 2D
+                if (SceneManager.GetActiveScene().name != nomeDaCena2D)
+                {
+                    AtualizarUI(slot.data.icone);
+                }
 
                 // --- SALVA A RUNA IMEDIATAMENTE NO DISCO ---
                 if (!Application.isEditor && PersistenciaManager.Instance != null)

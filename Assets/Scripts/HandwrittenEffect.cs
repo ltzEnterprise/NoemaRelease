@@ -5,13 +5,10 @@ using TMPro;
 public class HandwrittenEffect : MonoBehaviour
 {
     [Header("Distortion Settings")]
-    [Tooltip("Maximum random rotation angle for each character")]
     public float angleStrength = 2.5f;
-    [Tooltip("Maximum vertical offset for each character")]
     public float posStrength = 1.0f;
 
     [Header("Ink Simulation")]
-    [Tooltip("How much the ink fades randomly (0 to 255). Higher = more worn out.")]
     [Range(0, 255)] public float inkWearAmount = 100f;
 
     private TMP_Text textComponent;
@@ -24,83 +21,73 @@ public class HandwrittenEffect : MonoBehaviour
 
     void OnValidate()
     {
-        // Garante que pegamos o componente antes de tentar usar
         if (textComponent == null) textComponent = GetComponent<TMP_Text>();
+        
+        // Evita rodar no exato frame em que o objeto é desligado/destruído, o que causa crash
+        if (!gameObject.activeInHierarchy) return;
+        
         ApplyVisuals();
     }
 
     public void ApplyVisuals()
     {
-        // 1. Verificações de Segurança Básica
         if (textComponent == null) return;
 
-        // Força o TMP a atualizar a geometria antes de tentarmos mexer nela
         textComponent.ForceMeshUpdate();
-
         var textInfo = textComponent.textInfo;
 
-        // 2. Verifica se existem dados de malha válidos
         if (textInfo == null || textInfo.meshInfo == null || textInfo.characterCount == 0) return;
 
         for (int i = 0; i < textInfo.characterCount; i++)
         {
             var charInfo = textInfo.characterInfo[i];
-
-            // Pula caracteres invisíveis ou sem dados
             if (!charInfo.isVisible) continue;
 
-            int vertexIndex = charInfo.vertexIndex;
             int materialIndex = charInfo.materialReferenceIndex;
-            
-            // 3. Verificação de Segurança de Array
-            if (materialIndex >= textInfo.meshInfo.Length) continue;
+            int vertexIndex = charInfo.vertexIndex;
 
-            var vertices = textInfo.meshInfo[materialIndex].vertices;
-            var colors = textInfo.meshInfo[materialIndex].colors32;
+            // Trava de segurança 1: Material inválido
+            if (materialIndex < 0 || materialIndex >= textInfo.meshInfo.Length) continue;
 
-            // Se os arrays estiverem vazios por algum motivo, pula
+            var meshInfo = textInfo.meshInfo[materialIndex];
+            var vertices = meshInfo.vertices;
+            var colors = meshInfo.colors32;
+
+            // Trava de segurança 2: TMP não montou os arrays direito
             if (vertices == null || colors == null) continue;
-            // Se o índice for maior que o tamanho do array, pula (evita crash)
-            if (vertexIndex + 3 >= vertices.Length) continue;
 
-            // --- Jitter Logic ---
-            Vector3 center = (vertices[vertexIndex + 0] + vertices[vertexIndex + 2]) / 2;
+            Vector3 center = (vertices[vertexIndex + 0] + vertices[vertexIndex + 2]) / 2f;
+            Random.InitState(i * 33); 
             
-            Random.InitState(i * 33); // Seed fixa para não tremer
-
             float rndAngle = Random.Range(-angleStrength, angleStrength);
             Quaternion rotation = Quaternion.Euler(0, 0, rndAngle);
-            
-            float rndOffsetY = Random.Range(-posStrength, posStrength);
-            Vector3 offset = new Vector3(0, rndOffsetY, 0);
-
-            // --- Ink Wear Logic ---
+            Vector3 offset = new Vector3(0, Random.Range(-posStrength, posStrength), 0);
             byte alphaReduction = (byte)Random.Range(0, inkWearAmount);
 
             for (int j = 0; j < 4; j++)
             {
+                int vIdx = vertexIndex + j;
+                
+                // Trava de Segurança ABSOLUTA: Testa o índice ANTES de aplicar qualquer matemática
+                // Se o TMP bugou e a cor ou o vértice não existe, ele pula o loop na hora e não dá erro
+                if (vIdx < 0 || vIdx >= vertices.Length || vIdx >= colors.Length) break;
+
                 // Aplica distorção
-                Vector3 original = vertices[vertexIndex + j];
-                vertices[vertexIndex + j] = rotation * (original - center) + center + offset;
+                vertices[vIdx] = rotation * (vertices[vIdx] - center) + center + offset;
 
                 // Aplica cor (tinta falhada)
-                byte currentAlpha = colors[vertexIndex + j].a;
-                
-                if (currentAlpha > alphaReduction)
-                    colors[vertexIndex + j].a = (byte)(currentAlpha - alphaReduction);
-                else
-                    colors[vertexIndex + j].a = 0;
+                byte currentAlpha = colors[vIdx].a;
+                colors[vIdx].a = currentAlpha > alphaReduction ? (byte)(currentAlpha - alphaReduction) : (byte)0;
             }
         }
 
         // Aplica as mudanças na malha
         for (int i = 0; i < textInfo.meshInfo.Length; i++)
         {
-            var meshInfo = textInfo.meshInfo[i];
-            if (meshInfo.mesh == null) continue;
+            if (textInfo.meshInfo[i].mesh == null) continue;
 
-            meshInfo.mesh.vertices = meshInfo.vertices;
-            meshInfo.mesh.colors32 = meshInfo.colors32;
+            textInfo.meshInfo[i].mesh.vertices = textInfo.meshInfo[i].vertices;
+            textInfo.meshInfo[i].mesh.colors32 = textInfo.meshInfo[i].colors32;
             
             textComponent.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices | TMP_VertexDataUpdateFlags.Colors32);
         }

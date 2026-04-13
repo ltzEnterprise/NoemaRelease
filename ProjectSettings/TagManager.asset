@@ -12,6 +12,7 @@ TagManager:
   - GhostBlock
   - LuzUV
   - LuzUV2D
+  - Chao
   layers:
   - Default
   - TransparentFX

@@ -13,6 +13,12 @@ public class LadderSystem : MonoBehaviour
     public int idItemEscada = 3; 
     public bool jaFoiColocada = false; 
 
+    [Header("Colisores da Escada")]
+    [Tooltip("Collider da parte de cima da escada")]
+    public Collider colliderCima;
+    [Tooltip("Collider da parte de baixo da escada")]
+    public Collider colliderBaixo;
+
     [Header("Teleporte")]
     public Transform pontoBaixo; // Onde o player pisa ao descer
     public Transform pontoCima;  // Onde o player pisa ao subir
@@ -45,9 +51,12 @@ public class LadderSystem : MonoBehaviour
     {
         if (visualDaEscada) visualDaEscada.SetActive(jaFoiColocada);
         
-        // Se a escada não foi colocada, os colisores de subir/descer devem estar desligados?
-        // Depende. Se você quer que o player clique no "nada" pra colocar, deixe ligado.
-        // Se você tem um colisor específico "Base" para colocar, configure aqui.
+        // Liga o collider de cima SOMENTE se a escada já foi colocada
+        if (colliderCima) colliderCima.enabled = jaFoiColocada;
+        
+        // O collider de baixo sempre precisa estar ligado para o player clicar e "Colocar a escada"
+        // Então garantimos que ele tá ativo
+        if (colliderBaixo) colliderBaixo.enabled = true;
     }
 
     // --- CHAMADO PELOS TRIGGERS ---
@@ -62,12 +71,23 @@ public class LadderSystem : MonoBehaviour
 
         if (!jaFoiColocada)
         {
-            // Só mostra opção de colocar se olhar para a base (opcional)
+            // Só mostra opção de colocar se olhar para a base
             if (!olhandoParaCima) 
             {
+                // Verifica qual a língua atual
+                int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
                 bool temItem = InventoryManager.Instance != null && InventoryManager.Instance.itemSelecionado == idItemEscada;
-                textoDeInteracao.text = temItem ? "[E] Colocar Escada" : "Preciso de uma escada...";
-                textoDeInteracao.color = temItem ? Color.white : Color.red;
+                
+                if (temItem)
+                {
+                    textoDeInteracao.text = (lang == 0) ? "[E] Colocar Escada" : "[E] Place Ladder";
+                    textoDeInteracao.color = Color.white;
+                }
+                else
+                {
+                    textoDeInteracao.text = (lang == 0) ? "Preciso de uma escada..." : "I need a ladder...";
+                    textoDeInteracao.color = Color.red;
+                }
             }
             else
             {
@@ -76,8 +96,18 @@ public class LadderSystem : MonoBehaviour
         }
         else
         {
-            // Escada já existe, mostra subir/descer
-            textoDeInteracao.text = olhandoParaCima ? "[E] Descer" : "[E] Subir";
+            // Escada já existe, mostra subir/descer com tradução embutida
+            int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
+            
+            if (olhandoParaCima)
+            {
+                textoDeInteracao.text = (lang == 0) ? "[E] Descer" : "[E] Go Down";
+            }
+            else
+            {
+                textoDeInteracao.text = (lang == 0) ? "[E] Subir" : "[E] Go Up";
+            }
+            
             textoDeInteracao.color = Color.white;
         }
     }
@@ -111,7 +141,7 @@ public class LadderSystem : MonoBehaviour
         {
             InventoryManager.Instance.ConsumirItem(idItemEscada);
             jaFoiColocada = true;
-            AtualizarEstadoVisual();
+            AtualizarEstadoVisual(); // Isso agora também vai ligar o collider de cima!
             
             // Atualiza texto imediato
             if (textoDeInteracao) textoDeInteracao.gameObject.SetActive(false);

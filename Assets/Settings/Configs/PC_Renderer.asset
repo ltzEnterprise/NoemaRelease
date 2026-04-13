@@ -14,19 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ScreenSpaceShadows
   m_Active: 0
   m_Shader: {fileID: 4800000, guid: 0f854b35a0cf61a429bd5dcfea30eddd, type: 3}
---- !u!114 &-6088756777517892232
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b90edb407d144c748a9bbe65c7236c63, type: 3}
-  m_Name: ClearDepthFeature
-  m_EditorClassIdentifier: Assembly-CSharp::ClearDepthFeature
-  m_Active: 1
 --- !u!114 &-5659012813097957753
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -78,8 +65,9 @@ MonoBehaviour:
   - {fileID: 7236103666219916733}
   - {fileID: 3214773094466870049}
   - {fileID: -5659012813097957753}
-  - {fileID: 8546330398930993824}
-  m_RendererFeatureMap: ad6b866f10d7b46c30366ae1b619cb8a48e0355f08d69d36bd9df026f2cd6b64215b2ec9182b9d2c8786e947d42577b1a08267a937aa9a76
+  - {fileID: 717366906861782996}
+  - {fileID: 8876519044599632392}
+  m_RendererFeatureMap: ad6b866f10d7b46c30366ae1b619cb8a48e0355f08d69d36bd9df026f2cd6b64215b2ec9182b9d2c8786e947d42577b1d4071ea96699f40908d2598f0abb2f7b
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -108,6 +96,26 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &717366906861782996
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: GlitchVoid
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
+  m_Active: 0
+  injectionPoint: 450
+  fetchColorBuffer: 1
+  requirements: 5
+  passMaterial: {fileID: 2100000, guid: c63db06a7b150b94b993d9a1517d6340, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
 --- !u!114 &3214773094466870049
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -200,6 +208,22 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aded3f2393a6a124082b3ea7f3fa481f, type: 3}
   m_Name: DrawWeaponFeature
+  m_EditorClassIdentifier: Assembly-CSharp::DrawWeaponFeature
+  m_Active: 1
+  itemLayer:
+    serializedVersion: 2
+    m_Bits: 524288
+--- !u!114 &8876519044599632392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aded3f2393a6a124082b3ea7f3fa481f, type: 3}
+  m_Name: DrawWeaponFeaturePrime
   m_EditorClassIdentifier: Assembly-CSharp::DrawWeaponFeature
   m_Active: 1
   itemLayer:

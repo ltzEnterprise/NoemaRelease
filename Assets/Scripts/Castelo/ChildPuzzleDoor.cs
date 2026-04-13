@@ -2,14 +2,18 @@ using UnityEngine;
 using TMPro; 
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine.UI;
 
 public class ChildPuzzleDoor : MonoBehaviour
 {
     [System.Serializable]
     public class LinhaDeDialogo
     {
-        [TextArea] public string texto;
+        [Tooltip("Texto em Português (Original)")]
+        [TextArea] public string texto; 
+        
+        [Tooltip("Texto em Inglês")]
+        [TextArea] public string textoEN;
+        
         public float tamanhoDaFonte = 36f; 
         public float velocidadeDigitar = 0.04f;
         public float tempoDeEsperaApos = 1.5f;
@@ -326,9 +330,19 @@ public class ChildPuzzleDoor : MonoBehaviour
     
     IEnumerator TocarLista(List<LinhaDeDialogo> lista)
     {
+        // Verifica qual é a língua atual no sistema (0 = PT, 1 = EN)
+        int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
+
         foreach (LinhaDeDialogo linha in lista) {
             if (textoDialogoCutscene) textoDialogoCutscene.fontSize = linha.tamanhoDaFonte;
-            yield return StartCoroutine(EfeitoDigitar(linha.texto, linha.velocidadeDigitar));
+
+            // Usa a variável original 'texto' para o PT, e 'textoEN' para o Inglês
+            string textoParaExibir = (lang == 0) ? linha.texto : linha.textoEN;
+
+            // Fallback: se o inglês estiver vazio, toca em PT pra não dar pau
+            if (lang == 1 && string.IsNullOrEmpty(textoParaExibir)) textoParaExibir = linha.texto;
+
+            yield return StartCoroutine(EfeitoDigitar(textoParaExibir, linha.velocidadeDigitar));
             yield return new WaitForSeconds(linha.tempoDeEsperaApos);
         }
     }
@@ -338,6 +352,7 @@ public class ChildPuzzleDoor : MonoBehaviour
         if (textoDialogoCutscene) { textoDialogoCutscene.text = ""; textoDialogoCutscene.color = Color.white; }
         
         if (audioSourceVoz && somDigitando) { audioSourceVoz.clip = somDigitando; audioSourceVoz.Play(); }
+        
         foreach (char letra in frase.ToCharArray()) {
             if (textoDialogoCutscene) textoDialogoCutscene.text += letra;
             yield return new WaitForSeconds(velocidade);

@@ -8,7 +8,12 @@ public class AudioPuzzleDoor : MonoBehaviour
     [System.Serializable]
     public class LinhaDeDialogo
     {
+        [Tooltip("Texto em Português (Original)")]
         [TextArea] public string texto;
+        
+        [Tooltip("Texto em Inglês")]
+        [TextArea] public string textoEN;
+        
         public float tamanhoDaFonte = 36f; 
         public float velocidadeDigitar = 0.04f;
         public float tempoDeEsperaApos = 1.5f;
@@ -21,7 +26,12 @@ public class AudioPuzzleDoor : MonoBehaviour
     [Header("--- CONFIGURAÇÃO DO PUZZLE ---")]
     public string senhaCorreta = "1234";
     public int idDoDiscoParaDar = 2;   
+    
+    [Tooltip("Dica em Português (Original)")]
     [TextArea] public string dicaApertarR = "[R] Repetir vozes";
+    
+    [Tooltip("Dica em Inglês")]
+    [TextArea] public string dicaApertarREN = "[R] Repeat voices";
 
     [Header("--- ROTEIRO ---")]
     public List<LinhaDeDialogo> falasDaPorta; 
@@ -272,7 +282,14 @@ public class AudioPuzzleDoor : MonoBehaviour
         
         if (textoDicaR)
         {
-            textoDicaR.text = dicaApertarR;
+            // Verifica qual a língua atual
+            int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
+            string dicaParaExibir = (lang == 0) ? dicaApertarR : dicaApertarREN;
+            
+            // Fallback de segurança para o inglês
+            if (lang == 1 && string.IsNullOrEmpty(dicaParaExibir)) dicaParaExibir = dicaApertarR;
+
+            textoDicaR.text = dicaParaExibir;
             textoDicaR.gameObject.SetActive(mostrarDicaR);
         }
 
@@ -391,10 +408,19 @@ public class AudioPuzzleDoor : MonoBehaviour
 
     IEnumerator TocarLista(List<LinhaDeDialogo> lista)
     {
+        int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
+
         foreach (LinhaDeDialogo linha in lista)
         {
             if (textoDialogoCutscene) textoDialogoCutscene.fontSize = linha.tamanhoDaFonte;
-            yield return StartCoroutine(EfeitoDigitar(linha.texto, linha.velocidadeDigitar));
+
+            // Usa a variável original 'texto' para o PT, e 'textoEN' para o Inglês
+            string textoParaExibir = (lang == 0) ? linha.texto : linha.textoEN;
+
+            // Fallback: se o inglês estiver vazio, toca em PT
+            if (lang == 1 && string.IsNullOrEmpty(textoParaExibir)) textoParaExibir = linha.texto;
+
+            yield return StartCoroutine(EfeitoDigitar(textoParaExibir, linha.velocidadeDigitar));
             yield return new WaitForSeconds(linha.tempoDeEsperaApos);
         }
     }

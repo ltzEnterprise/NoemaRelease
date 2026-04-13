@@ -48,6 +48,8 @@ public class FuseBoxController : MonoBehaviour
     public List<FuseSwitch> interruptores; 
     public Transform alavancaMestre;       
     public Transform portaDaCaixa;         
+    [Tooltip("Arraste o Collider da porta aqui. Ele ficará 'Trigger' ao abrir/fechar para não empurrar o player.")]
+    public Collider colisorDaPorta; 
 
     [Header("--- VISUAL E AUDIO ---")]
     public Renderer rendererLuzVerde;
@@ -187,7 +189,12 @@ public class FuseBoxController : MonoBehaviour
 
     void AtualizarMiraComMemoria()
     {
-        if (cameraDoJogador == null) return;
+        // Trava de segurança extra para garantir que a câmera do jogador está ativa
+        if (cameraDoJogador == null) 
+        {
+            if (Camera.main != null) cameraDoJogador = Camera.main;
+            else return; 
+        }
 
         Ray raio = cameraDoJogador.ScreenPointToRay(Input.mousePosition);
         RaycastHit[] hits = Physics.RaycastAll(raio, 100f);
@@ -280,14 +287,12 @@ public class FuseBoxController : MonoBehaviour
             if (audioSource && somSucesso) audioSource.PlayOneShot(somSucesso);
             LigarLuz(rendererLuzVerde, corVerdeAcesa);
 
-            // A MÁGICA DA COMUNICAÇÃO COM O PC ESTÁ AQUI
             if (!resolvidoDia)
             {
                 resolvidoDia = true;
                 PlayerPrefs.SetInt("FuseBox_Dia_Resolvida", 1);
                 PlayerPrefs.Save();
                 
-                // LIGA O DESKTOP DO PC PRA IR PRO MUNDO 2D
                 if (pcPrincipal != null) pcPrincipal.LigarPCProMundo2D(); 
             }
             else
@@ -297,7 +302,6 @@ public class FuseBoxController : MonoBehaviour
                 PlayerPrefs.SetInt("FuseBox_Noite_Resolvida", 1);
                 PlayerPrefs.Save();
 
-                // LIGA A SETA DA NOITE NO PC
                 if (pcPrincipal != null) pcPrincipal.LigarPcSetaNoite();
             }
 
@@ -356,8 +360,26 @@ public class FuseBoxController : MonoBehaviour
     void AnimarPorta()
     {
         if (!portaDaCaixa) return;
+
         Vector3 anguloAlvo = interagindo ? rotacaoPortaAberta : rotacaoPortaFechada;
-        portaDaCaixa.localRotation = Quaternion.Lerp(portaDaCaixa.localRotation, Quaternion.Euler(anguloAlvo), Time.deltaTime * 5f);
+        Quaternion rotAlvo = Quaternion.Euler(anguloAlvo);
+
+        portaDaCaixa.localRotation = Quaternion.Lerp(portaDaCaixa.localRotation, rotAlvo, Time.deltaTime * 5f);
+
+        // 🔥 CORREÇÃO DA MÁGICA DA PORTA AQUI 🔥
+        if (colisorDaPorta != null)
+        {
+            // O Lerp nunca termina num número redondo exato. Se a porta chegar muito perto do alvo (menos de 2 graus), a gente crava ela pra não bugar.
+            if (Quaternion.Angle(portaDaCaixa.localRotation, rotAlvo) > 2.0f)
+            {
+                colisorDaPorta.isTrigger = true; // Porta ainda girando: Fantasma
+            }
+            else
+            {
+                portaDaCaixa.localRotation = rotAlvo; // Força a porta a parar no lugar exato
+                colisorDaPorta.isTrigger = false; // Porta parada: Sólida de novo pro Raycast enxergar ela
+            }
+        }
     }
 
     void AnimarAlavancaNormal()

@@ -6107,6 +6107,7 @@ MonoBehaviour:
   clipeMusicaMenu: {fileID: 8300000, guid: 09385547e04aa7449a91a67f87f665c9, type: 3}
   volumeMaximoMusica: 0.933
   tempoDeFade: 1.5
+  jogoPausado: 0
 --- !u!1001 &3338979232502677686
 PrefabInstance:
   m_ObjectHideFlags: 0
