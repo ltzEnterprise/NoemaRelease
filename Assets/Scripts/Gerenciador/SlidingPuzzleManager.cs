@@ -121,6 +121,8 @@ public class SlidingPuzzleManager : MonoBehaviour
 
     void TentarMoverVizinhoParaVazio()
     {
+        if (isAnimating || isSolved) return; // Trava extra
+
         for (int i = 0; i < 9; i++) {
             int pID = ocupacaoGrade[i];
             if (pID != -1 && SaoVizinhos(i, slotVazioAtual)) {
@@ -132,10 +134,14 @@ public class SlidingPuzzleManager : MonoBehaviour
 
     public void TentarMoverPeca(int pecaID)
     {
+        // 🔥 A TRAVA BLINDADA QUE MATA O BUG: Se já tá animando ou resolvido, ignora a ordem! 🔥
+        if (isAnimating || isSolved) return; 
+
         int slotDaPeca = -1;
         for (int i = 0; i < 9; i++) if (ocupacaoGrade[i] == pecaID) { slotDaPeca = i; break; }
 
         if (SaoVizinhos(slotDaPeca, slotVazioAtual)) {
+            isAnimating = true; // Tranca na mesma hora antes do coroutine iniciar!
             StartCoroutine(AnimarTroca(pecaID, slotDaPeca, slotVazioAtual));
         }
     }
@@ -149,7 +155,6 @@ public class SlidingPuzzleManager : MonoBehaviour
 
     IEnumerator AnimarTroca(int pecaID, int de, int para)
     {
-        isAnimating = true;
         Transform tPeca = puzzlePieces[pecaID];
         Vector3 destino = slotsPosicoes[para];
         Vector3 origem = slotsPosicoes[de];
@@ -170,7 +175,7 @@ public class SlidingPuzzleManager : MonoBehaviour
         ocupacaoGrade[de] = -1;
         slotVazioAtual = de;
 
-        isAnimating = false;
+        isAnimating = false; // Destranca pra próxima peça
         CheckWinCondition();
         SaveGame();
     }
@@ -299,6 +304,14 @@ public class SlidingPuzzleManager : MonoBehaviour
             else emptySpaceMarker.localPosition = slotsPosicoes[i];
         }
         return true;
+    }
+
+    public void ResetarPuzzle()
+    {
+        if (isSolved || isAnimating) return; 
+        
+        ConfigurarPuzzle(); 
+        AutoShuffle(); 
     }
 }
 

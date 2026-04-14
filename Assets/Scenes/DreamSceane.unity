@@ -4506,7 +4506,7 @@ RectTransform:
   m_GameObject: {fileID: 61860023}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3, y: 3, z: 3}
+  m_LocalScale: {x: 4.14, y: 4.43, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2108487711}
@@ -4514,8 +4514,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -18.045057}
+  m_SizeDelta: {x: 0, y: -36.08989}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &61860025
 MonoBehaviour:
@@ -4530,7 +4530,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.9019608}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.92941177}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -7364,7 +7364,7 @@ RectTransform:
   - {fileID: 1655514671}
   - {fileID: 518559030}
   - {fileID: 2075915119}
-  m_Father: {fileID: 948344376}
+  m_Father: {fileID: 522395613}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -8716,7 +8716,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PirateLever
   symbol: 4
   isOn: 0
-  interactText: {fileID: 498188055}
+  interactText: {fileID: 0}
   puzzleManager: {fileID: 1076998908}
   handleObject: {fileID: 1212594047}
   angleOff: -45
@@ -9441,8 +9441,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 10.5, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -26.09, y: 0.04}
-  m_SizeDelta: {x: 200, y: 50}
+  m_AnchoredPosition: {x: -29.67, y: -0.6}
+  m_SizeDelta: {x: 188.3, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &102373946
 MonoBehaviour:
@@ -9512,8 +9512,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 9.52
-  m_fontSizeBase: 9.52
+  m_fontSize: 10.8
+  m_fontSizeBase: 10.8
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -10359,7 +10359,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -12659,7 +12659,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PirateLever
   symbol: 2
   isOn: 0
-  interactText: {fileID: 498188055}
+  interactText: {fileID: 0}
   puzzleManager: {fileID: 1076998908}
   handleObject: {fileID: 436948985}
   angleOff: -45
@@ -14388,7 +14388,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BotaoFisico
   targetDoor: {fileID: 2707908}
   movingPart: {fileID: 1398241954}
-  pressDistance: 0.2
+  pressDistance: 0.09
   speed: 5
   sensorCenter: {x: 0, y: 0.38, z: 0}
   sensorSize: {x: 0.8, y: 0.5, z: 0.8}
@@ -15317,7 +15317,7 @@ Transform:
   m_GameObject: {fileID: 158823799}
   serializedVersion: 2
   m_LocalRotation: {x: 0.073151626, y: -0.19181556, z: 0.014338522, w: 0.978596}
-  m_LocalPosition: {x: 0, y: 0, z: 0.09}
+  m_LocalPosition: {x: 0, y: 0, z: 0.14}
   m_LocalScale: {x: 0.18, y: 0.24, z: 0.36}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -15446,6 +15446,7 @@ MonoBehaviour:
   hideInsteadOfReveal: 0
   audioSource: {fileID: 158823801}
   revealSound: {fileID: 0}
+  textoDicaMagica: {fileID: 572407317}
 --- !u!64 &158823803
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -19312,7 +19313,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 216658864}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Retorno
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -24359,6 +24360,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 65028169216114354, guid: a47d5a7cdb311b242bed64d10900e570, type: 3}
+      propertyPath: m_IsTrigger
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 199587485440891032, guid: a47d5a7cdb311b242bed64d10900e570, type: 3}
       propertyPath: m_Materials.Array.size
       value: 1
@@ -26168,6 +26173,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1534066118601383972, guid: 36f0b95c8afb6ca49b8e112cc8fba58d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 271035950}
+    - targetCorrespondingSourceObject: {fileID: 1534066118601383972, guid: 36f0b95c8afb6ca49b8e112cc8fba58d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 271035951}
   m_SourcePrefab: {fileID: 100100000, guid: 36f0b95c8afb6ca49b8e112cc8fba58d, type: 3}
 --- !u!4 &271035947 stripped
 Transform:
@@ -26308,6 +26316,27 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!65 &271035951
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 271035948}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.84, y: 1.05, z: 0.5}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1001 &271191893
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -31123,7 +31152,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.32, y: 0.18, z: 0.31}
+  m_Size: {x: 0.32, y: 0.2, z: 0.31}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &333843409
 MonoBehaviour:
@@ -33352,6 +33381,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1305265795}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &361156306 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+  m_PrefabInstance: {fileID: 1768927549}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &361391325 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b8aa0ccd1fb79294da6b8f03791e27f2, type: 3}
@@ -34391,7 +34425,7 @@ RectTransform:
   m_GameObject: {fileID: 382692599}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3.5, y: 4, z: 3}
+  m_LocalScale: {x: 3.69, y: 4.18, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 149734909}
@@ -48004,6 +48038,7 @@ Transform:
   - {fileID: 42985346}
   - {fileID: 1299582312}
   - {fileID: 2016980941}
+  - {fileID: 85240680}
   - {fileID: 948344376}
   - {fileID: 65783817}
   - {fileID: 1161877770}
@@ -49234,7 +49269,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -49531,7 +49566,7 @@ Transform:
   m_GameObject: {fileID: 538445871}
   serializedVersion: 2
   m_LocalRotation: {x: 0.012214848, y: 0.018585261, z: -0.00022707229, w: 0.9997527}
-  m_LocalPosition: {x: -37.992508, y: 11.68507, z: -13.8483925}
+  m_LocalPosition: {x: -37.992508, y: 11.2, z: -13.8483925}
   m_LocalScale: {x: 0.089999996, y: 0.12, z: 0.1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -50559,6 +50594,7 @@ GameObject:
   - component: {fileID: 549882640}
   - component: {fileID: 549882639}
   - component: {fileID: 549882638}
+  - component: {fileID: 549882641}
   m_Layer: 5
   m_Name: Pag 2
   m_TagString: Untagged
@@ -50582,7 +50618,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 10.5, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 29.5, y: -1.8100026}
+  m_AnchoredPosition: {x: 29.5, y: -0.38}
   m_SizeDelta: {x: 204.7, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &549882638
@@ -50624,16 +50660,16 @@ MonoBehaviour:
     humano. Lutou como um animal encurralado, l\xE2mina contra tr\xEAs, quatro homens.
     John viu dois ca\xEDrem antes de atravessarem o peito do capit\xE3o.\n\nCaindo
     de joelhos, Delacruz riu com sangue nos dentes.\n\nDo casaco, tirou uma concha
-    negra, espiralada, viva como se respirasse. Antes que algu\xE9m entendesse, ele
-    a lan\xE7ou ao mar.\n\nO oceano respondeu.\n\nPrimeiro, o navio parou. Ap\xF3s
-    isso, tent\xE1culos maiores que mastros emergiram, e o mundo virou \xE1gua, madeira
-    quebrando e homens gritando.\n\nMas John n\xE3o morreu afogado. Ele se levanta\n
-    e v\xEA o c\xE9u roxo. O mar, im\xF3vel como vidro. O Aurora Negra estava preso
-    em um limbo.\n\nO kraken n\xE3o os devorou. Ele os guardou.\nO navio ficou aprisionado
-    nos sonhos da criatura"
+    negra, viva como se respirasse. Antes que algu\xE9m entendesse, ele a lan\xE7ou
+    ao mar.\n\nO oceano respondeu.\n\nPrimeiro, o navio parou. Ap\xF3s isso, tent\xE1culos
+    maiores que mastros emergiram, e o mundo virou \xE1gua, madeira quebrando e homens
+    gritando.\n\nMas John n\xE3o morreu afogado. Ele se levanta\n e v\xEA o c\xE9u
+    roxo. O mar, im\xF3vel como vidro. O Aurora Negra estava preso em um limbo.\n\nO
+    kraken n\xE3o os devorou. Ele os guardou.\nO navio ficou aprisionado nos sonhos
+    da criatura"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 57e634bc06c699c45a79e69dea82c9ca, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 57e634bc06c699c45a79e69dea82c9ca, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 02f060fd2e6b4d541b3b7878fadd3233, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 02f060fd2e6b4d541b3b7878fadd3233, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -50657,8 +50693,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 8.5
-  m_fontSizeBase: 8.5
+  m_fontSize: 10.64
+  m_fontSizeBase: 10.64
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -50709,6 +50745,44 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 549882636}
   m_CullTransparentMesh: 1
+--- !u!114 &549882641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 549882636}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 367ad717683bf1142b71d7eee7510893, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  textoPT: "Ent\xE3o o capit\xE3o apareceu.\n\nOs olhos dele n\xE3o tinham mais nada
+    humano. Lutou como um animal encurralado, l\xE2mina contra tr\xEAs, quatro homens.
+    John viu dois ca\xEDrem antes de atravessarem o peito do capit\xE3o.\n\nCaindo
+    de joelhos, Delacruz riu com sangue nos dentes.\n\nDo casaco, tirou uma concha
+    negra, viva como se respirasse. Antes que algu\xE9m entendesse, ele a lan\xE7ou
+    ao mar.\n\nO oceano respondeu.\n\nPrimeiro, o navio parou. Ap\xF3s isso, tent\xE1culos
+    maiores que mastros emergiram, e o mundo virou \xE1gua, madeira quebrando e homens
+    gritando.\n\nMas John n\xE3o morreu afogado. Ele se levanta\n e v\xEA o c\xE9u
+    roxo. O mar, im\xF3vel como vidro. O Aurora Negra estava preso em um limbo.\n\nO
+    kraken n\xE3o os devorou. Ele os guardou.\nO navio ficou aprisionado nos sonhos
+    da criatura"
+  textoEN: "Then the captain appeared.\n\nHis eyes held nothing human anymore. He
+    fought like a cornered animal, blade against three, four men. John saw two fall
+    before they drove steel through the captain\u2019s chest.\n\nFalling to his knees,
+    Delacruz laughed, blood on his teeth.\n\nFrom his coat, he pulled a black shell,
+    alive as if it breathed. Before anyone understood, he threw it into the sea.\n\nThe
+    ocean answered.\n\nFirst, the ship stopped. Then, tentacles larger than masts
+    rose, and the world became water, wood splintering and men screaming.\n\nBut
+    John did not drown. He rises\nand sees the sky turned purple. The sea, still
+    as glass. The Black Aurora was trapped in a limbo.\n\nThe kraken did not devour
+    them. It kept them.\nThe ship was bound within the creature\u2019s dreams."
+  useLayoutOverride: 0
+  ptAnchoredPosition: {x: 0, y: 0}
+  ptScale: {x: 1, y: 1, z: 1}
+  enAnchoredPosition: {x: 0, y: 0}
+  enScale: {x: 1, y: 1, z: 1}
 --- !u!4 &550059220 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5155919925506244918, guid: b273de0d6e5818a4cb3195ce4f376ccb, type: 3}
@@ -51973,6 +52047,7 @@ Transform:
   - {fileID: 929704952}
   - {fileID: 719202766}
   - {fileID: 1407542813}
+  - {fileID: 361156306}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &563677397
@@ -52027,7 +52102,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -52849,6 +52924,162 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 572082645}
+  m_CullTransparentMesh: 1
+--- !u!1 &572407317
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 572407318}
+  - component: {fileID: 572407321}
+  - component: {fileID: 572407320}
+  - component: {fileID: 572407319}
+  m_Layer: 5
+  m_Name: PhotoText
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &572407318
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572407317}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 903086841}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 827.6, y: 3.9}
+  m_SizeDelta: {x: 200, y: 50}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &572407319
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572407317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 367ad717683bf1142b71d7eee7510893, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  textoPT: "Clique com o bot\xE3o direito"
+  textoEN: Right-click
+  useLayoutOverride: 0
+  ptAnchoredPosition: {x: 0, y: 0}
+  ptScale: {x: 1, y: 1, z: 1}
+  enAnchoredPosition: {x: 0, y: 0}
+  enScale: {x: 1, y: 1, z: 1}
+--- !u!114 &572407320
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572407317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: "Clique com o bot\xE3o direito"
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: -1183493901
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 28.72
+  m_fontSizeBase: 28.72
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 18
+  m_fontSizeMax: 72
+  m_fontStyle: 0
+  m_HorizontalAlignment: 4
+  m_VerticalAlignment: 512
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_TextWrappingMode: 1
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 0
+  m_ActiveFontFeatures: 6e72656b
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_EmojiFallbackSupport: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!222 &572407321
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572407317}
   m_CullTransparentMesh: 1
 --- !u!1 &574817245
 GameObject:
@@ -58091,7 +58322,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4739101688840770, guid: 1072f88c8e856574facc0e8c56e8fe34, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -3.55
+      value: -3.86
       objectReference: {fileID: 0}
     - target: {fileID: 4739101688840770, guid: 1072f88c8e856574facc0e8c56e8fe34, type: 3}
       propertyPath: m_LocalPosition.y
@@ -58103,19 +58334,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4739101688840770, guid: 1072f88c8e856574facc0e8c56e8fe34, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.38928494
+      value: 0.35527018
       objectReference: {fileID: 0}
     - target: {fileID: 4739101688840770, guid: 1072f88c8e856574facc0e8c56e8fe34, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4739101688840770, guid: 1072f88c8e856574facc0e8c56e8fe34, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.9211174
+      value: 0.93476367
       objectReference: {fileID: 0}
     - target: {fileID: 4739101688840770, guid: 1072f88c8e856574facc0e8c56e8fe34, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4739101688840770, guid: 1072f88c8e856574facc0e8c56e8fe34, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -58123,7 +58354,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4739101688840770, guid: 1072f88c8e856574facc0e8c56e8fe34, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 134.18
+      value: 138.38
       objectReference: {fileID: 0}
     - target: {fileID: 4739101688840770, guid: 1072f88c8e856574facc0e8c56e8fe34, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
@@ -61453,7 +61684,7 @@ MonoBehaviour:
   audioSource: {fileID: 680153380}
   somQuebrarMadeira: {fileID: 8300000, guid: e1cca36e26432634faa1d1e9df55d3e1, type: 3}
   textoSemFerramenta: {fileID: 563677397}
-  textoInteragir: {fileID: 535313702}
+  textoInteragir: {fileID: 0}
   portaBloqueada: {fileID: 563677397}
 --- !u!114 &680153382
 MonoBehaviour:
@@ -62459,7 +62690,7 @@ MonoBehaviour:
   hudIconeChaveParaApagar: {fileID: 1729512352}
   madeirasBloqueio:
   - {fileID: 680153377}
-  textoInteragirUI: {fileID: 498188055}
+  textoInteragirUI: {fileID: 0}
   textoSemChaveUI: {fileID: 1689283667}
   audioSource: {fileID: 693149369}
   somTrancada: {fileID: 8300000, guid: 260bd2d7be1d486409f61e2e1f972232, type: 3}
@@ -63137,7 +63368,7 @@ MonoBehaviour:
   oneTimeOnly: 1
   blackScreenPanel: {fileID: 1816069576}
   fadeSpeed: 3
-  interactText: {fileID: 498188055}
+  interactText: {fileID: 0}
   audioSource: {fileID: 695696092}
   jumpSound: {fileID: 0}
   landSound: {fileID: 0}
@@ -65420,7 +65651,7 @@ Transform:
   m_GameObject: {fileID: 725511333}
   serializedVersion: 2
   m_LocalRotation: {x: 0.073151626, y: -0.19181556, z: 0.014338522, w: 0.978596}
-  m_LocalPosition: {x: 0, y: 0, z: 0.09}
+  m_LocalPosition: {x: 0, y: 0, z: 0.14}
   m_LocalScale: {x: 0.18, y: 0.24, z: 0.36}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -65549,6 +65780,7 @@ MonoBehaviour:
   hideInsteadOfReveal: 1
   audioSource: {fileID: 725511335}
   revealSound: {fileID: 0}
+  textoDicaMagica: {fileID: 572407317}
 --- !u!64 &725511337
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -70066,7 +70298,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0.92156863}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -84430,6 +84662,7 @@ RectTransform:
   - {fileID: 1241418517}
   - {fileID: 2084000022}
   - {fileID: 1028264211}
+  - {fileID: 572407318}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -85367,8 +85600,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   textoPT: "                                , uma organiza\xE7\xE3o interna que conecta
     pontos dispersos quando"
-  textoEN: '                 , an internal organization that connects scattered points
-    when'
+  textoEN: '                            , an internal organization that connects
+    scattered points when'
   useLayoutOverride: 0
   ptAnchoredPosition: {x: 0, y: 0}
   ptScale: {x: 1, y: 1, z: 1}
@@ -87661,7 +87894,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1863343378}
-  - {fileID: 85240680}
   m_Father: {fileID: 522395613}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!82 &948344377
@@ -92594,8 +92826,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
-  uiInteractionPrompt: {fileID: 1659585017}
-  uiContentPanel: {fileID: 498188055}
+  uiInteractionPrompt: {fileID: 362232497}
+  uiContentPanel: {fileID: 1659585017}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
   comecaBloqueado: 0
 --- !u!65 &998263155
@@ -92798,7 +93030,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PirateLever
   symbol: 1
   isOn: 0
-  interactText: {fileID: 498188055}
+  interactText: {fileID: 0}
   puzzleManager: {fileID: 1076998908}
   handleObject: {fileID: 56703871}
   angleOff: -45
@@ -105485,19 +105717,13 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ef9754ec140262b47838c2e650f0fa24, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1123253998}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ef9754ec140262b47838c2e650f0fa24, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 1123253997}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ef9754ec140262b47838c2e650f0fa24, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1123253996}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ef9754ec140262b47838c2e650f0fa24, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1123253995}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ef9754ec140262b47838c2e650f0fa24, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 1123253994}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ef9754ec140262b47838c2e650f0fa24, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1123254001}
   m_SourcePrefab: {fileID: 100100000, guid: ef9754ec140262b47838c2e650f0fa24, type: 3}
 --- !u!1 &1123253992 stripped
 GameObject:
@@ -105524,48 +105750,6 @@ MonoBehaviour:
   uniqueID: 5cc84d58-904d-4114-bdca-104ac64d1e45
   salvarPosicao: 1
   autoRegistrarAoDesativar: 1
---- !u!65 &1123253995
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1123253992}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1.86, y: 3.14, z: 1.37}
-  m_Center: {x: -0.14, y: 1.24, z: 0.0000002980232}
---- !u!65 &1123253996
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1123253992}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1.23, y: 2.32, z: 0.25000066}
-  m_Center: {x: -0.14, y: 1.24, z: 0.0000002980232}
 --- !u!82 &1123253997
 AudioSource:
   m_ObjectHideFlags: 0
@@ -105663,26 +105847,27 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &1123253998
-MonoBehaviour:
+--- !u!65 &1123254001
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1123253992}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c8647fe85cfb65a468db3ca666a0dd58, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GradeTimida
-  distanciaParaAbrir: 3
-  visualGrade: {fileID: 1123253992}
-  colisorBloqueio: {fileID: 1123253996}
-  jogadorOuCamera: {fileID: 1770183903825819771}
-  audioSource: {fileID: 1123253997}
-  somAparecer: {fileID: 8300000, guid: 6aebcbb9af17cba43a676917d6163d5c, type: 3}
-  somDesaparecer: {fileID: 8300000, guid: 6aebcbb9af17cba43a676917d6163d5c, type: 3}
-  volume: 0.5
+  serializedVersion: 3
+  m_Size: {x: 2.5000002, y: 3.2500005, z: 0.25000063}
+  m_Center: {x: 0.00000005960464, y: 1.6250007, z: 0.000004120171}
 --- !u!4 &1123550966 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5155919925506244918, guid: b273de0d6e5818a4cb3195ce4f376ccb, type: 3}
@@ -107487,6 +107672,8 @@ MonoBehaviour:
   visualDaEscada: {fileID: 1146134283}
   idItemEscada: 3
   jaFoiColocada: 1
+  colliderCima: {fileID: 333843408}
+  colliderBaixo: {fileID: 1209381908}
   pontoBaixo: {fileID: 1374274504}
   pontoCima: {fileID: 218797705}
   textoDeInteracao: {fileID: 530000567}
@@ -107870,7 +108057,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47166506711aa63488aa0659c83da1dd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GerenciadorDiaNoite
-  startWith: 1
+  startWith: 0
   sunAngle: {x: 32.7, y: -193.1, z: 0}
   sunAngleInitial: {x: 43.6, y: -139.8, z: 0}
   moonAngle: {x: 20.1, y: -100, z: 0}
@@ -121503,7 +121690,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PirateLever
   symbol: 5
   isOn: 0
-  interactText: {fileID: 498188055}
+  interactText: {fileID: 0}
   puzzleManager: {fileID: 1076998908}
   handleObject: {fileID: 667577453}
   angleOff: -45
@@ -137009,7 +137196,7 @@ Transform:
   m_GameObject: {fileID: 1503460523}
   serializedVersion: 2
   m_LocalRotation: {x: 0.073151626, y: -0.19181556, z: 0.014338522, w: 0.978596}
-  m_LocalPosition: {x: 0, y: 0, z: 0.09}
+  m_LocalPosition: {x: 0, y: 0, z: 0.14}
   m_LocalScale: {x: 0.18, y: 0.24, z: 0.36}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -137138,6 +137325,7 @@ MonoBehaviour:
   hideInsteadOfReveal: 1
   audioSource: {fileID: 1503460525}
   revealSound: {fileID: 0}
+  textoDicaMagica: {fileID: 572407317}
 --- !u!64 &1503460527
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -140463,6 +140651,33 @@ CapsuleCollider:
   m_Height: 55.73084
   m_Direction: 1
   m_Center: {x: -0.048549175, y: 27.687399, z: -0.08}
+--- !u!1 &1540583419 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8238628555961441385, guid: 15b90133da402544baefedae1d50385d, type: 3}
+  m_PrefabInstance: {fileID: 1768927549}
+  m_PrefabAsset: {fileID: 0}
+--- !u!64 &1540583421
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1540583419}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -2803439570797247185, guid: 15b90133da402544baefedae1d50385d, type: 3}
 --- !u!1 &1540592701
 GameObject:
   m_ObjectHideFlags: 0
@@ -141684,6 +141899,8 @@ MonoBehaviour:
   visualDaEscada: {fileID: 1194931119}
   idItemEscada: 9
   jaFoiColocada: 1
+  colliderCima: {fileID: 0}
+  colliderBaixo: {fileID: 0}
   pontoBaixo: {fileID: 1986316826}
   pontoCima: {fileID: 1009663725}
   textoDeInteracao: {fileID: 498188057}
@@ -146383,7 +146600,7 @@ Transform:
   m_GameObject: {fileID: 1612000514}
   serializedVersion: 2
   m_LocalRotation: {x: 0.073151626, y: -0.19181556, z: 0.014338522, w: 0.978596}
-  m_LocalPosition: {x: 0, y: 0, z: 0.09}
+  m_LocalPosition: {x: 0, y: 0, z: 0.14}
   m_LocalScale: {x: 0.18, y: 0.24, z: 0.36}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -146512,6 +146729,7 @@ MonoBehaviour:
   hideInsteadOfReveal: 1
   audioSource: {fileID: 1612000516}
   revealSound: {fileID: 0}
+  textoDicaMagica: {fileID: 572407317}
 --- !u!64 &1612000518
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -148350,7 +148568,7 @@ MonoBehaviour:
   velocidade: 5
   physicsCollider: {fileID: 1628763827}
   blockerObject: {fileID: 240056601}
-  interactText: {fileID: 498188055}
+  interactText: {fileID: 0}
   audioSource: {fileID: 1628763833}
   openSound: {fileID: 0}
   closeSound: {fileID: 0}
@@ -152621,7 +152839,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PirateLever
   symbol: 0
   isOn: 0
-  interactText: {fileID: 498188055}
+  interactText: {fileID: 0}
   puzzleManager: {fileID: 1076998908}
   handleObject: {fileID: 2066742480}
   angleOff: -45
@@ -153012,6 +153230,10 @@ PrefabInstance:
     - target: {fileID: 8866188851930244280, guid: a4b1276aff9e45d40818904c02bf6545, type: 3}
       propertyPath: m_Name
       value: clock_wall
+      objectReference: {fileID: 0}
+    - target: {fileID: 8866188851930244280, guid: a4b1276aff9e45d40818904c02bf6545, type: 3}
+      propertyPath: m_Layer
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 8866188851930244280, guid: a4b1276aff9e45d40818904c02bf6545, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -157677,7 +157899,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Voc\xEA conseguiu um p\xE9 de cabra!"
+  m_text: "Voc\xEA conseguiu uma fotografia!"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -157768,8 +157990,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 367ad717683bf1142b71d7eee7510893, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  textoPT: "Voc\xEA conseguiu um p\xE9 de cabra!"
-  textoEN: You got a crowbar!
+  textoPT: "Voc\xEA conseguiu uma fotografia!"
+  textoEN: You got a picture!
   useLayoutOverride: 0
   ptAnchoredPosition: {x: 0, y: 0}
   ptScale: {x: 1, y: 1, z: 1}
@@ -158549,7 +158771,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PirateLever
   symbol: 3
   isOn: 0
-  interactText: {fileID: 498188055}
+  interactText: {fileID: 0}
   puzzleManager: {fileID: 1076998908}
   handleObject: {fileID: 1911506165}
   angleOff: -45
@@ -160980,7 +161202,7 @@ MonoBehaviour:
   telaAzulUITransicao: {fileID: 7402110564816490021}
   tempoTelaAzul: 1
   tempoPainelUpgrade: 2
-  textoInteragirPC: {fileID: 498188055}
+  textoInteragirPC: {fileID: 0}
   textoInteragirRuna: {fileID: 107034491}
   painelUpgradeCamera: {fileID: 695662489}
   idDaCameraNoInventario: 6
@@ -162630,6 +162852,98 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5155919925506244918, guid: b273de0d6e5818a4cb3195ce4f376ccb, type: 3}
   m_PrefabInstance: {fileID: 1934687170}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1768927549
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 563314428}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.01
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.006
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.01
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 4.97
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.6999991
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -3.7228923
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.70691013
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.016659293
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.016659055
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.7069109
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 2.7
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: -4149507334195890468, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_Name
+      value: "Bot\xE3o Reset"
+      objectReference: {fileID: 0}
+    - target: {fileID: 4172935979117406967, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 47.4
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects:
+    - {fileID: 65702495048144492, guid: 15b90133da402544baefedae1d50385d, type: 3}
+    - {fileID: -8700617353114198275, guid: 15b90133da402544baefedae1d50385d, type: 3}
+    - {fileID: -8391222552659086748, guid: 15b90133da402544baefedae1d50385d, type: 3}
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8238628555961441385, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1540583421}
+    - targetCorrespondingSourceObject: {fileID: -4149507334195890468, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1841690123}
+    - targetCorrespondingSourceObject: {fileID: -4149507334195890468, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1841690121}
+    - targetCorrespondingSourceObject: {fileID: -4149507334195890468, guid: 15b90133da402544baefedae1d50385d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1841690126}
+  m_SourcePrefab: {fileID: 100100000, guid: 15b90133da402544baefedae1d50385d, type: 3}
 --- !u!1001 &1769055215
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -164716,7 +165030,7 @@ MonoBehaviour:
     - North
     - East
     - West
-    indiceCorreta: 3
+    indiceCorreta: 1
   - enunciado: "Me diga o c\xF3digo secreto das torres desse castelo."
     enunciadoEN: Tell me the secret code of the towers of this castle.
     tamanhoDaFonte: 18
@@ -168462,6 +168776,149 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b8aa0ccd1fb79294da6b8f03791e27f2, type: 3}
   m_PrefabInstance: {fileID: 962394910}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1841690119 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -4149507334195890468, guid: 15b90133da402544baefedae1d50385d, type: 3}
+  m_PrefabInstance: {fileID: 1768927549}
+  m_PrefabAsset: {fileID: 0}
+--- !u!82 &1841690121
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1841690119}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: -542698998699468651, guid: 448edc84d07664f488c6eb09aa21127e, type: 2}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 0.628
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!64 &1841690123
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1841690119}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 5149588033023628274, guid: 15b90133da402544baefedae1d50385d, type: 3}
+--- !u!114 &1841690126
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1841690119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0344d69e1ecf5ca44b1bb3cf3ebfe5d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PuzzleResetButton
+  managerDoPuzzle: {fileID: 1407542814}
+  alturaPadrao: 47.4
+  alturaBaixa: 46.48
+  velocidadeAnimacao: 10
+  audioSourceBotao: {fileID: 1841690121}
+  somApertarBotao: {fileID: 8300000, guid: 89d62380470be9e47ba7cf3f97105142, type: 3}
+  textoInteragir: {fileID: 497789058}
 --- !u!4 &1844257041 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5155919925506244918, guid: b273de0d6e5818a4cb3195ce4f376ccb, type: 3}
@@ -171925,7 +172382,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.90292317, z: 0, w: 0.42980212}
   m_LocalPosition: {x: -1.21, y: -3.1, z: 2.4}
-  m_LocalScale: {x: 0.6, y: 0.6, z: 0.79999995}
+  m_LocalScale: {x: 0.56, y: 0.6, z: 0.79999995}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 868769714}
@@ -174186,6 +174643,8 @@ MonoBehaviour:
   visualDaEscada: {fileID: 2108245426665280490}
   idItemEscada: 9
   jaFoiColocada: 1
+  colliderCima: {fileID: 0}
+  colliderBaixo: {fileID: 0}
   pontoBaixo: {fileID: 1374274504}
   pontoCima: {fileID: 218797705}
   textoDeInteracao: {fileID: 498188057}
@@ -175543,6 +176002,7 @@ GameObject:
   - component: {fileID: 1921865747}
   - component: {fileID: 1921865746}
   - component: {fileID: 1921865745}
+  - component: {fileID: 1921865748}
   m_Layer: 5
   m_Name: Pag 1
   m_TagString: Untagged
@@ -175566,7 +176026,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 10.5, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -34.7, y: 0.15000057}
+  m_AnchoredPosition: {x: -34.7, y: -0.11}
   m_SizeDelta: {x: 188.3, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1921865745
@@ -175604,19 +176064,18 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "O nome dele era John Hanks, e ningu\xE9m no navio Aurora Negra discordava
-    de uma coisa: o capit\xE3o desse navio era um dem\xF4nio em pele de homem.\n\nA
-    comida era podre, a \xE1gua contada em goles, e o chicote falava mais que qualquer
-    ordem. Quem errava, sangrava. Quem reclamava, sumia.\n\nJohn aguentou por meses.
-    Todos aguentaram. At\xE9 que a linha que segura um homem por dentro se rompeu.\n\nNuma
+  m_text: "Ningu\xE9m no navio discordava de uma coisa: o capit\xE3o era um dem\xF4nio
+    em pele de homem.\n\nA comida era podre, a \xE1gua contada em goles, e o chicote
+    falava mais que qualquer ordem. Quem errava, sangrava. Quem reclamava, sumia.\n\nTodos
+    aguentaram por meses. At\xE9 que a linha que segura um homem por dentro se rompeu.\n\nNuma
     noite sem lua, enquanto o mar parecia um po\xE7o sem fundo, um motim se iniciou.
     N\xE3o houve gritos de guerra, s\xF3 passos pesados e \xF3dio acumulado. Invadiram
     os aposentos do capit\xE3o. Ele n\xE3o estava, mas ela estava.\n\nA Senhora Delacruz
     nunca sujou as m\xE3os, mas tamb\xE9m nunca fechou os olhos. Ria quando algu\xE9m
     era punido. Mandava dobrar as correntes. Dizia que marinheiro era bicho.\n"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 57e634bc06c699c45a79e69dea82c9ca, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 57e634bc06c699c45a79e69dea82c9ca, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 02f060fd2e6b4d541b3b7878fadd3233, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 02f060fd2e6b4d541b3b7878fadd3233, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -175640,8 +176099,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 8.5
-  m_fontSizeBase: 8.5
+  m_fontSize: 10.78
+  m_fontSizeBase: 10.78
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -175692,6 +176151,42 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1921865743}
   m_CullTransparentMesh: 1
+--- !u!114 &1921865748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1921865743}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 367ad717683bf1142b71d7eee7510893, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  textoPT: "Ningu\xE9m no navio discordava de uma coisa: o capit\xE3o era um dem\xF4nio
+    em pele de homem.\n\nA comida era podre, a \xE1gua contada em goles, e o chicote
+    falava mais que qualquer ordem. Quem errava, sangrava. Quem reclamava, sumia.\n\nTodos
+    aguentaram por meses. At\xE9 que a linha que segura um homem por dentro se rompeu.\n\nNuma
+    noite sem lua, enquanto o mar parecia um po\xE7o sem fundo, um motim se iniciou.
+    N\xE3o houve gritos de guerra, s\xF3 passos pesados e \xF3dio acumulado. Invadiram
+    os aposentos do capit\xE3o. Ele n\xE3o estava, mas ela estava.\n\nA Senhora Delacruz
+    nunca sujou as m\xE3os, mas tamb\xE9m nunca fechou os olhos. Ria quando algu\xE9m
+    era punido. Mandava dobrar as correntes. Dizia que marinheiro era bicho.\n"
+  textoEN: "No one on the ship disagreed on one thing: the captain was a demon in
+    a man\u2019s skin.\n\nThe food was rotten, the water rationed in sips, and the
+    whip spoke louder than any order. Those who failed bled. Those who complained
+    disappeared.\n\nThey all endured it for months. Until the line that holds a man
+    together snapped.\n\nOn a moonless night, while the sea felt like a bottomless
+    pit, a mutiny began. There were no war cries, only heavy footsteps and bottled
+    rage. They stormed the captain\u2019s quarters. He wasn\u2019t there\u2014but
+    she was.\n\nLady Delacruz never dirtied her hands, but she never looked away
+    either. She laughed when someone was punished. She ordered the chains tightened.
+    She said sailors were beasts."
+  useLayoutOverride: 0
+  ptAnchoredPosition: {x: 0, y: 0}
+  ptScale: {x: 1, y: 1, z: 1}
+  enAnchoredPosition: {x: 0, y: 0}
+  enScale: {x: 1, y: 1, z: 1}
 --- !u!1 &1922500307
 GameObject:
   m_ObjectHideFlags: 0
@@ -180287,7 +180782,7 @@ MonoBehaviour:
   speed: 5
   physicsCollider: {fileID: 1976517636}
   lockedOnPositiveSide: 0
-  interactText: {fileID: 498188055}
+  interactText: {fileID: 0}
   lockedMessage: {fileID: 358745219}
   audioSource: {fileID: 1976517633}
   openSound: {fileID: 0}
@@ -192919,7 +193414,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 50}
+  m_SizeDelta: {x: 390, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2132293936
 MonoBehaviour:
@@ -192968,13 +193463,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 36.85
+  m_fontSizeBase: 36.85
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -210513,7 +211008,7 @@ MonoBehaviour:
   camadasInteracao:
     serializedVersion: 2
     m_Bits: 8
-  miraUI: {fileID: 0}
+  miraUI: {fileID: 1475049765}
   modeloDoCorpo: {fileID: 8950963537283026675}
 --- !u!1 &1994018372368056784
 GameObject:
@@ -224245,7 +224740,7 @@ CharacterController:
   m_Enabled: 1
   serializedVersion: 3
   m_Height: 2
-  m_Radius: 0.47
+  m_Radius: 0.27
   m_SlopeLimit: 45
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
@@ -240661,7 +241156,7 @@ GameObject:
   - component: {fileID: 693149362}
   - component: {fileID: 693149363}
   - component: {fileID: 693149369}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Door04_pr
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -241398,7 +241893,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8950963537283026675}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 0
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -241506,8 +242001,8 @@ MonoBehaviour:
   - {fileID: 725511333}
   - {fileID: 1612000514}
   - {fileID: 1503460523}
-  comecarComTudo: 0
-  debug_DarUpgradeLuzNoStart: 0
+  comecarComTudo: 1
+  debug_DarUpgradeLuzNoStart: 1
   delayTroca: 0.2
   itemSelecionado: -1
   idDaCamera: 6
@@ -243623,7 +244118,7 @@ GameObject:
   - component: {fileID: 6959176567993442312}
   - component: {fileID: 6959176567993442313}
   - component: {fileID: 6959176567993442318}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: door_knob01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -243642,7 +244137,7 @@ GameObject:
   - component: {fileID: 6959176568391864925}
   - component: {fileID: 6959176568391864914}
   - component: {fileID: 6959176568391864915}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: door_knob02
   m_TagString: Untagged
   m_Icon: {fileID: 0}

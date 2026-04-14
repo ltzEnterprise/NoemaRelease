@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
 using System;
+using System.Collections; // Necessário para a Coroutine de Autosave
 
 [Serializable] public class IntEntry { public string k; public int v; }
 [Serializable] public class FloatEntry { public string k; public float v; }
@@ -46,6 +47,9 @@ public class PersistenciaManager : MonoBehaviour
                 Directory.CreateDirectory(DiretorioSaves);
 
             inicializado = true;
+            
+            // Inicia o Autosave a cada 5 minutos (300 segundos)
+            StartCoroutine(RotinaAutoSave());
         }
         else Destroy(gameObject);
     }
@@ -53,6 +57,20 @@ public class PersistenciaManager : MonoBehaviour
     // =========================
     // AUTO SAVE
     // =========================
+    
+    // Salva a cada 5 minutos em background (super leve)
+    private IEnumerator RotinaAutoSave()
+    {
+        while (true)
+        {
+            yield return new WaitForSecondsRealtime(300f);
+            if (!ModoSemSave() && inicializado)
+            {
+                SalvarTudo();
+            }
+        }
+    }
+
     void OnApplicationQuit() => SalvarTudo();
 
     void OnApplicationFocus(bool focus)
@@ -144,6 +162,9 @@ public class PersistenciaManager : MonoBehaviour
 
     private void SincronizarListasParaCache()
     {
+        // 🔥 AQUI ESTAVA O MAIOR ERRO: O cache da RAM precisava ser limpo ao carregar um novo slot!
+        estadosObjetosRAM.Clear(); 
+        
         cacheInt.Clear();
         foreach (var e in dadosParaSerializar.ints)
             cacheInt[e.k] = e.v;
@@ -162,7 +183,7 @@ public class PersistenciaManager : MonoBehaviour
         cacheInt.Clear();
         cacheFloat.Clear();
         cacheString.Clear();
-        estadosObjetosRAM.Clear(); // 🔥 CORREÇÃO: Limpa a RAM velha para não bugar um Novo Jogo!
+        estadosObjetosRAM.Clear();
 
         dadosParaSerializar = new DadosDeSave();
         GarantirListasValidas();
@@ -224,7 +245,6 @@ public class PersistenciaManager : MonoBehaviour
         return cacheFloat.ContainsKey(k);
     }
 
-    // 🔥 NOVA FUNÇÃO: Responde se o objeto de fato tem algum save pra ele ou não
     public bool TemEstadoSalvo(string id)
     {
         if (string.IsNullOrEmpty(id)) return false;
@@ -271,10 +291,8 @@ public class PersistenciaManager : MonoBehaviour
         try
         {
             File.Copy(backup, path, true);
-
             slotCarregado = -1;
             ResetarDicionarios();
-
             CarregarDoDisco(slot);
         }
         catch (Exception e)
@@ -318,6 +336,7 @@ public class PersistenciaManager : MonoBehaviour
 
     public void LimparDicionario()
     {
+        slotCarregado = -1; // Força re-leitura do disco se precisar
         ResetarDicionarios();
     }
 }

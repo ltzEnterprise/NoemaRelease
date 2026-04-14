@@ -250,6 +250,8 @@ public class InterfaceManager : MonoBehaviour
                 string cenaSalva = "";
                 if (PersistenciaManager.Instance != null)
                 {
+                    // Garante que o Persistencia vai ler o slot que acabamos de selecionar
+                    PersistenciaManager.Instance.LimparDicionario();
                     cenaSalva = PersistenciaManager.Instance.ObterString($"Slot_{slot}_Cena");
                 }
                 
@@ -265,6 +267,8 @@ public class InterfaceManager : MonoBehaviour
             else
             {
                 SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false; 
+                // Se é save novo, limpa qualquer lixo da RAM
+                if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.LimparDicionario();
             }
         }
         
@@ -296,6 +300,13 @@ public class InterfaceManager : MonoBehaviour
         if (slotConfirmacao == slot)
         {
             SistemaGlobal.Instance.ApagarSave(slot);
+            
+            // 🔥 CORREÇÃO: Limpa a RAM se estiver apagando o slot que estava carregado.
+            if (PersistenciaManager.Instance != null)
+            {
+                 PersistenciaManager.Instance.LimparDicionario();
+            }
+
             slotConfirmacao = -1;
         }
         else slotConfirmacao = slot;
@@ -322,9 +333,15 @@ public class InterfaceManager : MonoBehaviour
     {
         if (slotParaRestaurar != -1 && !modoDesenvolvedor && SistemaGlobal.Instance != null && PersistenciaManager.Instance != null)
         {
-            PersistenciaManager.Instance.RestaurarBackup(slotParaRestaurar);
+            // 🔥 CORREÇÃO: Força o slot atual temporariamente para o SaveTudo ir para o arquivo correto
+            int slotAntigo = SistemaGlobal.Instance.slotAtual;
+            SistemaGlobal.Instance.slotAtual = slotParaRestaurar;
 
+            PersistenciaManager.Instance.RestaurarBackup(slotParaRestaurar);
             PersistenciaManager.Instance.SalvarTudo();
+
+            // Restaura
+            SistemaGlobal.Instance.slotAtual = slotAntigo;
 
             AtualizarTextosSlots(); 
         }
@@ -385,7 +402,6 @@ public class InterfaceManager : MonoBehaviour
         }
     }
 
-    // 🔥 FUNÇÃO RESTAURADA E NO LUGAR CERTO
     void ForcarAutoSizeCentral()
     {
         if (textosDosSlots == null) return;

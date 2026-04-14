@@ -21,7 +21,7 @@ public class SaveableItem : MonoBehaviour
 
     IEnumerator CarregarComDelay()
     {
-        yield return null; // 🔥 evita conflito de inicialização
+        yield return null; 
         CarregarDados();
     }
 
@@ -29,8 +29,6 @@ public class SaveableItem : MonoBehaviour
     {
         if (carregado) return;
 
-        // 🔥 A MÁGICA AQUI: Ele só mexe no objeto se DE FATO existir um save para ele.
-        // Se for jogo novo ou reset, ele ignora e deixa o objeto ativo igual na cena original!
         if (PersistenciaManager.Instance.TemEstadoSalvo(uniqueID))
         {
             bool estadoSalvo = PersistenciaManager.Instance.ObterEstado(uniqueID);
@@ -49,8 +47,6 @@ public class SaveableItem : MonoBehaviour
 
         carregado = true;
     }
-
-    // --- REGISTRO MANUAL (INALTERADO) ---
 
     public void RegistrarColeta()
     {
@@ -72,13 +68,12 @@ public class SaveableItem : MonoBehaviour
         }
     }
 
-    // 🔥 Proteção pesada no OnDisable para a Unity não bugar na troca de cena
     private void OnDisable()
     {
         if (!Application.isPlaying) return;
         if (gameObject != null && !gameObject.scene.isLoaded) return;
 
-        if (autoRegistrarAoDesativar && carregado && PersistenciaManager.Instance != null)
+        if (autoRegistrarAoDesativar && carregado && PersistenciaManager.Instance != null && !PersistenciaManager.Instance.ModoSemSave())
         {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, false);
         }

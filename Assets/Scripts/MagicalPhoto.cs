@@ -26,10 +26,17 @@ public class MagicalPhoto : MonoBehaviour
     public AudioSource audioSource;
     public AudioClip revealSound;
 
+    [Header("--- UI ---")]
+    [Tooltip("Coloque aqui o texto que avisa o jogador para clicar quando estiver no ângulo certo.")]
+    public GameObject textoDicaMagica;
+
     private bool isAiming = false;
     private bool alreadyUsed = false;
 
     void Start() {
+        // Garante que o texto de dica comece desligado
+        if (textoDicaMagica) textoDicaMagica.SetActive(false);
+
         // Verifica no save se a mágica já foi feita
         bool jaResolvido = false;
         if (PersistenciaManager.Instance != null && objectToReveal != null) {
@@ -60,6 +67,25 @@ public class MagicalPhoto : MonoBehaviour
         transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRot, Time.deltaTime * animationSpeed);
         transform.localScale = Vector3.Lerp(transform.localScale, targetScale, Time.deltaTime * animationSpeed);
 
+        // --- SISTEMA DA DICA NA TELA ---
+        bool noPontoCerto = false;
+        
+        // Só verifica a distância/ângulo se o player estiver de fato mirando
+        if (isAiming && idealPoint != null && Camera.main != null)
+        {
+            float dist = Vector3.Distance(Camera.main.transform.position, idealPoint.position);
+            float angle = Quaternion.Angle(Camera.main.transform.rotation, idealPoint.rotation);
+            
+            if (dist <= maxDistance && angle <= maxAngle)
+            {
+                noPontoCerto = true;
+            }
+        }
+
+        // Liga a UI se estiver perfeito, desliga se sair do foco ou soltar o botão de mirar
+        if (textoDicaMagica) textoDicaMagica.SetActive(noPontoCerto);
+
+        // --- TENTA REVELAR O OBJETO ---
         if (isAiming && Input.GetMouseButtonDown(0)) TryRevealObject();
     }
 
@@ -68,8 +94,16 @@ public class MagicalPhoto : MonoBehaviour
         float dist = Vector3.Distance(Camera.main.transform.position, idealPoint.position);
         float angle = Quaternion.Angle(Camera.main.transform.rotation, idealPoint.rotation);
 
-        if (dist <= maxDistance && angle <= maxAngle) StartCoroutine(SequenciaVitoria());
-        else Debug.Log($"Fora de foco. Dist: {dist:F1} | Ang: {angle:F1}");
+        if (dist <= maxDistance && angle <= maxAngle) 
+        {
+            // Apaga a UI de dica imediatamente ao clicar
+            if (textoDicaMagica) textoDicaMagica.SetActive(false); 
+            StartCoroutine(SequenciaVitoria());
+        }
+        else 
+        {
+            Debug.Log($"Fora de foco. Dist: {dist:F1} | Ang: {angle:F1}");
+        }
     }
 
     IEnumerator SequenciaVitoria() {
@@ -84,12 +118,15 @@ public class MagicalPhoto : MonoBehaviour
             PersistenciaManager.Instance.RegistrarEstado(objectToReveal.name, true);
         }
 
-        // Animação da foto saindo da tela
+        // Animação da foto saindo da tela E ENCOLHENDO pra não bugar na câmera
         float t = 0;
         Vector3 currentPos = transform.localPosition;
+        Vector3 currentScale = transform.localScale;
+        
         while (t < 1f) {
-            t += Time.deltaTime * 4f;
-            transform.localPosition = Vector3.Lerp(currentPos, currentPos + Vector3.down * 3f, t);
+            t += Time.deltaTime * 6f; // Acelerei um tiquinho pra sair do caminho mais rápido
+            transform.localPosition = Vector3.Lerp(currentPos, currentPos + (Vector3.down * 2f), t);
+            transform.localScale = Vector3.Lerp(currentScale, Vector3.zero, t); // Aqui é a mágica que evita o bug
             yield return null;
         }
 

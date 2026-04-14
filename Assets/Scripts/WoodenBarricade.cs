@@ -28,7 +28,6 @@ public class WoodenBarricade : MonoBehaviour
     private bool emProcesso = false;
     private bool estaOlhando = false;
     private bool mostrandoErro = false;
-    private Coroutine rotinaErro;
 
     // Função que checa em tempo real se a parada tá bloqueada
     private bool TaBloqueado()
@@ -43,17 +42,6 @@ public class WoodenBarricade : MonoBehaviour
         if (textoInteragir) textoInteragir.SetActive(false);
     }
 
-    void Update()
-    {
-        // Monitoramento constante: Se ativar o bloqueador, apaga as UIs na mesma hora
-        if (TaBloqueado())
-        {
-            if (textoInteragir && textoInteragir.activeSelf) textoInteragir.SetActive(false);
-            if (textoSemFerramenta && textoSemFerramenta.activeSelf) textoSemFerramenta.SetActive(false);
-        }
-    }
-
-    // 🔥 O TESTAMENTO: Se essa madeira sumir do mapa, apaga os textos da tela à força 🔥
     void OnDisable()
     {
         if (textoInteragir) textoInteragir.SetActive(false);
@@ -63,68 +51,60 @@ public class WoodenBarricade : MonoBehaviour
     // --- MÉTODOS RAYCAST ---
     public void AoOlhar()
     {
-        if (TaBloqueado()) return; 
-
-        if (emProcesso) return;
+        if (TaBloqueado() || emProcesso) return; 
         
         estaOlhando = true;
 
-        if (!mostrandoErro && textoInteragir) textoInteragir.SetActive(true);
+        // Só mostra o texto de [E] se NÃO estiver mostrando o erro
+        if (!mostrandoErro && textoInteragir)
+        {
+            textoInteragir.SetActive(true);
+        }
     }
 
     public void AoSair()
     {
         estaOlhando = false;
         
-        // Desliga os dois textos imediatamente quando o jogador virar as costas
+        // 🔥 AQUI TAVA O BUG! 🔥
+        // Agora APAGA SÓ O TEXTO NORMAL. O texto de erro fica intacto pra não bugar.
         if (textoInteragir) textoInteragir.SetActive(false);
-        if (textoSemFerramenta) textoSemFerramenta.SetActive(false);
     }
 
     public void Interagir()
     {
-        if (TaBloqueado()) return; 
-        if (emProcesso) return;
-        if (mostrandoErro) return; // Anti-spam do botão de erro
+        if (TaBloqueado() || emProcesso || mostrandoErro) return; 
 
-        if (VerificarSeTemPeDeCabra())
+        if (InventoryManager.Instance != null && InventoryManager.Instance.itemSelecionado == idDoPeDeCabra)
         {
             StartCoroutine(QuebrarBarricada());
         }
         else
         {
-            if (rotinaErro != null) StopCoroutine(rotinaErro);
-            rotinaErro = StartCoroutine(MostrarAvisoDeErro());
+            StartCoroutine(MostrarAvisoDeErro());
         }
     }
     // -----------------------
-
-    bool VerificarSeTemPeDeCabra()
-    {
-        // VERIFICA SE O ITEM TÁ NA MÃO E SELECIONADO AGORA
-        if (InventoryManager.Instance != null)
-        {
-            return InventoryManager.Instance.itemSelecionado == idDoPeDeCabra;
-        }
-        return false;
-    }
 
     IEnumerator MostrarAvisoDeErro()
     {
         mostrandoErro = true;
 
+        // Desliga o texto normal e liga o erro
         if (textoInteragir) textoInteragir.SetActive(false);
         if (textoSemFerramenta) textoSemFerramenta.SetActive(true);
         
+        // Fica na tela por 2 segundos independente da mira
         yield return new WaitForSeconds(2f);
         
+        // Acabou o tempo, apaga o erro
         if (textoSemFerramenta) textoSemFerramenta.SetActive(false);
         mostrandoErro = false;
 
-        // Só reativa o texto se o jogador AINDA estiver olhando E se não estiver bloqueado
-        if (!emProcesso && estaOlhando && textoInteragir && !TaBloqueado()) 
+        // Se o jogador ainda estiver olhando pra madeira, devolve o texto normal
+        if (estaOlhando && !emProcesso && !TaBloqueado()) 
         {
-            textoInteragir.SetActive(true);
+            if (textoInteragir) textoInteragir.SetActive(true);
         }
     }
 

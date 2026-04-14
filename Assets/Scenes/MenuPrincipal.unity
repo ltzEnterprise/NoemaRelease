@@ -2928,10 +2928,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   textoPT: SAIR
   textoEN: EXIT
-  useLayoutOverride: 0
+  useLayoutOverride: 1
   ptAnchoredPosition: {x: 0.8182068, y: 0.11448765}
   ptScale: {x: 1.56, y: 0.24, z: 1}
-  enAnchoredPosition: {x: 0.8182068, y: 0.11448765}
+  enAnchoredPosition: {x: -2.72, y: 0.11448765}
   enScale: {x: 1.56, y: 0.24, z: 1}
 --- !u!1 &1204762586
 GameObject:
@@ -3717,10 +3717,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   textoPT: JOGAR
   textoEN: PLAY
-  useLayoutOverride: 0
+  useLayoutOverride: 1
   ptAnchoredPosition: {x: -4.349982, y: -1.2734966}
   ptScale: {x: 1.56, y: 0.24, z: 1}
-  enAnchoredPosition: {x: -38.1, y: -1.2734966}
+  enAnchoredPosition: {x: -21.98, y: -1.2734966}
   enScale: {x: 1.56, y: 0.24, z: 1}
 --- !u!1 &1597701435
 GameObject:
@@ -6360,6 +6360,18 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 3219657136328132813}
+    - target: {fileID: 2555256036449098165, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3784367113677415959, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.6902541
+      objectReference: {fileID: 0}
+    - target: {fileID: 3784367113677415959, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3816221498609806534, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_Target
       value: 
@@ -6432,6 +6444,30 @@ PrefabInstance:
 
         Esc'
       objectReference: {fileID: 0}
+    - target: {fileID: 4338028168056124188, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.6902541
+      objectReference: {fileID: 0}
+    - target: {fileID: 4338028168056124188, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4338028168056124188, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0.6902541
+      objectReference: {fileID: 0}
+    - target: {fileID: 4853012091874833740, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.46030775
+      objectReference: {fileID: 0}
+    - target: {fileID: 4853012091874833740, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4853012091874833740, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0.46030775
+      objectReference: {fileID: 0}
     - target: {fileID: 4913892392612823129, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
       propertyPath: m_SizeDelta.y
       value: -291.09998
@@ -6439,6 +6475,22 @@ PrefabInstance:
     - target: {fileID: 4913892392612823129, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -10.550018
+      objectReference: {fileID: 0}
+    - target: {fileID: 5483562846028247679, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.46030775
+      objectReference: {fileID: 0}
+    - target: {fileID: 5483562846028247679, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7849673804327443508, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -345.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7892380087628145889, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
+      propertyPath: useLayoutOverride
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8142604484133148747, guid: 3bfb6c56bc8cfb142a420c993e15242d, type: 3}
       propertyPath: m_Name

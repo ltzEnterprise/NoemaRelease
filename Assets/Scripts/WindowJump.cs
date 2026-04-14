@@ -21,6 +21,9 @@ public class WindowJump : MonoBehaviour
 
     private bool isActing = false;
     private bool hasUsed = false;
+    
+    // 🔥 A TRAVA BLINDADA 🔥
+    private bool estaOlhando = false;
 
     void Start()
     {
@@ -34,20 +37,30 @@ public class WindowJump : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        // 🔥 SISTEMA FORÇADO PRA NÃO BUGAR A UI 🔥
+        if (interactText != null)
+        {
+            // A regra: Só aparece se estiver olhando, NÃO estiver pulando E não tiver esgotado o uso
+            bool deveAparecer = estaOlhando && !isActing && !(hasUsed && oneTimeOnly);
+            
+            if (interactText.activeSelf != deveAparecer)
+            {
+                interactText.SetActive(deveAparecer);
+            }
+        }
+    }
+
     // --- MÉTODOS DO RAYCAST ---
     public void AoOlhar()
     {
-        // Só mostra o texto se não estiver no meio da ação E se ainda puder ser usada
-        if (!isActing && !(hasUsed && oneTimeOnly))
-        {
-            if (interactText) interactText.SetActive(true);
-        }
+        estaOlhando = true; 
     }
 
     public void AoSair()
     {
-        // Esconde o texto quando o jogador vira a cara
-        if (interactText) interactText.SetActive(false);
+        estaOlhando = false; 
     }
     // --------------------------
 
@@ -55,9 +68,6 @@ public class WindowJump : MonoBehaviour
     public void Interagir()
     {
         if (isActing || (hasUsed && oneTimeOnly)) return;
-        
-        // Apaga o texto imediatamente na hora que aperta o botão
-        if (interactText) interactText.SetActive(false);
 
         StartCoroutine(JumpSequence());
     }
@@ -89,7 +99,7 @@ public class WindowJump : MonoBehaviour
 
         yield return new WaitForSeconds(0.2f);
 
-        // 2. Teleporte usando APENAS a função blindada do FPS_Master (sem girar a porra da câmera)
+        // 2. Teleporte cego
         if (FPS_Master.Instance != null && landingSpot != null)
         {
             FPS_Master.Instance.Teleportar(landingSpot.position);
@@ -119,5 +129,7 @@ public class WindowJump : MonoBehaviour
 
         isActing = false;
         if (oneTimeOnly) hasUsed = true;
+        
+        estaOlhando = false; // Garante que a mira desliga quando você chega do outro lado
     }
 }
