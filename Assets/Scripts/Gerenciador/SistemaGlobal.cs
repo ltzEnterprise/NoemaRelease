@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.IO;
 
 public class SistemaGlobal : MonoBehaviour
 {
@@ -29,39 +30,45 @@ public class SistemaGlobal : MonoBehaviour
 
     public void SalvarJogo(Vector3 posicaoPlayer, string nomeCena)
     {
-        string prefixo = "Slot_" + slotAtual;
-        PlayerPrefs.SetInt(prefixo + "_Existe", 1);
-        PlayerPrefs.SetString(prefixo + "_Cena", nomeCena);
-        
-        PlayerPrefs.SetFloat(prefixo + "_PosX", posicaoPlayer.x);
-        PlayerPrefs.SetFloat(prefixo + "_PosY", posicaoPlayer.y);
-        PlayerPrefs.SetFloat(prefixo + "_PosZ", posicaoPlayer.z);
-        
-        PlayerPrefs.SetString(prefixo + "_Data", System.DateTime.Now.ToString("dd/MM HH:mm"));
+        if (PersistenciaManager.Instance == null) return;
 
+        string prefixo = "Slot_" + slotAtual;
+        
+        // Tudo vai pro JSON agora!
+        PersistenciaManager.Instance.SalvarString(prefixo + "_Cena", nomeCena);
+        PersistenciaManager.Instance.SalvarFloat(prefixo + "_PosX", posicaoPlayer.x);
+        PersistenciaManager.Instance.SalvarFloat(prefixo + "_PosY", posicaoPlayer.y);
+        PersistenciaManager.Instance.SalvarFloat(prefixo + "_PosZ", posicaoPlayer.z);
+
+        // Atualiza os dados do EstadoGlobal antes de fechar o pacote
         EstadoGlobal.SalvarNoSlot(slotAtual);
         
-        PlayerPrefs.Save();
-        Debug.Log("Jogo Salvo no Slot " + slotAtual);
+        // O PersistenciaManager pega tudo isso e crava no arquivo físico
+        PersistenciaManager.Instance.SalvarTudo();
+        
+        Debug.Log("<color=cyan>[SistemaGlobal] Jogo Salvo 100% no arquivo JSON (Slot " + slotAtual + ")</color>");
     }
 
     public void CarregarJogo(int slot)
     {
         slotAtual = slot;
-        string prefixo = "Slot_" + slot;
 
-        if (PlayerPrefs.HasKey(prefixo + "_Existe"))
+        if (ExisteSave(slot))
         {
+            // Força a limpeza da RAM pra ler o arquivo certinho
+            if(PersistenciaManager.Instance) PersistenciaManager.Instance.LimparDicionario(); 
+            
             EstadoGlobal.CarregarDoSlot(slot);
             deveCarregarPosicaoAoIniciar = true; // ATIVA O TELEPORTE
             
-            string cenaParaCarregar = PlayerPrefs.GetString(prefixo + "_Cena");
+            string cenaParaCarregar = PersistenciaManager.Instance.ObterString("Slot_" + slot + "_Cena");
+            if (string.IsNullOrEmpty(cenaParaCarregar)) cenaParaCarregar = nomeCenaPadrao;
+            
             SceneManager.LoadScene(cenaParaCarregar);
         }
         else
         {
             EstadoGlobal.ResetarTudo();
-            // Limpa persistência de objetos da sessão anterior
             if(PersistenciaManager.Instance) PersistenciaManager.Instance.LimparDicionario();
             
             deveCarregarPosicaoAoIniciar = false; // NÃO TELEPORTA (Novo Jogo)
@@ -75,30 +82,39 @@ public class SistemaGlobal : MonoBehaviour
 
     public void ApagarSave(int slot)
     {
-        string prefixo = "Slot_" + slot;
-        PlayerPrefs.DeleteKey(prefixo + "_Existe");
-        PlayerPrefs.DeleteKey(prefixo + "_Cena");
-        PlayerPrefs.DeleteKey(prefixo + "_Data");
-        PlayerPrefs.DeleteKey(prefixo + "_PosX");
-        PlayerPrefs.DeleteKey(prefixo + "_PosY");
-        PlayerPrefs.DeleteKey(prefixo + "_PosZ");
-        
+        // Deleta os arquivos diretos do HD! Sem laço de repetição escroto.
+        string caminho = Path.Combine(Application.persistentDataPath, "Saves", $"Save_Slot_{slot}.json");
+        string caminhoBak = caminho + ".bak";
+
+        if (File.Exists(caminho)) File.Delete(caminho);
+        if (File.Exists(caminhoBak)) File.Delete(caminhoBak);
+
         EstadoGlobal.ResetarTudo();
         
-        string p = "Slot_" + slot + "_Global_";
-        for (int i = 0; i < 10; i++) {
-            PlayerPrefs.DeleteKey(p + "Arma_" + i);
-            PlayerPrefs.DeleteKey(p + "Casa_" + i);
+        // Se apagou o save que tava jogando, limpa a memória
+        if (slotAtual == slot && PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.LimparDicionario();
         }
-        PlayerPrefs.DeleteKey(p + "TemChave");
-        PlayerPrefs.DeleteKey(p + "TemDiscoRuna");
 
-        // Limpa objetos salvos deste slot também
-        // (Aqui é um pouco mais complexo limpar chaves dinâmicas, mas o básico tá feito)
-
-        PlayerPrefs.Save();
+        Debug.Log($"[SistemaGlobal] Save do Slot {slot} pulverizado do HD.");
     }
 
-    public bool ExisteSave(int slot) { return PlayerPrefs.HasKey("Slot_" + slot + "_Existe"); }
-    public string GetDataSave(int slot) { return PlayerPrefs.GetString("Slot_" + slot + "_Data", "Vazio"); }
+    public bool ExisteSave(int slot) 
+    { 
+        // Vê fisicamente se o arquivo tá lá
+        string caminho = Path.Combine(Application.persistentDataPath, "Saves", $"Save_Slot_{slot}.json");
+        return File.Exists(caminho); 
+    }
+
+    public string GetDataSave(int slot) 
+    { 
+        // Em vez de salvar a data num texto e dar trabalho pra ler, eu puxo a data de modificação real do arquivo pelo Windows!
+        string caminho = Path.Combine(Application.persistentDataPath, "Saves", $"Save_Slot_{slot}.json");
+        if (File.Exists(caminho))
+        {
+            return File.GetLastWriteTime(caminho).ToString("dd/MM HH:mm");
+        }
+        return "Vazio";
+    }
 }

@@ -178,8 +178,6 @@ public class FPS_Master : MonoBehaviour
         Ray raio = cameraJogador.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0)); 
         RaycastHit hit;
         
-        // 🔥 A CORREÇÃO DA CAGADA: Junta a camada de Interação com a camada 0 (Default das paredes).
-        // Assim ele não atravessa parede, MAS TAMBÉM não bate no seu próprio corpo/câmera!
         int mascaraSegura = camadasInteracao.value | (1 << 0);
         
         bool bateuEmAlgo = Physics.Raycast(raio, out hit, distanciaInteracao, mascaraSegura, QueryTriggerInteraction.Ignore);
@@ -187,7 +185,6 @@ public class FPS_Master : MonoBehaviour
 
         if (bateuEmAlgo)
         {
-            // O raio bateu em algo. Agora a gente confere: A layer desse objeto tá na sua lista de 'camadasInteracao'?
             if ((camadasInteracao.value & (1 << hit.transform.gameObject.layer)) > 0)
             {
                 achouInterativo = true;
@@ -214,7 +211,6 @@ public class FPS_Master : MonoBehaviour
             }
         }
 
-        // Se o raio bateu numa parede (achouInterativo = false) OU não bateu em nada no mapa
         if (!achouInterativo)
         {
             if (timerDesaparecer > 0)

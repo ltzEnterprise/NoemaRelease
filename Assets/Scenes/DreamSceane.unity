@@ -2418,6 +2418,7 @@ GameObject:
   - component: {fileID: 36591120}
   - component: {fileID: 36591119}
   - component: {fileID: 36591118}
+  - component: {fileID: 36591123}
   m_Layer: 3
   m_Name: Papel UV Mapa
   m_TagString: Untagged
@@ -2635,6 +2636,21 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 36591116}
   m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &36591123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 36591116}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d8de5d466d8be438c238441cce739a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SaveableItem
+  uniqueID: 95711425-2594-48A2-92CF-8EA5A7720F55
+  salvarPosicao: 1
+  autoRegistrarAoDesativar: 1
 --- !u!4 &36878418 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5155919925506244918, guid: b273de0d6e5818a4cb3195ce4f376ccb, type: 3}
@@ -3714,11 +3730,11 @@ Transform:
   m_GameObject: {fileID: 52458034}
   serializedVersion: 2
   m_LocalRotation: {x: 0.008849562, y: 0.72387147, z: -0.009286461, w: 0.68981564}
-  m_LocalPosition: {x: 141.77646, y: 5.85649, z: 55.051384}
-  m_LocalScale: {x: 1.05, y: 1.05, z: 1}
+  m_LocalPosition: {x: 4.849167, y: 1.65728, z: -2.783165}
+  m_LocalScale: {x: 1.05, y: 1.0499997, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 563314428}
   m_LocalEulerAnglesHint: {x: 1.47, y: 88.26, z: 0}
 --- !u!1 &53587058
 GameObject:
@@ -7871,55 +7887,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3377715bc4b91264db0e4420372a3b5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PortaFantasma
-  uniqueID: d6faaf8d-bc33-4f21-8eea-5b7c70ea2847
-  idDessaCasa: 0
-  idDaPaNoInventario: 4
-  idDoDiscoParaDar: 2
-  falasLoucura:
-  - texto: "O QUE VOC\xCA T\xC1 FAZENDO AQUI?"
-    tamanhoDaFonte: 18
-    velocidadeDigitar: 0.07
-    tempoDeEsperaApos: 1.2
-  - texto: "EST\xC1 PRESO NA SUA PR\xD3PRIA PRIS\xC3O?"
-    tamanhoDaFonte: 18
-    velocidadeDigitar: 0.08
-    tempoDeEsperaApos: 1.13
-  - texto: EU TENHO QUE SAIR DAQUI
-    tamanhoDaFonte: 18
-    velocidadeDigitar: 0.04
-    tempoDeEsperaApos: 1.37
-  - texto: EU PRECISO CAVAR...
-    tamanhoDaFonte: 18
-    velocidadeDigitar: 0.1
-    tempoDeEsperaApos: 1.39
-  - texto: E CAVAR...
-    tamanhoDaFonte: 18
-    velocidadeDigitar: 0.1
-    tempoDeEsperaApos: 0.78
-  - texto: "O INFERNO PODE SER A SA\xCDDA DESSE INFERNO"
-    tamanhoDaFonte: 18
-    velocidadeDigitar: 0.1
-    tempoDeEsperaApos: 1.5
-  falasComPa:
-  - texto: "Havia uma alma nessa casa que necessitava de uma p\xE1."
-    tamanhoDaFonte: 18
-    velocidadeDigitar: 0.04
-    tempoDeEsperaApos: 4
-  mensagemEntregaPa: "Voc\xEA entregou sua p\xE1 para a alma."
-  mensagemDeuses: Os deuses te presentearam com um disco musical
-  painelTelaPreta: {fileID: 2102252627}
-  textoDialogoCutscene: {fileID: 2138142798}
-  textoInteragir: {fileID: 1143060683}
-  objetoDicaSemPa: {fileID: 0}
-  audioSourceSFX: {fileID: 88323959}
-  audioSourceVoz: {fileID: 88323959}
-  audioSourceMusica: {fileID: 88323958}
-  somBatidaUnico: {fileID: 8300000, guid: 0b2ff79606ff07b4c846e9bc99b05485, type: 3}
-  somDigitando: {fileID: 8300000, guid: 7805f1431786d6445897bf8a3adfa2d8, type: 3}
-  somPortaAbrindo: {fileID: 8300000, guid: f767873a68e8f7a43992479695d19839, type: 3}
-  somPortaFechando: {fileID: 8300000, guid: b5b7443af1940824fb8df48efeb5040d, type: 3}
-  somImpactoDeuses: {fileID: 8300000, guid: 282e4941930635847935747b8237166d, type: 3}
-  musicaTensa: {fileID: 8300000, guid: 78752a24371d9a548b61cfb859183916, type: 3}
 --- !u!65 &88323961
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -9924,6 +9891,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
+  uniqueID: 
   uiInteractionPrompt: {fileID: 0}
   uiContentPanel: {fileID: 675122595}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
@@ -32008,6 +31976,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
+  uniqueID: 
   uiInteractionPrompt: {fileID: 1559629857}
   uiContentPanel: {fileID: 301972808}
   soundEffect: {fileID: 0}
@@ -52048,6 +52017,8 @@ Transform:
   - {fileID: 719202766}
   - {fileID: 1407542813}
   - {fileID: 361156306}
+  - {fileID: 52458039}
+  - {fileID: 899544138}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &563677397
@@ -61699,7 +61670,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SaveableItem
   uniqueID: ca519cf0-0d62-43b3-a744-f4fb7bd9baec
-  salvarPosicao: 0
+  salvarPosicao: 1
   autoRegistrarAoDesativar: 1
 --- !u!1001 &682524494
 PrefabInstance:
@@ -67710,6 +67681,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 736966424}
+  - component: {fileID: 736966425}
   m_Layer: 0
   m_Name: Temple
   m_TagString: Untagged
@@ -67744,6 +67716,21 @@ Transform:
   - {fileID: 1256308562}
   m_Father: {fileID: 925224119}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &736966425
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 736966423}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d8de5d466d8be438c238441cce739a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SaveableItem
+  uniqueID: BE3CBC92-DDE9-4044-8E95-815143DEE3E3
+  salvarPosicao: 1
+  autoRegistrarAoDesativar: 1
 --- !u!1 &737375704
 GameObject:
   m_ObjectHideFlags: 0
@@ -84446,11 +84433,11 @@ Transform:
   m_GameObject: {fileID: 899544133}
   serializedVersion: 2
   m_LocalRotation: {x: 0.008849562, y: 0.72387147, z: -0.009286461, w: 0.68981564}
-  m_LocalPosition: {x: 141.77646, y: 5.85649, z: 55.051384}
-  m_LocalScale: {x: 1.05, y: 1.05, z: 1}
+  m_LocalPosition: {x: 4.849167, y: 1.65728, z: -2.783165}
+  m_LocalScale: {x: 1.05, y: 1.0499997, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 563314428}
   m_LocalEulerAnglesHint: {x: 1.47, y: 88.26, z: 0}
 --- !u!4 &899604352 stripped
 Transform:
@@ -86962,6 +86949,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
+  uniqueID: 
   uiInteractionPrompt: {fileID: 362232497}
   uiContentPanel: {fileID: 47455936}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
@@ -92826,6 +92814,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
+  uniqueID: 
   uiInteractionPrompt: {fileID: 362232497}
   uiContentPanel: {fileID: 1659585017}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
@@ -107592,6 +107581,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacaDica
+  uniqueID: 
   uiInteractionPrompt: {fileID: 749758981}
   uiContentPanel: {fileID: 61860023}
   soundEffect: {fileID: 0}
@@ -115357,6 +115347,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacaDica
+  uniqueID: 
   uiInteractionPrompt: {fileID: 749758981}
   uiContentPanel: {fileID: 382692599}
   soundEffect: {fileID: 0}
@@ -130803,6 +130794,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacaDica
+  uniqueID: 
   uiInteractionPrompt: {fileID: 749758981}
   uiContentPanel: {fileID: 45524190}
   soundEffect: {fileID: 0}
@@ -148049,6 +148041,21 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 2097147
   textoInteragir: {fileID: 498188055}
+--- !u!114 &1624002247
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 408985494}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d8de5d466d8be438c238441cce739a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SaveableItem
+  uniqueID: ED242A83-6F42-4225-99C8-7CFDE2AC2F2A
+  salvarPosicao: 1
+  autoRegistrarAoDesativar: 1
 --- !u!1 &1624388543
 GameObject:
   m_ObjectHideFlags: 0
@@ -148957,6 +148964,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
+  uniqueID: 
   uiInteractionPrompt: {fileID: 413718651}
   uiContentPanel: {fileID: 153430311}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
@@ -150062,6 +150070,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacaDica
+  uniqueID: 
   uiInteractionPrompt: {fileID: 516223346}
   uiContentPanel: {fileID: 904437497}
   soundEffect: {fileID: 0}
@@ -152631,6 +152640,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
+  uniqueID: 
   uiInteractionPrompt: {fileID: 0}
   uiContentPanel: {fileID: 195130178}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
@@ -160568,6 +160578,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
+  uniqueID: 
   uiInteractionPrompt: {fileID: 498188055}
   uiContentPanel: {fileID: 759194621}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
@@ -172400,6 +172411,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
+  uniqueID: 
   uiInteractionPrompt: {fileID: 413718651}
   uiContentPanel: {fileID: 618109342}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
@@ -180777,6 +180789,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2dade57950e4ecc469aff87f93a433c9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OneSidedDoor
+  uniqueID: 
   closedAngle: 0
   openAngle: -90
   speed: 5
@@ -210869,6 +210882,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5073703340567604810, guid: 40147d0e186bc0b48b437ecac7f0e2cd, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1624002242}
+    - targetCorrespondingSourceObject: {fileID: 5073703340567604810, guid: 40147d0e186bc0b48b437ecac7f0e2cd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1624002247}
   m_SourcePrefab: {fileID: 100100000, guid: 40147d0e186bc0b48b437ecac7f0e2cd, type: 3}
 --- !u!1 &1959540505305378255
 GameObject:
@@ -242001,8 +242017,8 @@ MonoBehaviour:
   - {fileID: 725511333}
   - {fileID: 1612000514}
   - {fileID: 1503460523}
-  comecarComTudo: 1
-  debug_DarUpgradeLuzNoStart: 1
+  comecarComTudo: 0
+  debug_DarUpgradeLuzNoStart: 0
   delayTroca: 0.2
   itemSelecionado: -1
   idDaCamera: 6
@@ -254609,5 +254625,3 @@ SceneRoots:
   - {fileID: 588967579}
   - {fileID: 237210731}
   - {fileID: 774159918}
-  - {fileID: 52458039}
-  - {fileID: 899544138}

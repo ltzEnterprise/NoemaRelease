@@ -7,7 +7,7 @@ public class DayNightCycle : MonoBehaviour
 
     public enum TimeState { InitialDay, DramaticDay, Night }
 
-    [Header("--- DEV MODE ---")]
+    [Header("--- DEV MODE / SAVE ---")]
     public TimeState startWith = TimeState.InitialDay;
 
     [Header("--- ROTAÇÃO (Sun/Moon) ---")]
@@ -25,7 +25,6 @@ public class DayNightCycle : MonoBehaviour
     public LensFlareDataSRP flareNight;
     private LensFlareComponentSRP flareComponent;
 
-    // --- PERFIL DE ILUMINAÇÃO (AGORA COM A GRAMA) ---
     [System.Serializable]
     public class LightingProfile 
     {
@@ -59,9 +58,7 @@ public class DayNightCycle : MonoBehaviour
     public Material horizonFogMaterial; 
 
     [Header("--- MATERIAIS DA GRAMA ---")]
-    [Tooltip("Arraste os materiais de grama que você quer alterar aqui")]
     public Material[] grassMaterials;
-    [Tooltip("O nome interno da caixinha no shader. Geralmente é o nome com underline antes.")]
     public string grassNormalProperty = "_GrassNormal";
 
     [Header("--- GAMEPLAY ---")]
@@ -83,6 +80,16 @@ public class DayNightCycle : MonoBehaviour
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
 
+        // 🔥 CARREGA O ESTADO DO CÉU DO SAVE
+        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        {
+            // Usa uma chave global fixa pra não precisar de uniqueID num script único
+            if (PersistenciaManager.Instance.ObterInt("Global_TimeState") != 0 || PersistenciaManager.Instance.TemEstadoSalvo("Global_TimeState_Saved")) 
+            {
+                startWith = (TimeState)PersistenciaManager.Instance.ObterInt("Global_TimeState");
+            }
+        }
+
         ChangeTo(startWith);
     }
 
@@ -90,6 +97,14 @@ public class DayNightCycle : MonoBehaviour
     {
         currentState = newState;
         ApplyProfile(newState);
+
+        // 🔥 SALVA O NOVO HORÁRIO SEMPRE QUE MUDAR
+        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado("Global_TimeState_Saved", true); // Flag de segurança
+            PersistenciaManager.Instance.SalvarInt("Global_TimeState", (int)newState);
+            PersistenciaManager.Instance.SalvarTudo();
+        }
     }
 
     void Update()
@@ -164,7 +179,6 @@ public class DayNightCycle : MonoBehaviour
             horizonFogMaterial.SetFloat("_DensityMultiplier", p.customFogDensity);
         }
 
-        // --- A MÁGICA DA GRAMA AQUI ---
         if (grassMaterials != null && grassMaterials.Length > 0)
         {
             float normalValue = p.enableGrassNormal ? 1f : 0f;
@@ -172,7 +186,6 @@ public class DayNightCycle : MonoBehaviour
             {
                 if (mat != null)
                 {
-                    // Atira com Float e com Keyword pra garantir que vai acertar o jeito que o cara programou
                     mat.SetFloat(grassNormalProperty, normalValue);
                     
                     if (p.enableGrassNormal) mat.EnableKeyword(grassNormalProperty + "_ON");
@@ -210,7 +223,6 @@ public class DayNightCycle : MonoBehaviour
                 horizonFogMaterial.SetFloat("_DensityMultiplier", p.customFogDensity);
             }
 
-            // --- A MÁGICA DA GRAMA EM TEMPO REAL NO EDITOR ---
             if (grassMaterials != null && grassMaterials.Length > 0)
             {
                 float normalValue = p.enableGrassNormal ? 1f : 0f;

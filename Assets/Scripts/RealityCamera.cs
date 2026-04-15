@@ -79,10 +79,17 @@ public class RealityCamera : MonoBehaviour
         }
         
         if (modeloCameraMao) renderersVisuais = modeloCameraMao.GetComponentsInChildren<Renderer>();
+    }
 
-        if (PlayerPrefs.GetInt("Camera_TemUpgradeLanterna", 0) == 1)
+    void Start()
+    {
+        // 🔥 PUXA DO SAVE JSON EM VEZ DO PLAYER PREFS
+        if (PersistenciaManager.Instance != null)
         {
-            temUpgradeLanterna = true;
+            if (PersistenciaManager.Instance.ObterEstado("Camera_TemUpgradeLanterna"))
+            {
+                temUpgradeLanterna = true;
+            }
         }
     }
 
@@ -91,8 +98,13 @@ public class RealityCamera : MonoBehaviour
         if (temUpgradeLanterna) return; 
 
         temUpgradeLanterna = true;
-        PlayerPrefs.SetInt("Camera_TemUpgradeLanterna", 1);
-        PlayerPrefs.Save();
+        
+        // 🔥 SALVA NO JSON
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado("Camera_TemUpgradeLanterna", true);
+            PersistenciaManager.Instance.SalvarTudo();
+        }
 
         if (audioSource && somUpgradeRecebido) audioSource.PlayOneShot(somUpgradeRecebido);
     }
@@ -217,7 +229,6 @@ public class RealityCamera : MonoBehaviour
         }
     }
 
-    // --- FOTO CORRIGIDA PRO IGNORE COM DEDO DURO ---
     void TentarFotoEsfera()
     {
         if (Time.time < proximaFoto) return;
@@ -228,7 +239,6 @@ public class RealityCamera : MonoBehaviour
         Vector3 origem = cameraPlayer.transform.position + (cameraPlayer.transform.forward * 0.2f);
         Vector3 direcao = cameraPlayer.transform.forward;
 
-        // Voltou a ser Ignore, você tem toda a razão.
         RaycastHit[] hits = Physics.SphereCastAll(origem, raioDaMira, direcao, alcanceMaximo, layerObjetosFoto, QueryTriggerInteraction.Ignore);
 
         if (hits.Length > 0)
@@ -244,17 +254,13 @@ public class RealityCamera : MonoBehaviour
                 {
                     Vector3 centroDoObjeto = hit.collider.bounds.center;
 
-                    // A linha que checa se tem parede na frente. 
-                    // Agora usamos out RaycastHit pra descobrir EXATAMENTE o que a linha atingiu.
                     if (Physics.Linecast(cameraPlayer.transform.position, centroDoObjeto, out RaycastHit hitParede, layerParede, QueryTriggerInteraction.Ignore))
                     {
-                        // Se bateu em algo da Layer Parede antes de chegar no centro do objeto, ele avisa no Console!
                         Debug.LogWarning($"📷 FOTO BLOQUEADA: Tentou ver o [{alvo.gameObject.name}], mas o objeto [{hitParede.collider.gameObject.name}] entrou na frente!");
                         Debug.DrawLine(cameraPlayer.transform.position, hitParede.point, Color.red, 3f);
                     }
                     else
                     {
-                        // Caminho livre!
                         ExecutarFoto(alvo);
                         return;
                     }

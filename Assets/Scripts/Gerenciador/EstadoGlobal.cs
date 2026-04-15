@@ -3,10 +3,10 @@ using UnityEngine;
 public static class EstadoGlobal
 {
     // Arrays de Dados
-    public static bool[] armasDesbloqueadas = new bool[15]; // Aumentado pra 15 pra garantir espaço pra tudo
+    public static bool[] armasDesbloqueadas = new bool[15]; 
     public static bool[] casasResolvidas = new bool[10]; 
 
-    // Variáveis Especiais (Mantidas aqui para não quebrar scripts antigos)
+    // Variáveis Especiais
     public static bool temAChave = false; 
     public static bool temDiscoRuna = false; 
 
@@ -23,37 +23,35 @@ public static class EstadoGlobal
 
     public static void SalvarNoSlot(int slot)
     {
-        string p = "Slot_" + slot + "_Global_";
+        if (PersistenciaManager.Instance == null) return;
 
-        // Salva Armas/Itens
+        // Salva Armas/Itens no JSON
         for (int i = 0; i < armasDesbloqueadas.Length; i++)
-            PlayerPrefs.SetInt(p + "Arma_" + i, armasDesbloqueadas[i] ? 1 : 0);
+            PersistenciaManager.Instance.RegistrarEstado("EG_Arma_" + i, armasDesbloqueadas[i]);
             
-        // Salva Casas
+        // Salva Casas no JSON
         for (int i = 0; i < casasResolvidas.Length; i++)
-            PlayerPrefs.SetInt(p + "Casa_" + i, casasResolvidas[i] ? 1 : 0);
+            PersistenciaManager.Instance.RegistrarEstado("EG_Casa_" + i, casasResolvidas[i]);
         
-        // Salva Especiais
-        PlayerPrefs.SetInt(p + "TemChave", temAChave ? 1 : 0);
-        PlayerPrefs.SetInt(p + "TemDiscoRuna", temDiscoRuna ? 1 : 0);
-        
-        PlayerPrefs.Save();
+        // Salva Especiais no JSON
+        PersistenciaManager.Instance.RegistrarEstado("EG_TemChave", temAChave);
+        PersistenciaManager.Instance.RegistrarEstado("EG_TemDiscoRuna", temDiscoRuna);
     }
 
     public static void CarregarDoSlot(int slot)
     {
-        string p = "Slot_" + slot + "_Global_";
+        if (PersistenciaManager.Instance == null) return;
 
-        // Carrega Armas/Itens
+        // Carrega Armas/Itens do JSON
         for (int i = 0; i < armasDesbloqueadas.Length; i++)
-            armasDesbloqueadas[i] = PlayerPrefs.GetInt(p + "Arma_" + i, 0) == 1;
+            armasDesbloqueadas[i] = PersistenciaManager.Instance.ObterEstado("EG_Arma_" + i);
             
-        // Carrega Casas
+        // Carrega Casas do JSON
         for (int i = 0; i < casasResolvidas.Length; i++)
-            casasResolvidas[i] = PlayerPrefs.GetInt(p + "Casa_" + i, 0) == 1;
+            casasResolvidas[i] = PersistenciaManager.Instance.ObterEstado("EG_Casa_" + i);
         
-        // Carrega Especiais
-        temAChave = PlayerPrefs.GetInt(p + "TemChave", 0) == 1;
-        temDiscoRuna = PlayerPrefs.GetInt(p + "TemDiscoRuna", 0) == 1;
+        // Carrega Especiais do JSON
+        temAChave = PersistenciaManager.Instance.ObterEstado("EG_TemChave");
+        temDiscoRuna = PersistenciaManager.Instance.ObterEstado("EG_TemDiscoRuna");
     }
 }

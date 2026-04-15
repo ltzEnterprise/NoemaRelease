@@ -25,11 +25,14 @@ public class ItemPickup : MonoBehaviour
 
     void Start() 
     { 
-        // Se o save diz que você já pegou essa arma, ela se destrói antes de você ver.
-        if (!string.IsNullOrEmpty(uniqueID) && PlayerPrefs.GetInt(uniqueID + "_Pego", 0) == 1)
+        // 🔥 PUXA DO NOSSO SISTEMA DE SAVE OFICIAL (JSON) 🔥
+        if (!Application.isEditor && PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
-            Destroy(gameObject);
-            return;
+            if (PersistenciaManager.Instance.ObterEstado(uniqueID))
+            {
+                Destroy(gameObject);
+                return;
+            }
         }
 
         if(objetoDeTexto) objetoDeTexto.SetActive(false); 
@@ -58,20 +61,17 @@ public class ItemPickup : MonoBehaviour
 
     void PegarItem()
     {
-        jaPegou = true; // Trava imediata pra não receber mais comandos do Raycast
+        jaPegou = true; 
         
         if (objetoDeTexto) objetoDeTexto.SetActive(false);
 
-        // Desliga o colisor AGORA. Assim o seu Raycast Central entende que não tem mais nada ali
-        // e não dá erro quando a Unity destruir o objeto no fim do frame.
         Collider col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
 
-        // 1. Grava no cérebro do jogo que esse item sumiu pra sempre
-        if (!string.IsNullOrEmpty(uniqueID))
+        // 1. Grava no cérebro do jogo que esse item sumiu (NO SLOT ATUAL)
+        if (!string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
         {
-            PlayerPrefs.SetInt(uniqueID + "_Pego", 1);
-            PlayerPrefs.Save();
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
         }
 
         // 2. Adiciona ao Inventário
@@ -87,10 +87,15 @@ public class ItemPickup : MonoBehaviour
         // 3. Executa eventos extras (Tocar Som, rodar cutscene, etc)
         if (onPickup != null) onPickup.Invoke();
 
-        // 4. Salvar (Se marcado)
+        // 4. Salvar Fisicamente no HD
         if (salvarAoPegar && SistemaGlobal.Instance != null && FPS_Master.Instance != null)
         {
             SistemaGlobal.Instance.SalvarJogo(FPS_Master.Instance.transform.position, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        }
+        else if (PersistenciaManager.Instance != null)
+        {
+            // Se não for um Save Point completo, pelo menos salva o JSON pra garantir que o item tá no bolso se o jogo fechar
+            PersistenciaManager.Instance.SalvarTudo();
         }
 
         // 5. Some com a arma

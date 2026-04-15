@@ -2,6 +2,10 @@ using UnityEngine;
 
 public class ReadableDocument : MonoBehaviour
 {
+    [Header("--- SAVE SYSTEM (OPCIONAL) ---")]
+    [Tooltip("Deixe em branco para documentos normais. Preencha se o documento começar bloqueado e precisar salvar que foi liberado.")]
+    public string uniqueID; 
+
     [Header("--- UI CONFIG ---")]
     public GameObject uiInteractionPrompt; 
     public GameObject uiContentPanel;      
@@ -22,7 +26,6 @@ public class ReadableDocument : MonoBehaviour
 
     void Awake()
     {
-        // TEM QUE SER NO AWAKE! Se deixar no Start(), ele re-bloqueia o papel sozinho ao carregar o save.
         isBlocked = comecaBloqueado; 
     }
 
@@ -37,30 +40,41 @@ public class ReadableDocument : MonoBehaviour
         audioSource.playOnAwake = false;
         audioSource.spatialBlend = 1.0f; 
         audioSource.ignoreListenerPause = true; 
+
+        // Confere se já foi liberado em algum save anterior
+        if (!string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
+        {
+            if (PersistenciaManager.Instance.ObterEstado(uniqueID + "_unlocked"))
+            {
+                isBlocked = false;
+            }
+        }
     }
 
     public void LiberarDocumento()
     {
         isBlocked = false;
+
+        // Se tem ID, avisa o save que esse documento tá livre pra sempre
+        if (!string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_unlocked", true);
+            // Não chamo o SalvarTudo() aqui porque quem libera o documento (ex: Vitrola) já deve estar salvando o jogo.
+        }
     }
 
     void Update()
     {
-        // 1. O SISTEMA À PROVA DE BALAS DO TEXTO:
-        // O Update força a interface a obedecer a matemática atualizada no exato frame.
         if (uiInteractionPrompt != null)
         {
-            // A regra: Só acende se estiver sendo olhado, NÃO estiver bloqueado e NÃO estiver aberto.
             bool deveAparecer = (estaSendoOlhado && !isBlocked && !isReading);
 
-            // Só mexe no SetActive se precisar (pra não fritar a CPU)
             if (uiInteractionPrompt.activeSelf != deveAparecer)
             {
                 uiInteractionPrompt.SetActive(deveAparecer);
             }
         }
 
-        // 2. Lógica de Fechar o papel
         if (isReading && Time.unscaledTime > tempoBloqueio)
         {
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
@@ -73,7 +87,6 @@ public class ReadableDocument : MonoBehaviour
 
     public void AoOlhar()
     {
-        // Agora ele só avisa que a mira encostou. O Update cuida do resto.
         estaSendoOlhado = true; 
     }
 

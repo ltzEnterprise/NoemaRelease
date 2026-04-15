@@ -90,9 +90,13 @@ public class FuseBoxController : MonoBehaviour
         rotMin = Quaternion.Euler(anguloEulerMin);
         rotMax = Quaternion.Euler(anguloEulerMax);
 
-        if (PlayerPrefs.GetInt(idSaveLock, 0) == 1) estaDestrancada = true;
-        if (PlayerPrefs.GetInt("FuseBox_Dia_Resolvida", 0) == 1) resolvidoDia = true;
-        if (PlayerPrefs.GetInt("FuseBox_Noite_Resolvida", 0) == 1) resolvidoNoite = true;
+        // 🔥 TUDO AGORA É LIDO DO PERSISTENCIA MANAGER
+        if (PersistenciaManager.Instance != null)
+        {
+            if (PersistenciaManager.Instance.ObterEstado(idSaveLock)) estaDestrancada = true;
+            if (PersistenciaManager.Instance.ObterEstado("FuseBox_Dia_Resolvida")) resolvidoDia = true;
+            if (PersistenciaManager.Instance.ObterEstado("FuseBox_Noite_Resolvida")) resolvidoNoite = true;
+        }
 
         if (portaDaCaixa) portaDaCaixa.localEulerAngles = rotacaoPortaFechada;
         if (alavancaMestre) alavancaMestre.localRotation = Quaternion.AngleAxis(anguloBaixo, eixoAlavanca);
@@ -175,10 +179,10 @@ public class FuseBoxController : MonoBehaviour
         yield return new WaitForSeconds(1.5f); 
 
         estaDestrancada = true;
-        if (!Application.isEditor)
+        if (!Application.isEditor && PersistenciaManager.Instance != null)
         {
-            PlayerPrefs.SetInt(idSaveLock, 1);
-            PlayerPrefs.Save();
+            PersistenciaManager.Instance.RegistrarEstado(idSaveLock, true);
+            PersistenciaManager.Instance.SalvarTudo();
         }
 
         if (faderTelaPreta) { faderTelaPreta.alpha = 0f; faderTelaPreta.gameObject.SetActive(false); }
@@ -189,7 +193,6 @@ public class FuseBoxController : MonoBehaviour
 
     void AtualizarMiraComMemoria()
     {
-        // Trava de segurança extra para garantir que a câmera do jogador está ativa
         if (cameraDoJogador == null) 
         {
             if (Camera.main != null) cameraDoJogador = Camera.main;
@@ -290,8 +293,11 @@ public class FuseBoxController : MonoBehaviour
             if (!resolvidoDia)
             {
                 resolvidoDia = true;
-                PlayerPrefs.SetInt("FuseBox_Dia_Resolvida", 1);
-                PlayerPrefs.Save();
+                if (PersistenciaManager.Instance != null)
+                {
+                    PersistenciaManager.Instance.RegistrarEstado("FuseBox_Dia_Resolvida", true);
+                    PersistenciaManager.Instance.SalvarTudo();
+                }
                 
                 if (pcPrincipal != null) pcPrincipal.LigarPCProMundo2D(); 
             }
@@ -299,8 +305,12 @@ public class FuseBoxController : MonoBehaviour
             {
                 resolvidoNoite = true;
                 if (quadExtraNoite) quadExtraNoite.SetActive(true); 
-                PlayerPrefs.SetInt("FuseBox_Noite_Resolvida", 1);
-                PlayerPrefs.Save();
+                
+                if (PersistenciaManager.Instance != null)
+                {
+                    PersistenciaManager.Instance.RegistrarEstado("FuseBox_Noite_Resolvida", true);
+                    PersistenciaManager.Instance.SalvarTudo();
+                }
 
                 if (pcPrincipal != null) pcPrincipal.LigarPcSetaNoite();
             }
@@ -366,18 +376,16 @@ public class FuseBoxController : MonoBehaviour
 
         portaDaCaixa.localRotation = Quaternion.Lerp(portaDaCaixa.localRotation, rotAlvo, Time.deltaTime * 5f);
 
-        // 🔥 CORREÇÃO DA MÁGICA DA PORTA AQUI 🔥
         if (colisorDaPorta != null)
         {
-            // O Lerp nunca termina num número redondo exato. Se a porta chegar muito perto do alvo (menos de 2 graus), a gente crava ela pra não bugar.
             if (Quaternion.Angle(portaDaCaixa.localRotation, rotAlvo) > 2.0f)
             {
-                colisorDaPorta.isTrigger = true; // Porta ainda girando: Fantasma
+                colisorDaPorta.isTrigger = true; 
             }
             else
             {
-                portaDaCaixa.localRotation = rotAlvo; // Força a porta a parar no lugar exato
-                colisorDaPorta.isTrigger = false; // Porta parada: Sólida de novo pro Raycast enxergar ela
+                portaDaCaixa.localRotation = rotAlvo; 
+                colisorDaPorta.isTrigger = false; 
             }
         }
     }

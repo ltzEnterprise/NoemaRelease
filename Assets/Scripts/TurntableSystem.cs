@@ -188,7 +188,6 @@ public class TurntableSystem : MonoBehaviour
     public void AoOlhar() 
     { 
         estaOlhando = true;
-        // Só acende se não tiver mostrando a mensagem de erro na cara
         if (!mostrandoErro && interactText) interactText.SetActive(true); 
         
         if (currentDiskID != 0 && !temManivela && textoFaltaManivela) 
@@ -205,23 +204,32 @@ public class TurntableSystem : MonoBehaviour
 
     public void Interagir()
     {
-        if (Time.unscaledTime < tempoBloqueio) return;
-        
-        // Anti-spam de erro
-        if (mostrandoErro) return;
-
+        if (Time.unscaledTime < tempoBloqueio || mostrandoErro) return;
         tempoBloqueio = Time.unscaledTime + 0.5f; 
 
         int itemInHand = InventoryManager.Instance != null ? InventoryManager.Instance.itemSelecionado : -1;
 
-        if (!temManivela && itemInHand == manivelaItemID)
+        if (currentDiskID == 0)
         {
-            InstalarManivela();
-            return;
+            if (itemInHand == shovelRecordID || itemInHand == runeRecordID)
+            {
+                InventoryManager.Instance.ConsumirItem(itemInHand);
+                LoadDisk(itemInHand, false);
+            }
+            else if (itemInHand == manivelaItemID && !temManivela)
+            {
+                InstalarManivela();
+            }
+            else
+            {
+                if (rotinaErro != null) StopCoroutine(rotinaErro);
+                rotinaErro = StartCoroutine(ShowErrorFeedback());
+            }
         }
-
-        if (currentDiskID != 0) EjectDisk();
-        else AttemptInsertDisk();
+        else
+        {
+            EjectDisk();
+        }
     }
 
     void InstalarManivela()
@@ -239,24 +247,6 @@ public class TurntableSystem : MonoBehaviour
         if (currentDiskID != 0)
         {
             AtivarFuncoesDoDisco(currentDiskID, false);
-        }
-    }
-
-    void AttemptInsertDisk()
-    {
-        if (InventoryManager.Instance == null) return;
-
-        int itemInHand = InventoryManager.Instance.itemSelecionado;
-
-        if (itemInHand == shovelRecordID || itemInHand == runeRecordID)
-        {
-            InventoryManager.Instance.ConsumirItem(itemInHand);
-            LoadDisk(itemInHand, false);
-        }
-        else
-        {
-            if (rotinaErro != null) StopCoroutine(rotinaErro);
-            rotinaErro = StartCoroutine(ShowErrorFeedback());
         }
     }
 
@@ -378,17 +368,19 @@ public class TurntableSystem : MonoBehaviour
         isPlaying = false;
         audioSource.Stop();
         
-        if (InventoryManager.Instance != null)
-            InventoryManager.Instance.ReceberItemDeVolta(currentDiskID);
-
-        if (currentDiskID == shovelRecordID && visualShovelRecord) visualShovelRecord.SetActive(false);
-        else if (currentDiskID == runeRecordID && visualRuneRecord) visualRuneRecord.SetActive(false);
+        int diskToReturn = currentDiskID;
+        currentDiskID = 0;
 
         SalvarEstadoDisco(false, false);
-        currentDiskID = 0;
         
+        if (InventoryManager.Instance != null)
+            InventoryManager.Instance.ReceberItemDeVolta(diskToReturn);
+
+        if (diskToReturn == shovelRecordID && visualShovelRecord) visualShovelRecord.SetActive(false);
+        else if (diskToReturn == runeRecordID && visualRuneRecord) visualRuneRecord.SetActive(false);
+
         if (interactText) interactText.SetActive(true);
-        if (textoFaltaManivela) textoFaltaManivela.SetActive(false);
+        PersistenciaManager.Instance.SalvarTudo();
     }
 
     void SalvarEstadoDisco(bool shovelIn, bool runeIn)
@@ -408,7 +400,6 @@ public class TurntableSystem : MonoBehaviour
         if (noDiskText) noDiskText.SetActive(false);
 
         mostrandoErro = false;
-        // MÁGICA: Reativa o texto principal se o player continuar olhando
         if (estaOlhando && interactText) interactText.SetActive(true);
     }
 

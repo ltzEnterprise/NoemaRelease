@@ -40,30 +40,24 @@ public class TVInterativa : MonoBehaviour
 
     void VerificarSave()
     {
-        // Se estiver no Editor e você quiser testar o save, comente a linha abaixo.
-        // Mantive igual ao seu SaveableItem para consistência.
         if (Application.isEditor) return;
 
         if (PersistenciaManager.Instance != null)
         {
-            // Tenta carregar o estado. O padrão é TRUE (Runa Disponível).
+            // O padrão é TRUE (Runa Disponível).
             // Se o save retornar FALSE, significa que já pegamos a runa antes.
             bool runaDisponivel = PersistenciaManager.Instance.CarregarEstadoObjeto(idUnico, true);
 
             if (!runaDisponivel)
             {
-                // Já pegamos a runa no save!
                 jaPegou = true;
                 tvLigada = false;
                 
-                // Garante que visualmente não aparece nada
                 if (imagemRunaNaTela) imagemRunaNaTela.SetActive(false);
                 if (textoInteragir) textoInteragir.SetActive(false);
             }
         }
     }
-
-    // --- PROTOCOLO FPS_MASTER ---
 
     public void AoOlhar()
     {
@@ -86,8 +80,6 @@ public class TVInterativa : MonoBehaviour
         }
     }
 
-    // --- LÓGICA DA TV ---
-
     public void ReceberSinalDoDisco()
     {
         if (jaPegou || animacaoRodando) return;
@@ -99,7 +91,6 @@ public class TVInterativa : MonoBehaviour
         jaPegou = true;
         tvLigada = false; 
 
-        // 1. Feedback Visual Imediato
         if (imagemRunaNaTela) imagemRunaNaTela.SetActive(false);
         if (textoInteragir) textoInteragir.SetActive(false);
         
@@ -109,7 +100,6 @@ public class TVInterativa : MonoBehaviour
             StartCoroutine(EsconderPainelDepois());
         }
 
-        // 2. Envia para o Inventário de Runas
         if (InventarioRunas.Instance != null)
         {
             InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
@@ -121,17 +111,14 @@ public class TVInterativa : MonoBehaviour
 
     void SalvarQueJaPegou()
     {
-        // Mesma trava do Editor que existe no seu SaveableItem
         if (Application.isEditor) return;
 
         if (PersistenciaManager.Instance != null)
         {
-            // Registra FALSE no ID da TV.
-            // FALSE significa: "O objeto interativo (runa) NÃO está mais ativo/disponível".
             PersistenciaManager.Instance.RegistrarEstado(idUnico, false);
             
-            // Força o save no disco (opcional, mas seguro para itens importantes)
-            PlayerPrefs.Save(); 
+            // 🔥 REMOVIDO o PlayerPrefs e colocado o nosso JSON oficial
+            PersistenciaManager.Instance.SalvarTudo(); 
         }
     }
 

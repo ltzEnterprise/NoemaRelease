@@ -114,6 +114,7 @@ public class TreasureChest : MonoBehaviour
             StartCoroutine(AnimarTampa());
         }
 
+        // --- SISTEMA DE SAVE ---
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
@@ -135,6 +136,7 @@ public class TreasureChest : MonoBehaviour
             InventoryManager.Instance.ReceberItem(idDoItemInventario);
         }
 
+        // Salva tudo no disco agora!
         if (!Application.isEditor && PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.SalvarTudo();
@@ -179,20 +181,15 @@ public class TreasureChest : MonoBehaviour
 
     IEnumerator SequenciaRecompensa()
     {
-        // Liga a sua UI antiga (se tiver)
         if(painelPretoRecompensa) painelPretoRecompensa.SetActive(true);
         
-        // Escreve o texto antigo (se tiver)
         if(textoRecompensa && !string.IsNullOrEmpty(nomeDaRunaNesteBau)) 
             textoRecompensa.text = "Você pegou a " + nomeDaRunaNesteBau + "!";
             
-        // LIGA O SEU PAINEL NOVO
         if(painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(true);
         
-        // Fica exatos 3 segundos
         yield return new WaitForSecondsRealtime(3f);
         
-        // Desliga a porra toda
         if(painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
         if(painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
 

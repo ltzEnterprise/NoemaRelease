@@ -17,18 +17,14 @@ public class InventoryManager : MonoBehaviour
     [Header("--- CONFIGURAÇÕES DE GAMEPLAY ---")]
     public float delayTroca = 0.2f;
     public int itemSelecionado = -1; 
-    [Tooltip("Necessário pro código saber qual item não pode ser desligado enquanto mira")]
     public int idDaCamera = 6; 
 
     [Header("--- ANIMAÇÃO DE SAQUE ---")]
     public float forcaDropSaque = 0.4f;
-    [Tooltip("Quanto maior, mais rápido. Ex: 5 = 0.2 segundos pra sacar.")]
     public float velocidadeSaque = 5f; 
 
     private float tempoParaProximaTroca = 0f;
     private Vector3[] posicoesOriginais;
-    
-    // Guarda as animações ativas pra uma arma não bugar a outra se você trocar rápido
     private Coroutine[] corrotinasSaque; 
 
     void Awake()
@@ -38,10 +34,7 @@ public class InventoryManager : MonoBehaviour
             Instance = this;
             if (transform.parent == null) DontDestroyOnLoad(gameObject);
         }
-        else
-        {
-            Destroy(gameObject);
-        }
+        else Destroy(gameObject);
     }
 
     void OnEnable() { SceneManager.sceneLoaded += OnSceneLoaded; }
@@ -49,6 +42,11 @@ public class InventoryManager : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        // Ao carregar a cena, o item selecionado deve ser persistente também
+        if (PersistenciaManager.Instance != null)
+        {
+            itemSelecionado = PersistenciaManager.Instance.ObterInt("Inv_ItemSelected");
+        }
         StartCoroutine(ReequiparVisualmente());
     }
 
@@ -68,9 +66,7 @@ public class InventoryManager : MonoBehaviour
         for (int i = 0; i < itensRegistrados.Count; i++)
         {
             if (itensRegistrados[i] != null)
-            {
                 posicoesOriginais[i] = itensRegistrados[i].transform.localPosition;
-            }
         }
 
         if (Application.isEditor) AplicarDebugInicial();
@@ -82,24 +78,14 @@ public class InventoryManager : MonoBehaviour
     {
         if (comecarComTudo)
         {
-            for (int i = 0; i < EstadoGlobal.armasDesbloqueadas.Length; i++)
-            {
-                EstadoGlobal.armasDesbloqueadas[i] = true;
-            }
-        }
-
-        if (debug_DarUpgradeLuzNoStart && RealityCamera.Instance != null)
-        {
-            RealityCamera.Instance.ReceberUpgradeLanterna();
+            for (int i = 0; i < itensRegistrados.Count; i++)
+                DesbloquearItem(i);
         }
     }
 
     void Update()
     {
-        // O Update agora tá limpo. A animação acontece na Coroutine lá embaixo.
-        
         if (FPS_Master.travadoInteracao) return;
-        if (!TemAlgumItem()) return;
 
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (Mathf.Abs(scroll) > 0.01f && Time.time >= tempoParaProximaTroca)
@@ -119,17 +105,17 @@ public class InventoryManager : MonoBehaviour
     {
         DesbloquearItem(id);
         itemSelecionado = id; 
+        PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", id);
 
         if (id >= 0 && id < itensRegistrados.Count && itensRegistrados[id] != null)
         {
             ItemIdentificador idScript = itensRegistrados[id].GetComponent<ItemIdentificador>();
             if (idScript != null && HUDItemNome.Instance != null)
-            {
                 HUDItemNome.Instance.MostrarFadeDeColeta(idScript.nomeDoItem);
-            }
         }
 
         AtualizarVisual(true);
+        PersistenciaManager.Instance.SalvarTudo(); // Salva o item imediatamente
     }
 
     public void ReceberItemDeVolta(int id) { ReceberItem(id); }
@@ -140,8 +126,10 @@ public class InventoryManager : MonoBehaviour
         if (itemSelecionado == id)
         {
             itemSelecionado = -1; 
+            PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", -1);
             AtualizarVisual(true);
         }
+        PersistenciaManager.Instance.SalvarTudo();
     }
 
     public void TentarEquipar(int id)
@@ -151,12 +139,11 @@ public class InventoryManager : MonoBehaviour
             if (itemSelecionado != id)
             {
                 itemSelecionado = id;
+                PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", id);
                 AtualizarVisual(true);
             }
         }
     }
-
-    public void ForcarAtualizacaoUI() => AtualizarVisual(true);
 
     void NavegarInventario(int direcao)
     {
@@ -166,13 +153,13 @@ public class InventoryManager : MonoBehaviour
         for (int i = 0; i < total + 2; i++)
         {
             tentativa += direcao;
-            
             if (tentativa >= total) tentativa = -1;
             if (tentativa < -1) tentativa = total - 1;
 
             if (tentativa == -1 || ItemEstaDesbloqueado(tentativa))
             {
                 itemSelecionado = tentativa;
+                PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", tentativa);
                 AtualizarVisual(true);
                 return;
             }
@@ -187,14 +174,7 @@ public class InventoryManager : MonoBehaviour
         for (int i = 0; i < itensRegistrados.Count; i++)
         {
             if (itensRegistrados[i] == null) continue;
-            
-            bool ativar = (i == itemSelecionado);
-
-            // Mantém a câmera ligada se ela estiver no rosto
-            if (i == idDaCamera && cameraEstaNoRosto)
-            {
-                ativar = true; 
-            }
+            bool ativar = (i == itemSelecionado) || (i == idDaCamera && cameraEstaNoRosto);
             
             itensRegistrados[i].SetActive(ativar);
 
@@ -205,17 +185,13 @@ public class InventoryManager : MonoBehaviour
 
                 if (animar) 
                 {
-                    // Cancela o saque antigo pra não dar conflito se o cara trocar de arma rápido
                     if (corrotinasSaque[i] != null) StopCoroutine(corrotinasSaque[i]);
-                    
-                    // Inicia o saque perfeito
                     corrotinasSaque[i] = StartCoroutine(RotinaDeSaque(i));
                 }
             }
         }
 
-        if (itemSelecionado == -1) nomeParaHUD = "";
-        if (HUDItemNome.Instance != null && animar) HUDItemNome.Instance.MostrarNome(nomeParaHUD);
+        if (HUDItemNome.Instance != null && animar) HUDItemNome.Instance.MostrarNome(itemSelecionado == -1 ? "" : nomeParaHUD);
     }
 
     IEnumerator RotinaDeSaque(int index)
@@ -223,47 +199,35 @@ public class InventoryManager : MonoBehaviour
         Transform itemTransform = itensRegistrados[index].transform;
         Vector3 posFinal = posicoesOriginais[index];
         Vector3 posInicial = posFinal + new Vector3(0, -forcaDropSaque, 0);
-
-        // Joga a arma lá embaixo
         itemTransform.localPosition = posInicial;
-
         float tempoPercorrido = 0f;
-        
-        // Converte a Velocidade em Segundos. Ex: Velocidade 5 = 0.2s. 
         float tempoTotal = 1f / Mathf.Max(0.1f, velocidadeSaque); 
 
         while (tempoPercorrido < tempoTotal)
         {
             tempoPercorrido += Time.deltaTime;
-            // Interpola linearmente garantindo precisão absoluta
             itemTransform.localPosition = Vector3.Lerp(posInicial, posFinal, tempoPercorrido / tempoTotal);
             yield return null;
         }
-
-        // Garante a colagem final na posição certa
         itemTransform.localPosition = posFinal;
-        corrotinasSaque[index] = null;
     }
 
+    // 🔥 VÍNCULO DIRETO COM O PERSISTENCIA MANAGER
     bool ItemEstaDesbloqueado(int id) 
     {
-        if (EstadoGlobal.armasDesbloqueadas == null) return false;
-        return (id >= 0 && id < EstadoGlobal.armasDesbloqueadas.Length && EstadoGlobal.armasDesbloqueadas[id]);
+        if (PersistenciaManager.Instance == null) return false;
+        return PersistenciaManager.Instance.ObterEstado("InvItemUnlocked_" + id);
     }
 
     void DesbloquearItem(int id) 
     { 
-        if(id >= 0 && id < EstadoGlobal.armasDesbloqueadas.Length) EstadoGlobal.armasDesbloqueadas[id] = true; 
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.RegistrarEstado("InvItemUnlocked_" + id, true);
     }
 
     void BloquearItem(int id) 
     { 
-        if(id >= 0 && id < EstadoGlobal.armasDesbloqueadas.Length) EstadoGlobal.armasDesbloqueadas[id] = false; 
-    }
-
-    bool TemAlgumItem() 
-    { 
-        foreach (bool b in EstadoGlobal.armasDesbloqueadas) if (b) return true; 
-        return false; 
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.RegistrarEstado("InvItemUnlocked_" + id, false);
     }
 }

@@ -189,14 +189,12 @@ public class QuizDoor : MonoBehaviour
         if(audioSourceSFX) audioSourceSFX.PlayOneShot(somPortaAbrindo);
         yield return new WaitForSeconds(1f);
 
-        // Verifica a língua atual
         int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
 
         foreach (LinhaDeDialogo linha in introducao)
         {
             if (textoDialogoIntro) textoDialogoIntro.fontSize = linha.tamanhoDaFonte; 
             
-            // Pega o texto correto com fallback de segurança
             string textoParaExibir = (lang == 0) ? linha.texto : linha.textoEN;
             if (lang == 1 && string.IsNullOrEmpty(textoParaExibir)) textoParaExibir = linha.texto;
 
@@ -270,7 +268,6 @@ public class QuizDoor : MonoBehaviour
 
         if (textoEnunciado) 
         {
-            // Configura o enunciado traduzido
             string enunciadoExibir = (lang == 0) ? perguntaAtual.enunciado : perguntaAtual.enunciadoEN;
             if (lang == 1 && string.IsNullOrEmpty(enunciadoExibir)) enunciadoExibir = perguntaAtual.enunciado;
 
@@ -282,7 +279,6 @@ public class QuizDoor : MonoBehaviour
         {
             if (i < textosDosBotoes.Length && textosDosBotoes[i] != null) 
             {
-                // Configura as alternativas traduzidas
                 string altExibir = (lang == 0) ? perguntaAtual.alternativas[i] : perguntaAtual.alternativasEN[i];
                 if (lang == 1 && string.IsNullOrEmpty(altExibir)) altExibir = perguntaAtual.alternativas[i];
                 
@@ -408,10 +404,17 @@ public class QuizDoor : MonoBehaviour
             EstadoGlobal.casasResolvidas[idDessaCasa] = true;
 
         if (InventoryManager.Instance != null) 
-        InventoryManager.Instance.ReceberItem(idItemPremio);
+            InventoryManager.Instance.ReceberItem(idItemPremio);
 
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
+
+        // 🔥 TRAVA DE SAVE DE AÇO
+        if (SistemaGlobal.Instance != null)
+        {
+            EstadoGlobal.SalvarNoSlot(SistemaGlobal.Instance.slotAtual);
+            if (PersistenciaManager.Instance) PersistenciaManager.Instance.SalvarTudo();
+        }
     }
 
     IEnumerator FadeOutMusica(float duracao)

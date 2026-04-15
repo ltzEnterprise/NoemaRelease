@@ -19,8 +19,8 @@ public class InvestigationHouseDoor : MonoBehaviour
 
     [Header("--- UI E EFEITOS ---")]
     [Tooltip("O texto 'Pressione E para Entrar'")]
-    public GameObject textoInteragirUI; // <--- O NOVO TEXTO AQUI
-    public GameObject textoSemChaveUI;  // "Preciso de uma chave..."
+    public GameObject textoInteragirUI; 
+    public GameObject textoSemChaveUI;  
     
     public AudioSource audioSource;
     public AudioClip somTrancada;
@@ -35,24 +35,19 @@ public class InvestigationHouseDoor : MonoBehaviour
         if (textoSemChaveUI) textoSemChaveUI.SetActive(false);
         if (textoInteragirUI) textoInteragirUI.SetActive(false);
         
-        // Garante que o AudioSource exista
         if (!audioSource) audioSource = gameObject.AddComponent<AudioSource>();
     }
 
-    // --- SISTEMA DE MIRA (SÓ MOSTRA TEXTO SE NÃO TIVER MADEIRA) ---
     public void AoOlhar()
     {
         if (interagindo) return;
 
-        // Se tiver madeira na frente, NÃO mostra o texto de "Entrar"
-        // Isso força o jogador a entender que tem que quebrar a madeira primeiro
         if (TemMadeiraBloqueando()) 
         {
             if (textoInteragirUI) textoInteragirUI.SetActive(false);
             return;
         }
 
-        // Se está livre, mostra o texto
         if (textoInteragirUI) textoInteragirUI.SetActive(true);
     }
 
@@ -60,16 +55,13 @@ public class InvestigationHouseDoor : MonoBehaviour
     {
         if (textoInteragirUI) textoInteragirUI.SetActive(false);
     }
-    // -------------------------------------------------------------
 
     public void Interagir()
     {
         if (interagindo) return;
 
-        // 1. VERIFICA BARRICADA
         if (TemMadeiraBloqueando()) return; 
 
-        // 2. VERIFICA CHAVE
         if (KeySystem.TemChave(idChaveNecessaria))
         {
             StartCoroutine(EntrarNaCasa());
@@ -93,12 +85,11 @@ public class InvestigationHouseDoor : MonoBehaviour
     {
         interagindo = true;
         
-        // Esconde o texto de interagir imediatamente
         if (textoInteragirUI) textoInteragirUI.SetActive(false);
 
-        FPS_Master.travadoInteracao = true;
+        if (FPS_Master.Instance != null) FPS_Master.travadoInteracao = true;
 
-        // 1. CONSOME A CHAVE E ATUALIZA HUD
+        // 1. CONSOME A CHAVE E ATUALIZA HUD (O KeySystem já salva isso no JSON pra gente)
         KeySystem.GastarChave(idChaveNecessaria);
         if (hudIconeChaveParaApagar) hudIconeChaveParaApagar.SetActive(false);
 
@@ -110,12 +101,10 @@ public class InvestigationHouseDoor : MonoBehaviour
         if (audioSource && somAbrirPorta) audioSource.PlayOneShot(somAbrirPorta);
 
         // 4. SALVA TUDO
-        if (SistemaGlobal.Instance != null)
+        if (SistemaGlobal.Instance != null && pontoDeRetorno != null)
         {
-            EstadoGlobal.SalvarNoSlot(SistemaGlobal.Instance.slotAtual);
-            
-            if(pontoDeRetorno != null)
-                SistemaGlobal.Instance.SalvarJogo(pontoDeRetorno.position, SceneManager.GetActiveScene().name);
+            // O seu novo SistemaGlobal já salva TUDO (Player, Inventario, EstadoGlobal) numa tacada só.
+            SistemaGlobal.Instance.SalvarJogo(pontoDeRetorno.position, SceneManager.GetActiveScene().name);
         }
 
         yield return new WaitForSeconds(1f); 
@@ -126,7 +115,6 @@ public class InvestigationHouseDoor : MonoBehaviour
 
     IEnumerator MostrarMensagemSemChave()
     {
-        // Garante que o texto de interagir suma pra mostrar o de erro
         if (textoInteragirUI) textoInteragirUI.SetActive(false);
 
         if (textoSemChaveUI) textoSemChaveUI.SetActive(true);

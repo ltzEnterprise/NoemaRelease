@@ -11,7 +11,6 @@ public class KeySystem : MonoBehaviour
     public AudioClip pickupSound;
 
     // --- BRIDGE TO KEY MANAGER ---
-    // Mantido em PT-BR para não quebrar o seu script ChildPuzzleDoor!
     public static bool TemChave(string id) 
     {
         if (KeyManager.Instance != null)
@@ -23,18 +22,12 @@ public class KeySystem : MonoBehaviour
     {
         if (KeyManager.Instance != null)
             KeyManager.Instance.TurnOnKeyIcon(id);
-
-        if (!Application.isEditor && PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.RegistrarEstado("Key_" + id, true);
     }
 
     public static void GastarChave(string id)
     {
         if (KeyManager.Instance != null)
             KeyManager.Instance.TurnOffKeyIcon(id);
-
-        if (!Application.isEditor && PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.RegistrarEstado("Key_" + id, false);
     }
 
     // --- LÓGICA DO ITEM NO CHÃO ---

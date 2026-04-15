@@ -3,6 +3,9 @@ using System.Collections;
 
 public class OneSidedDoor : MonoBehaviour
 {
+    [Header("--- SAVE SYSTEM ---")]
+    public string uniqueID; 
+
     [Header("Movement")]
     public float closedAngle = 0f; 
     [Tooltip("Quantos graus ela vai girar para abrir? (Ex: 90 ou -90)")]
@@ -39,17 +42,35 @@ public class OneSidedDoor : MonoBehaviour
 
     void Start()
     {
+        if (string.IsNullOrEmpty(uniqueID)) 
+            Debug.LogWarning($"[Aviso] Porta de um lado '{gameObject.name}' sem Unique ID! Ela não vai salvar se foi destrancada.");
+
         rotacaoFechada = transform.localRotation;
         rotacaoAberta = rotacaoFechada * Quaternion.Euler(0, openAngle, 0);
 
         if (lockedMessage) lockedMessage.SetActive(false);
         if (interactText) interactText.SetActive(false);
+
+        CarregarEstadoSalvo();
+    }
+
+    void CarregarEstadoSalvo()
+    {
+        if (Application.isEditor || PersistenciaManager.Instance == null || string.IsNullOrEmpty(uniqueID)) return;
+
+        isUnlocked = PersistenciaManager.Instance.ObterEstado(uniqueID + "_unlocked");
+        isOpen = PersistenciaManager.Instance.ObterEstado(uniqueID + "_open");
+
+        // Se o save diz que a porta tava aberta, teleporta a rotação pra ela não ficar abrindo sozinha na cara do player no Load
+        if (isOpen)
+        {
+            transform.localRotation = rotacaoAberta;
+        }
     }
 
     public void AoOlhar()
     {
         estaOlhando = true;
-        // Só acende o botão de interação se não tiver uma mensagem de erro na cara do jogador
         if (!mostrandoErro && interactText) interactText.SetActive(true);
     }
 
@@ -57,20 +78,15 @@ public class OneSidedDoor : MonoBehaviour
     {
         estaOlhando = false;
         if (interactText) interactText.SetActive(false);
-        
-        // Limpa a tela caso o jogador vire de costas rápido durante o erro
         if (lockedMessage) lockedMessage.SetActive(false);
     }
 
     public void Interagir()
     {
         if (Time.time < tempoUltimoClique + 0.5f) return;
-        
-        // TRAVA ANTI-SPAM: Impede o cara de ficar apertando E e sobrepondo áudio/coroutine de erro
         if (mostrandoErro) return; 
 
         tempoUltimoClique = Time.time;
-
         if (interactText) interactText.SetActive(false);
 
         CheckSideAndInteract();
@@ -80,16 +96,11 @@ public class OneSidedDoor : MonoBehaviour
     {
         Quaternion alvo = isOpen ? rotacaoAberta : rotacaoFechada;
         
-        // Gira a porta suavemente
         transform.localRotation = Quaternion.Slerp(transform.localRotation, alvo, speed * Time.deltaTime);
 
-        // --- SISTEMA DE FANTASMA ---
         if (physicsCollider != null)
         {
-            // Se a diferença entre o alvo e a porta atual for maior que 1 grau, ela está em movimento
             bool isMoving = Quaternion.Angle(transform.localRotation, alvo) > 1.0f;
-            
-            // Transforma num fantasma enquanto mexe (o jogador passa direto, mas o raycast ainda pega)
             physicsCollider.isTrigger = isMoving;
         }
     }
@@ -115,6 +126,13 @@ public class OneSidedDoor : MonoBehaviour
         else
         {
             isUnlocked = true;
+            
+            // 🔥 SALVA QUE O ATALHO FOI DESTRANCADO PRA SEMPRE
+            if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+            {
+                PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_unlocked", true);
+            }
+
             ToggleDoor();
         }
     }
@@ -124,6 +142,12 @@ public class OneSidedDoor : MonoBehaviour
         isOpen = !isOpen;
         if (audioSource) 
             audioSource.PlayOneShot(isOpen ? openSound : closeSound);
+
+        // 🔥 SALVA SE ELA TÁ ABERTA OU FECHADA
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+        {
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_open", isOpen);
+        }
     }
 
     IEnumerator ShowLockedMessage()
@@ -139,7 +163,6 @@ public class OneSidedDoor : MonoBehaviour
         
         mostrandoErro = false;
 
-        // A MÁGICA AQUI: Devolve o botão de interagir se o cara AINDA tiver olhando pra porta
         if (estaOlhando && interactText) interactText.SetActive(true);
     }
 }

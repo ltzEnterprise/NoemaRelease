@@ -32,7 +32,6 @@ public class ComputerController : MonoBehaviour
     public GameObject textoInteragirRuna;  
 
     [Header("--- RECOMPENSAS DO PÓS-CRASH ---")]
-    [Tooltip("A TELA PRETA COM O TEXTO DE UPGRADE!")]
     public GameObject painelUpgradeCamera; 
     public int idDaCameraNoInventario = 6; 
     
@@ -69,50 +68,52 @@ public class ComputerController : MonoBehaviour
         if (painelUpgradeCamera) painelUpgradeCamera.SetActive(false);
         if (telaAzulUITransicao) telaAzulUITransicao.SetActive(false);
 
-        if (PlayerPrefs.GetInt("World_Is_Pixelated", 0) == 1)
+        // 🔥 SUBSTITUÍDO PARA O PERSISTENCIAMANAGER
+        if (PersistenciaManager.Instance != null)
         {
-            if (pixelURPFeature != null) pixelURPFeature.SetActive(true);
-        }
-        else
-        {
-            if (pixelURPFeature != null) pixelURPFeature.SetActive(false);
-        }
+            if (PersistenciaManager.Instance.ObterEstado("World_Is_Pixelated"))
+            {
+                if (pixelURPFeature != null) pixelURPFeature.SetActive(true);
+            }
+            else
+            {
+                if (pixelURPFeature != null) pixelURPFeature.SetActive(false);
+            }
 
-        if (PlayerPrefs.GetInt("PC_" + idDoComputador + "_Queimado", 0) == 1)
-        {
-            pcQueimado = true;
-            DesligarTudo();
-            if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-            return;
-        }
+            if (PersistenciaManager.Instance.ObterEstado("PC_" + idDoComputador + "_Queimado"))
+            {
+                pcQueimado = true;
+                DesligarTudo();
+                if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
+                return;
+            }
 
-        if (PlayerPrefs.GetInt("PC_Crash_Event", 0) == 1)
-        {
-            AtivarModoPósCrash(false);
-        }
-        else if (PlayerPrefs.GetInt("FuseBox_Noite_Resolvida", 0) == 1)
-        {
-            AtivarModoBonusNoite(false);
-            if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-        }
-        else if (PlayerPrefs.GetInt("FuseBox_Dia_Resolvida", 0) == 1)
-        {
-            AtivarModoNormal(false);
-            if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-        }
-        else
-        {
-            DesligarTudo();
-            if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
+            if (PersistenciaManager.Instance.ObterEstado("PC_Crash_Event"))
+            {
+                AtivarModoPósCrash(false);
+            }
+            else if (PersistenciaManager.Instance.ObterEstado("FuseBox_Noite_Resolvida"))
+            {
+                AtivarModoBonusNoite(false);
+                if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
+            }
+            else if (PersistenciaManager.Instance.ObterEstado("FuseBox_Dia_Resolvida"))
+            {
+                AtivarModoNormal(false);
+                if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
+            }
+            else
+            {
+                DesligarTudo();
+                if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
+            }
         }
     }
 
-    // 🔥 CÓDIGO CORRIGIDO: TRAVA DE ENERGIA REMOVIDA 🔥
     public void AoOlhar()
     {
         estaOlhando = true;
 
-        // Só apaga se o PC já era de vez ou tá em historinha
         if (pcQueimado || cutsceneRodando) 
         {
             if (textoInteragirPC) textoInteragirPC.SetActive(false);
@@ -120,7 +121,6 @@ public class ComputerController : MonoBehaviour
             return;
         }
 
-        // Caso contrário, mostra o texto normal pro jogador poder interagir!
         if (modoRunaAtivo)
         {
             if (textoInteragirPC) textoInteragirPC.SetActive(false);
@@ -169,16 +169,20 @@ public class ComputerController : MonoBehaviour
 
         if (tocarSom) TocarSom();
 
-        PlayerPrefs.SetInt("World_Is_Pixelated", 1);
-        PlayerPrefs.Save();
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", true);
+            PersistenciaManager.Instance.SalvarTudo();
+        }
+
         if (pixelURPFeature != null) pixelURPFeature.SetActive(true);
 
-        if (PlayerPrefs.GetInt("Player3D_HasSave", 0) == 1 && player3D != null && FPS_Master.Instance != null)
+        if (PersistenciaManager.Instance != null && PersistenciaManager.Instance.ObterEstado("Player3D_HasSave") && player3D != null && FPS_Master.Instance != null)
         {
-            float x = PlayerPrefs.GetFloat("Player3D_PosX");
-            float y = PlayerPrefs.GetFloat("Player3D_PosY");
-            float z = PlayerPrefs.GetFloat("Player3D_PosZ");
-            float rotY = PlayerPrefs.GetFloat("Player3D_RotY");
+            float x = PersistenciaManager.Instance.ObterFloat("Player3D_PosX");
+            float y = PersistenciaManager.Instance.ObterFloat("Player3D_PosY");
+            float z = PersistenciaManager.Instance.ObterFloat("Player3D_PosZ");
+            float rotY = PersistenciaManager.Instance.ObterFloat("Player3D_RotY");
 
             FPS_Master.Instance.Teleportar(new Vector3(x, y, z));
             player3D.rotation = Quaternion.Euler(0, rotY, 0);
@@ -187,10 +191,6 @@ public class ComputerController : MonoBehaviour
                 FPS_Master.Instance.cameraJogador.transform.localRotation = Quaternion.identity;
 
             Physics.SyncTransforms(); 
-            PlayerPrefs.SetInt("Player3D_HasSave", 1);
-            PlayerPrefs.Save();
-            
-            if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
         }
         else if (pontoDeSpawnPadrao != null && player3D != null && FPS_Master.Instance != null)
         {
@@ -296,16 +296,18 @@ public class ComputerController : MonoBehaviour
         if (audioSourcePC && somDesligarPC) audioSourcePC.PlayOneShot(somDesligarPC);
         DesligarTudo(); 
         
-        PlayerPrefs.SetInt("PC_" + idDoComputador + "_Queimado", 1);
-        PlayerPrefs.SetInt("PC_Crash_Event", 0); 
-        PlayerPrefs.Save();
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado("PC_" + idDoComputador + "_Queimado", true);
+            PersistenciaManager.Instance.RegistrarEstado("PC_Crash_Event", false); 
+            PersistenciaManager.Instance.SalvarTudo();
+        }
         
         pcQueimado = true;
         modoRunaAtivo = false;
         
         cutsceneRodando = false;
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-        if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
     }
 
     private IEnumerator SequenciaEntradaMatrix()
@@ -313,16 +315,15 @@ public class ComputerController : MonoBehaviour
         cutsceneRodando = true;
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
 
-        if (player3D != null)
+        if (player3D != null && PersistenciaManager.Instance != null)
         {
-            PlayerPrefs.SetFloat("Player3D_PosX", player3D.position.x);
-            PlayerPrefs.SetFloat("Player3D_PosY", player3D.position.y);
-            PlayerPrefs.SetFloat("Player3D_PosZ", player3D.position.z);
-            PlayerPrefs.SetFloat("Player3D_RotY", player3D.eulerAngles.y);
-            PlayerPrefs.SetInt("Player3D_HasSave", 1);
-            PlayerPrefs.Save();
+            PersistenciaManager.Instance.SalvarFloat("Player3D_PosX", player3D.position.x);
+            PersistenciaManager.Instance.SalvarFloat("Player3D_PosY", player3D.position.y);
+            PersistenciaManager.Instance.SalvarFloat("Player3D_PosZ", player3D.position.z);
+            PersistenciaManager.Instance.SalvarFloat("Player3D_RotY", player3D.eulerAngles.y);
+            PersistenciaManager.Instance.RegistrarEstado("Player3D_HasSave", true);
             
-            if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
+            PersistenciaManager.Instance.SalvarTudo();
         }
 
         float tempo = 0;

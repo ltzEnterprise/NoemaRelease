@@ -4,7 +4,6 @@ using System.Collections.Generic;
 public class PilarReceptor : MonoBehaviour
 {
     public static List<PilarReceptor> todosPilares = new List<PilarReceptor>();
-    private static int pilaresAtivadosCount = 0; // Contador global
 
     [Header("--- SAVE SYSTEM ---")]
     public string uniqueID; 
@@ -19,11 +18,10 @@ public class PilarReceptor : MonoBehaviour
 
     void Awake()
     {
-        // Trava de segurança pra cena recarregar limpa
+        // 🔥 Limpa pilares mortos da lista caso a cena recarregue
+        todosPilares.RemoveAll(item => item == null);
+
         if (!todosPilares.Contains(this)) todosPilares.Add(this);
-        
-        // Se for o primeiro pilar a acordar, zera o contador de saves/cenas anteriores
-        if (todosPilares.Count == 1) pilaresAtivadosCount = 0;
 
         if (objetoNoPilar) objetoNoPilar.SetActive(false);
     }
@@ -44,20 +42,14 @@ public class PilarReceptor : MonoBehaviour
             if (estadoSalvo)
             {
                 ativado = true;
-                pilaresAtivadosCount++; 
                 if (objetoNoPilar) objetoNoPilar.SetActive(true);
-                
-                // Nota: A gente NÃO chama o IniciarFinal() aqui no Start pra não repetir 
-                // a cutscene toda vez que você der Load no jogo.
             }
         }
     }
 
     void OnDestroy()
     {
-        // Limpa da lista de verdade quando a cena fecha
         if (todosPilares.Contains(this)) todosPilares.Remove(this);
-        if (todosPilares.Count == 0) pilaresAtivadosCount = 0;
     }
 
     public void AtivarObjeto()
@@ -65,7 +57,6 @@ public class PilarReceptor : MonoBehaviour
         if (ativado) return; 
 
         ativado = true;
-        pilaresAtivadosCount++; // Conta +1 pilar ativado
 
         if (objetoNoPilar) 
             objetoNoPilar.SetActive(true);
@@ -77,8 +68,20 @@ public class PilarReceptor : MonoBehaviour
             PersistenciaManager.Instance.SalvarTudo();
         }
 
-        // SE COMPLETOU TODOS OS PILARES DA CENA
-        if (pilaresAtivadosCount >= todosPilares.Count && todosPilares.Count > 0)
+        ChecarCondicaoCutscene();
+    }
+
+    void ChecarCondicaoCutscene()
+    {
+        // 🔥 A MÁGICA: Em vez de contar com variável estática que buga no Load, 
+        // ele só passa o olho em todos os pilares reais da cena e conta.
+        int contador = 0;
+        foreach(var pilar in todosPilares)
+        {
+            if (pilar.ativado) contador++;
+        }
+
+        if (contador >= todosPilares.Count && todosPilares.Count > 0)
         {
             Debug.Log("Todos os pilares ativos! Iniciando Cutscene...");
             if (GerenciadorCutscene.Instance != null)

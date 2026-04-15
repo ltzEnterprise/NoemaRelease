@@ -127,8 +127,6 @@ public class AudioPuzzleDoor : MonoBehaviour
 
         jogadorNaPorta = true;
         
-        // Trava o player. Use true, false para não soltar o mouse se não for necessário
-        // mas garante que ele não ative o inventário
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
         
         if (textoInteragir) textoInteragir.SetActive(false);
@@ -149,14 +147,12 @@ public class AudioPuzzleDoor : MonoBehaviour
     {
         if (!jogadorNaPorta || portaResolvida) return;
 
-        // Se estivermos saindo pelo 'E', esperamos 1 frame
         if (ignorarProximoInputE)
         {
             ignorarProximoInputE = false;
             return;
         }
 
-        // Lê o 'E' e também o Escape para garantir que consiga sair
         if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape)) 
         {
             SairDoPuzzle();
@@ -282,11 +278,9 @@ public class AudioPuzzleDoor : MonoBehaviour
         
         if (textoDicaR)
         {
-            // Verifica qual a língua atual
             int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
             string dicaParaExibir = (lang == 0) ? dicaApertarR : dicaApertarREN;
             
-            // Fallback de segurança para o inglês
             if (lang == 1 && string.IsNullOrEmpty(dicaParaExibir)) dicaParaExibir = dicaApertarR;
 
             textoDicaR.text = dicaParaExibir;
@@ -302,16 +296,24 @@ public class AudioPuzzleDoor : MonoBehaviour
         if (audioSourceSFX && somSucesso) audioSourceSFX.PlayOneShot(somSucesso);
         textoVisorSenha.color = Color.green;
 
-        if (EstadoGlobal.armasDesbloqueadas != null && idDoDiscoParaDar < EstadoGlobal.armasDesbloqueadas.Length)
-        {
+        // 🔥 OTIMIZAÇÃO: Usa o InventoryManager pra dar o disco e ativar a UI!
+        if (InventoryManager.Instance != null) 
+            InventoryManager.Instance.ReceberItem(idDoDiscoParaDar);
+        else if (EstadoGlobal.armasDesbloqueadas != null && idDoDiscoParaDar < EstadoGlobal.armasDesbloqueadas.Length)
             EstadoGlobal.armasDesbloqueadas[idDoDiscoParaDar] = true;
-        }
 
         if (EstadoGlobal.casasResolvidas != null && idDessaCasa < EstadoGlobal.casasResolvidas.Length) 
             EstadoGlobal.casasResolvidas[idDessaCasa] = true;
 
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID)) 
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
+
+        // 🔥 TRAVA DE SAVE DE AÇO
+        if (SistemaGlobal.Instance != null)
+        {
+            EstadoGlobal.SalvarNoSlot(SistemaGlobal.Instance.slotAtual);
+            if (PersistenciaManager.Instance) PersistenciaManager.Instance.SalvarTudo();
+        }
 
         StartCoroutine(SairDoPuzzleDelay());
     }
@@ -335,13 +337,10 @@ public class AudioPuzzleDoor : MonoBehaviour
         
         TrocarParaMusicaGlobal();
         
-        // Destrava o Player
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
         
-        // Evita que ele clique sem querer ao sair
         ignorarProximoInputE = true; 
         
-        // Joga a mira pra longe um pouquinho pra não reconectar instantaneamente (opcional mas recomendado)
         if (FPS_Master.Instance != null) FPS_Master.Instance.LimparVisual();
     }
 
@@ -414,10 +413,7 @@ public class AudioPuzzleDoor : MonoBehaviour
         {
             if (textoDialogoCutscene) textoDialogoCutscene.fontSize = linha.tamanhoDaFonte;
 
-            // Usa a variável original 'texto' para o PT, e 'textoEN' para o Inglês
             string textoParaExibir = (lang == 0) ? linha.texto : linha.textoEN;
-
-            // Fallback: se o inglês estiver vazio, toca em PT
             if (lang == 1 && string.IsNullOrEmpty(textoParaExibir)) textoParaExibir = linha.texto;
 
             yield return StartCoroutine(EfeitoDigitar(textoParaExibir, linha.velocidadeDigitar));

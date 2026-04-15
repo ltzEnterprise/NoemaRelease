@@ -81,11 +81,9 @@ public class ChildPuzzleDoor : MonoBehaviour
         if (textoDialogoCutscene) textoDialogoCutscene.text = "";
         if (textoDisplaySenha) textoDisplaySenha.text = "";
         
-        // Garante que os feedbacks comecem desligados
         if (objetoAcertou) objetoAcertou.SetActive(false);
         if (objetoErrou) objetoErrou.SetActive(false);
 
-        // Carrega o save (COM TRAVA DE EDITOR)
         CarregarEstadoSalvo();
 
         if (imagemChaveNoInventario)
@@ -211,7 +209,6 @@ public class ChildPuzzleDoor : MonoBehaviour
         if (painelSenha) painelSenha.SetActive(true);
         if (textoAvisoBotaoR) textoAvisoBotaoR.SetActive(mostrarAvisoR);
         
-        // Garante que os feedbacks estao desligados ao abrir a senha
         if (objetoAcertou) objetoAcertou.SetActive(false);
         if (objetoErrou) objetoErrou.SetActive(false);
         
@@ -268,9 +265,7 @@ public class ChildPuzzleDoor : MonoBehaviour
     {
         digitandoSenha = false;
 
-        // --- LIGA O OBJETO DE ERRO ---
         if (objetoErrou) objetoErrou.SetActive(true);
-        
         if(audioSourceSFX) audioSourceSFX.PlayOneShot(somErro);
         
         senhaAtual = "";
@@ -284,9 +279,7 @@ public class ChildPuzzleDoor : MonoBehaviour
     {
         digitandoSenha = false;
 
-        // --- LIGA O OBJETO DE SUCESSO ---
         if (objetoAcertou) objetoAcertou.SetActive(true);
-        
         if(audioSourceSFX) audioSourceSFX.PlayOneShot(somSucesso);
 
         if (darChaveAoResolver)
@@ -304,6 +297,13 @@ public class ChildPuzzleDoor : MonoBehaviour
 
             if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
                 PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
+
+            // 🔥 TRAVA DE SAVE DE AÇO
+            if (SistemaGlobal.Instance != null)
+            {
+                EstadoGlobal.SalvarNoSlot(SistemaGlobal.Instance.slotAtual);
+                if (PersistenciaManager.Instance) PersistenciaManager.Instance.SalvarTudo();
+            }
         }
 
         yield return new WaitForSeconds(3.0f);
@@ -320,7 +320,6 @@ public class ChildPuzzleDoor : MonoBehaviour
         if (audioSourceMusica) audioSourceMusica.Stop(); 
         if (textoAvisoBotaoR) textoAvisoBotaoR.SetActive(false);
         
-        // Desliga os feedbacks ao sair
         if (objetoAcertou) objetoAcertou.SetActive(false);
         if (objetoErrou) objetoErrou.SetActive(false);
         
@@ -330,16 +329,12 @@ public class ChildPuzzleDoor : MonoBehaviour
     
     IEnumerator TocarLista(List<LinhaDeDialogo> lista)
     {
-        // Verifica qual é a língua atual no sistema (0 = PT, 1 = EN)
         int lang = (LanguageManager.Instance != null) ? LanguageManager.Instance.currentLanguage : 0;
 
         foreach (LinhaDeDialogo linha in lista) {
             if (textoDialogoCutscene) textoDialogoCutscene.fontSize = linha.tamanhoDaFonte;
 
-            // Usa a variável original 'texto' para o PT, e 'textoEN' para o Inglês
             string textoParaExibir = (lang == 0) ? linha.texto : linha.textoEN;
-
-            // Fallback: se o inglês estiver vazio, toca em PT pra não dar pau
             if (lang == 1 && string.IsNullOrEmpty(textoParaExibir)) textoParaExibir = linha.texto;
 
             yield return StartCoroutine(EfeitoDigitar(textoParaExibir, linha.velocidadeDigitar));
