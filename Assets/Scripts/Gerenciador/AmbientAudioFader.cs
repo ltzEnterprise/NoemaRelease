@@ -4,14 +4,14 @@ using System.Collections;
 [RequireComponent(typeof(AudioSource))]
 public class AmbientAudioFader : MonoBehaviour
 {
-    [Header("--- FADE SETTINGS ---")]
+    [Header("--- CONFIGURAÇÃO DE FADE ---")]
     [Range(0f, 1f)]
     public float maxVolume = 0.5f;
     
-    [Tooltip("Duration for Fade In (Start) and Fade Out (Scene Change)")]
-    public float fadeDuration = 0.5f;
+    [Tooltip("Tempo exato de duração do fade (1 segundo como você pediu)")]
+    public float fadeDuration = 1.0f;
 
-    [Header("--- REFERENCES ---")]
+    [Header("--- REFERÊNCIAS ---")]
     public AudioSource audioSource;
 
     private bool isQuitting = false;
@@ -40,7 +40,7 @@ public class AmbientAudioFader : MonoBehaviour
         StartCoroutine(FadeVolumeRoutine(maxVolume, false));
     }
 
-    // Call this if you want to stop it manually during gameplay
+    // Chama isso pra parar a música com 1 segundo de fade out
     public void StopWithFadeOut()
     {
         StopAllCoroutines();
@@ -64,20 +64,13 @@ public class AmbientAudioFader : MonoBehaviour
         if (stopAtEnd)
             audioSource.Stop();
     }
-
-    // --- DETECTION FOR SCENE CHANGE ---
     
     private void OnDestroy()
     {
-        // Check if the application is actually closing to avoid errors in the Editor
         if (isQuitting) return;
 
-        // When the scene changes and this object is destroyed, we try a quick fade out.
-        // Note: This only works effectively if the scene transition isn't 100% instant.
         if (audioSource != null && audioSource.isPlaying)
         {
-            // We can't use Coroutines here because the object is dying, 
-            // but we can set the volume to 0 to prevent the "pop" sound.
             audioSource.volume = 0f;
         }
     }

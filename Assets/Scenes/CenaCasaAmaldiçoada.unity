@@ -3185,6 +3185,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: "Assembly-CSharp::CasaAmaldi\xE7oadaManager"
   nomeDaRuna: "Runa da Investiga\xE7\xE3o"
+  forcarSaveNoHD: 0
   fonteAudio: {fileID: 971551300}
   somPortaTrancando: {fileID: 8300000, guid: b5b7443af1940824fb8df48efeb5040d, type: 3}
   somPortaDestrancando: {fileID: 8300000, guid: f767873a68e8f7a43992479695d19839, type: 3}
@@ -4073,7 +4074,12 @@ PrefabInstance:
       propertyPath: objetoDeTexto
       value: 
       objectReference: {fileID: 1963711860}
-    m_RemovedComponents: []
+    - target: {fileID: 8836090521062809929, guid: 565f0196fde3e894eaa83b6ba99dbe3d, type: 3}
+      propertyPath: salvarAoPegar
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 4973373116829136274, guid: 565f0196fde3e894eaa83b6ba99dbe3d, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -4542,6 +4548,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7947353761663984966, guid: 59bb71fa266f253449c3cf1097f58e65, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9148713030808661207, guid: 59bb71fa266f253449c3cf1097f58e65, type: 3}
+      propertyPath: m_LODs.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9148713030808661207, guid: 59bb71fa266f253449c3cf1097f58e65, type: 3}
+      propertyPath: m_LocalReferencePoint.x
+      value: 0.031015135
+      objectReference: {fileID: 0}
+    - target: {fileID: 9148713030808661207, guid: 59bb71fa266f253449c3cf1097f58e65, type: 3}
+      propertyPath: m_LocalReferencePoint.z
+      value: 0.6365787
+      objectReference: {fileID: 0}
+    - target: {fileID: 9148713030808661207, guid: 59bb71fa266f253449c3cf1097f58e65, type: 3}
+      propertyPath: m_LODs.Array.data[1].renderers.Array.size
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
@@ -5251,6 +5273,10 @@ PrefabInstance:
     - target: {fileID: 4206605987560419784, guid: 445438879f3c8b44ba0dc0dd67c8d69e, type: 3}
       propertyPath: limiteDigitos
       value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 4206605987560419784, guid: 445438879f3c8b44ba0dc0dd67c8d69e, type: 3}
+      propertyPath: forcarSaveNoHD
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4206605987560419784, guid: 445438879f3c8b44ba0dc0dd67c8d69e, type: 3}
       propertyPath: painelAvisoRuna
@@ -7964,6 +7990,7 @@ PrefabInstance:
     m_RemovedGameObjects:
     - {fileID: 1308661138192150749, guid: 62337a461f3212645a447d079bb8f208, type: 3}
     - {fileID: 2716398416259523856, guid: 62337a461f3212645a447d079bb8f208, type: 3}
+    - {fileID: 7052308832298690689, guid: 62337a461f3212645a447d079bb8f208, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 1545481827897609370, guid: 62337a461f3212645a447d079bb8f208, type: 3}
@@ -8141,7 +8168,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
   m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
@@ -9970,6 +9997,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacaDica
+  uniqueID: 
   uiInteractionPrompt: {fileID: 191811854}
   uiContentPanel: {fileID: 1469023532}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
@@ -9986,6 +10014,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacaDica
+  uniqueID: 
   uiInteractionPrompt: {fileID: 1054420360}
   uiContentPanel: {fileID: 1850089788}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}
@@ -10002,6 +10031,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aef76d691f41344b97282996591378f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacaDica
+  uniqueID: 
   uiInteractionPrompt: {fileID: 9015909345469146705}
   uiContentPanel: {fileID: 1885207957}
   soundEffect: {fileID: 8300000, guid: 61c22cd31875d6e4b9fbbedbfe00eb13, type: 3}

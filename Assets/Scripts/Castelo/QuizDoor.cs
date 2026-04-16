@@ -61,7 +61,7 @@ public class QuizDoor : MonoBehaviour
     public GameObject textoInteragir;
     public GameObject painelRecompensa; 
 
-    [Header("Sons")]
+    [Header("Sons do Quiz")]
     public AudioSource audioSourceSFX;
     public AudioSource audioSourceVoz;
     public AudioSource audioSourceMusica;
@@ -72,8 +72,17 @@ public class QuizDoor : MonoBehaviour
     public AudioClip somErro;
     public AudioClip somVitoriaFinal;
     public AudioClip musicaQuiz;
-    [Tooltip("Marque se o áudio acima for MÚSICA (pausa o ambiente). Desmarque se for EFEITO (toca junto).")]
-    public bool silenciarMusicaBackground = true;
+
+    [Header("Áudio Global (Arraste do Inspector)")]
+    [Tooltip("Arraste aqui o AudioSource da Trilha Sonora Principal")]
+    public AudioSource bgmSourceGlobal;
+    
+    [Tooltip("Arraste aqui o objeto que tem o script AmbientAudioFader (mato/vento)")]
+    public AmbientAudioFader ambientFader;
+
+    [Header("--- CONTROLE DE ÁUDIO DINÂMICO ---")]
+    [Tooltip("Volume para onde o som ambiente vai cair durante o quiz.")]
+    [Range(0f, 1f)] public float volumeAmbienteDuranteQuiz = 0.1f;
 
     private bool emCena = false;
     private bool jaViuIntro = false;
@@ -83,10 +92,14 @@ public class QuizDoor : MonoBehaviour
     private PerguntaQuiz perguntaAtual;
     private int acertosConsecutivos = 0;
     private bool aguardandoResposta = false;
-    private Coroutine currentFade;
     
+    private Coroutine currentFade;
     private Vector3 posicaoInicialInteracao;
-    private AudioSource musicaAmbientePausada;
+
+    private float bgmOriginalVolume;
+    private float ambientOriginalVolume;
+    private Coroutine fadeSoundtrackCoroutine;
+    private Coroutine fadeAmbientCoroutine;
 
     void Start()
     {
@@ -210,21 +223,24 @@ public class QuizDoor : MonoBehaviour
     {
         emCena = true;
         TravarPlayer(true);
-        
-        if (silenciarMusicaBackground)
+
+        // 1. Trilha Principal some
+        if (bgmSourceGlobal != null && bgmSourceGlobal.isPlaying)
         {
-            GameObject bgmObj = GameObject.Find("Soundtrack");
-            if (bgmObj != null)
-            {
-                AudioSource bgmSource = bgmObj.GetComponent<AudioSource>();
-                if (bgmSource != null && bgmSource.isPlaying)
-                {
-                    bgmSource.Pause(); 
-                    musicaAmbientePausada = bgmSource;
-                }
-            }
+            bgmOriginalVolume = bgmSourceGlobal.volume;
+            if (fadeSoundtrackCoroutine != null) StopCoroutine(fadeSoundtrackCoroutine);
+            fadeSoundtrackCoroutine = StartCoroutine(TransitarVolume(bgmSourceGlobal, 0f, 1.5f));
         }
 
+        // 2. Ambiente abaixa
+        if (ambientFader != null && ambientFader.audioSource != null && ambientFader.audioSource.isPlaying)
+        {
+            ambientOriginalVolume = ambientFader.maxVolume;
+            if (fadeAmbientCoroutine != null) StopCoroutine(fadeAmbientCoroutine);
+            fadeAmbientCoroutine = StartCoroutine(TransitarVolume(ambientFader.audioSource, volumeAmbienteDuranteQuiz, 1.5f));
+        }
+
+        // 3. Som do Quiz entra
         if (audioSourceMusica) 
         { 
             if (currentFade != null) StopCoroutine(currentFade);
@@ -336,16 +352,23 @@ public class QuizDoor : MonoBehaviour
         emCena = false;
         painelQuiz.SetActive(false);
         
+        // --- RESTAURA O ÁUDIO ---
         if (audioSourceMusica && audioSourceMusica.isPlaying) 
         {
             if (currentFade != null) StopCoroutine(currentFade);
             currentFade = StartCoroutine(FadeOutMusica(1.5f)); 
         }
 
-        if (musicaAmbientePausada != null)
+        if (bgmSourceGlobal != null)
         {
-            musicaAmbientePausada.UnPause();
-            musicaAmbientePausada = null;
+            if (fadeSoundtrackCoroutine != null) StopCoroutine(fadeSoundtrackCoroutine);
+            fadeSoundtrackCoroutine = StartCoroutine(TransitarVolume(bgmSourceGlobal, bgmOriginalVolume, 1.5f));
+        }
+
+        if (ambientFader != null && ambientFader.audioSource != null)
+        {
+            if (fadeAmbientCoroutine != null) StopCoroutine(fadeAmbientCoroutine);
+            fadeAmbientCoroutine = StartCoroutine(TransitarVolume(ambientFader.audioSource, ambientOriginalVolume, 1.5f));
         }
 
         RetornarPosicaoSegura();
@@ -355,13 +378,24 @@ public class QuizDoor : MonoBehaviour
     IEnumerator Vitoria()
     {
         painelQuiz.SetActive(false);
-        if (currentFade != null) StopCoroutine(currentFade);
-        currentFade = StartCoroutine(FadeOutMusica(2.0f));
 
-        if (musicaAmbientePausada != null)
+        // --- RESTAURA O ÁUDIO ---
+        if (audioSourceMusica && audioSourceMusica.isPlaying)
         {
-            musicaAmbientePausada.UnPause();
-            musicaAmbientePausada = null;
+            if (currentFade != null) StopCoroutine(currentFade);
+            currentFade = StartCoroutine(FadeOutMusica(2.0f));
+        }
+
+        if (bgmSourceGlobal != null)
+        {
+            if (fadeSoundtrackCoroutine != null) StopCoroutine(fadeSoundtrackCoroutine);
+            fadeSoundtrackCoroutine = StartCoroutine(TransitarVolume(bgmSourceGlobal, bgmOriginalVolume, 2.0f));
+        }
+
+        if (ambientFader != null && ambientFader.audioSource != null)
+        {
+            if (fadeAmbientCoroutine != null) StopCoroutine(fadeAmbientCoroutine);
+            fadeAmbientCoroutine = StartCoroutine(TransitarVolume(ambientFader.audioSource, ambientOriginalVolume, 2.0f));
         }
 
         if (textoDialogoIntro)
@@ -409,7 +443,6 @@ public class QuizDoor : MonoBehaviour
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
 
-        // 🔥 TRAVA DE SAVE DE AÇO
         if (SistemaGlobal.Instance != null)
         {
             EstadoGlobal.SalvarNoSlot(SistemaGlobal.Instance.slotAtual);
@@ -429,6 +462,20 @@ public class QuizDoor : MonoBehaviour
             yield return null;
         }
         audioSourceMusica.Stop();
+    }
+
+    IEnumerator TransitarVolume(AudioSource source, float targetVolume, float duracao)
+    {
+        if (source == null) yield break;
+        float startVolume = source.volume;
+        float rate = 1.0f / duracao;
+        float progress = 0.0f;
+        while (progress < 1.0f) {
+            source.volume = Mathf.Lerp(startVolume, targetVolume, progress);
+            progress += rate * Time.deltaTime;
+            yield return null;
+        }
+        source.volume = targetVolume;
     }
 
     IEnumerator EfeitoDigitar(string frase, float velocidade, TextMeshProUGUI alvo)

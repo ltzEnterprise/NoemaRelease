@@ -5,12 +5,15 @@ using System.Collections;
 public class Keypad : MonoBehaviour
 {
     [Header("--- BLOQUEADOR ---")]
-    [Tooltip("Coloque o objeto que bloqueia (ex: plasma). Se ficar vazio, funciona normal.")]
     public GameObject bloqueador;
 
     [Header("Configurações")]
     public string senhaCorreta = "1487";
     public int limiteDigitos = 4;
+
+    [Header("--- SAVE SYSTEM (TRAVA) ---")]
+    [Tooltip("Se ativado, salva o jogo no HD assim que pegar a runa. DEIXE DESMARCADO dentro de cenas instanciadas para evitar softlock!")]
+    public bool forcarSaveNoHD = false; // 🔥 CAIXINHA NOVA AQUI
 
     [Header("--- SENHA EXTRA (Opcional) ---")]
     public string senhaExtra = ""; 
@@ -185,7 +188,6 @@ public class Keypad : MonoBehaviour
 
         if (FPS_Master.Instance != null)
         {
-            // 🔥 CORREÇÃO: Liga o corpo ANTES de ligar a câmera pra não ter risco de colisão bugada
             FPS_Master.Instance.FicarInvisivelMasFisico(false);
             
             if(FPS_Master.Instance.cameraJogador) 
@@ -195,7 +197,6 @@ public class Keypad : MonoBehaviour
                 if(listener) listener.enabled = true;
             }
 
-            // Destrava o personagem
             FPS_Master.Instance.AlterarEstadoJogador(false, false);
         }
 
@@ -265,9 +266,12 @@ public class Keypad : MonoBehaviour
 
             if (darRunaAoAcertar && InventarioRunas.Instance != null)
             {
-                InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
+                // 🔥 LÓGICA CONDICIONAL 🔥
+                if (forcarSaveNoHD)
+                    InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
+                else
+                    InventarioRunas.Instance.ColetarRunaSemForcarSaveHD(nomeDaRuna);
                 
-                // Independente da UI, o jogador é solto
                 if (painelAvisoRuna) StartCoroutine(MostrarAvisoRuna());
             }
 

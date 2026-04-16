@@ -9,9 +9,8 @@ public class GameManager : MonoBehaviour
     public string nomeCenaPadrao = "DreamSceane";
     public bool autoSaveAoPegarRuna = true;
 
-    [Header("Referências Globais (Opcional)")]
+    [Header("Referências Globais")]
     public GameObject player;
-    public Camera cameraPrincipal;
 
     private void Awake()
     {
@@ -20,33 +19,34 @@ public class GameManager : MonoBehaviour
             Instance = this;
             if (transform.parent == null) DontDestroyOnLoad(gameObject);
         }
-        else
-        {
-            Destroy(gameObject);
-        }
+        else Destroy(gameObject);
     }
 
     void Start()
     {
         if (player == null) player = GameObject.FindGameObjectWithTag("Player");
-        if (cameraPrincipal == null) cameraPrincipal = Camera.main;
+        Invoke("SalvarProgresso", 1f);
     }
 
     public void SalvarProgresso()
     {
         if (player == null) player = GameObject.FindGameObjectWithTag("Player");
         
-        // Agora o SistemaGlobal faz TUDO em um lugar só.
-        if (player != null && SistemaGlobal.Instance != null)
+        string cenaAtual = SceneManager.GetActiveScene().name;
+        Vector3 posSegura = player != null ? player.transform.position : Vector3.zero;
+
+        if (SistemaGlobal.Instance != null)
         {
-            SistemaGlobal.Instance.SalvarJogo(player.transform.position, SceneManager.GetActiveScene().name);
+            SistemaGlobal.Instance.SalvarJogo(posSegura, cenaAtual);
         }
-        else if (PersistenciaManager.Instance != null)
+        
+        // 🔥 CRAVA A CENA NO HD SEM DESCULPA 🔥
+        if (PersistenciaManager.Instance != null)
         {
-            // Segurança caso você chame o botão no menu ou sem player na cena
+            int slotCerto = SistemaGlobal.Instance != null ? SistemaGlobal.Instance.slotAtual : 1;
+            
+            PersistenciaManager.Instance.SalvarString("Slot_" + slotCerto + "_Cena", cenaAtual);
             PersistenciaManager.Instance.SalvarTudo();
         }
-
-        Debug.Log("<color=green>[GameManager] Progresso salvo em bloco fechado!</color>");
     }
 }

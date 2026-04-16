@@ -16,6 +16,13 @@ public class SoundtrackManager : MonoBehaviour
     [SerializeField] private List<string> labels;
     [SerializeField] private AudioClip starterSoundtrack;
 
+    [Header("--- CONTROLE DE VOLUME INDIVIDUAL ---")]
+    [Tooltip("Multiplicador para a música de INÍCIO. 1 = Volume padrão. 0.5 = Metade. 2 = Dobro.")]
+    public float starterVolumeMultiplier = 1f;
+    
+    [Tooltip("Multiplicadores para a lista de músicas acima. A ordem tem que ser a MESMA da lista de áudios. Deixe em 1 para manter o volume padrão.")]
+    [SerializeField] private List<float> volumeMultipliers = new List<float>();
+
     private AudioSource audioSource;
     private float fadeSpan;
 
@@ -32,7 +39,10 @@ public class SoundtrackManager : MonoBehaviour
         {
             audioSource.clip = starterSoundtrack;
             audioSource.loop = true;
-            audioSource.volume = volume;
+            
+            // Aplica o multiplicador na música inicial (Padrão 1 * volume normal)
+            audioSource.volume = volume * starterVolumeMultiplier;
+            
             audioSource.Play();
             
             // CORREÇÃO DE ERRO FATAL: 
@@ -54,14 +64,22 @@ public class SoundtrackManager : MonoBehaviour
         int index = labels.IndexOf(name);
         if (index == -1) return; // Segurança extra se a música não existir
 
+        // Pega o volume global como base
         float targetVolume = volume;
+        
+        // Se você adicionou um multiplicador pra essa música específica, ele aplica aqui
+        if (volumeMultipliers != null && index < volumeMultipliers.Count)
+        {
+            targetVolume = volume * volumeMultipliers[index];
+        }
+
         StopAllCoroutines(); // Para não bugar se tocar duas vezes seguidas
         StartCoroutine(FadeVolume(targetVolume, index, interval));
     }
 
     private IEnumerator FadeVolume(float target, int index, float interval)
     {
-        float starterVolume = audioSource.volume; // Atualizado para pegar o volume atual da source em vez da variável base
+        float starterVolume = audioSource.volume; // Pega o volume atual real da source
         
         // Fade Out
         while (audioSource.volume >= 0.0005f)

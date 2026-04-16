@@ -215,6 +215,10 @@ public class TurntableSystem : MonoBehaviour
             {
                 InventoryManager.Instance.ConsumirItem(itemInHand);
                 LoadDisk(itemInHand, false);
+
+                // 🔥 TRAVA TRANSACIONAL DE AÇO: Salva o jogo imediatamente.
+                // Garante que o disco saiu do bolso e entrou na vitrola no MESMO milissegundo no HD.
+                if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
             }
             else if (itemInHand == manivelaItemID && !temManivela)
             {
@@ -242,7 +246,10 @@ public class TurntableSystem : MonoBehaviour
         if (textoFaltaManivela) textoFaltaManivela.SetActive(false);
 
         if (PersistenciaManager.Instance != null)
+        {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_manivela", true);
+            PersistenciaManager.Instance.SalvarTudo();
+        }
 
         if (currentDiskID != 0)
         {
@@ -380,7 +387,9 @@ public class TurntableSystem : MonoBehaviour
         else if (diskToReturn == runeRecordID && visualRuneRecord) visualRuneRecord.SetActive(false);
 
         if (interactText) interactText.SetActive(true);
-        PersistenciaManager.Instance.SalvarTudo();
+        
+        // 🔥 TRAVA: Salva o jogo imediatamente ao ejetar
+        if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
     }
 
     void SalvarEstadoDisco(bool shovelIn, bool runeIn)

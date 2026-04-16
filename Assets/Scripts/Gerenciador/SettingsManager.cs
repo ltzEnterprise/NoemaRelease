@@ -265,7 +265,15 @@ public class SettingsManager : MonoBehaviour
         if (index >= 0 && index < listaManual.Count)
         {
             ResData res = listaManual[index];
-            Screen.SetResolution(res.w, res.h, FullScreenMode.FullScreenWindow, new RefreshRate() { numerator = (uint)res.hz, denominator = 1 });
+            
+            // 🔥 A MÁGICA ANTI-GLITCH AQUI:
+            // A Unity só aplica a resolução se ela DE FATO for diferente da do monitor atual.
+            // Isso impede que a tela pisque preto toda vez que você entra por uma porta!
+            if (Screen.width != res.w || Screen.height != res.h || Screen.currentResolution.refreshRateRatio.value != res.hz)
+            {
+                Screen.SetResolution(res.w, res.h, FullScreenMode.FullScreenWindow, new RefreshRate() { numerator = (uint)res.hz, denominator = 1 });
+            }
+            
             Application.targetFrameRate = res.hz; 
             PlayerPrefs.SetInt("Resolution", index);
         }

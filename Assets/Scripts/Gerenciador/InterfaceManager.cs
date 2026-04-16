@@ -3,7 +3,6 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
-using System.Collections.Generic;
 using QuantumTek.SimpleMenu;
 
 public class InterfaceManager : MonoBehaviour
@@ -125,6 +124,8 @@ public class InterfaceManager : MonoBehaviour
         }
         else
         {
+            if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.LimparDicionario();
+
             estadoAtual = EstadoInterface.Menu;
             Cursor.lockState = CursorLockMode.None;   
             Cursor.visible = true;                    
@@ -221,22 +222,6 @@ public class InterfaceManager : MonoBehaviour
             return;
         }
 
-        if (modoDesenvolvedor)
-        {
-            if (PlayerPrefs.GetInt($"Slot_{slot}_SaveExistente", 0) == 0)
-            {
-                string dataAgora = System.DateTime.Now.ToString("dd/MM HH:mm");
-                PlayerPrefs.SetInt($"Slot_{slot}_SaveExistente", 1);
-                PlayerPrefs.SetString($"Slot_{slot}_Data", dataAgora);
-                PlayerPrefs.Save();
-            }
-            
-            AtualizarTextosSlots();
-            if (loadingAtual != null) StopCoroutine(loadingAtual);
-            loadingAtual = StartCoroutine(RotinaLoadingDevMode());
-            return; 
-        }
-
         string cenaAlvo = nomeDaCenaDoJogo; 
 
         if (SistemaGlobal.Instance != null) 
@@ -247,28 +232,21 @@ public class InterfaceManager : MonoBehaviour
             {
                 SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = true;
                 
-                string cenaSalva = "";
                 if (PersistenciaManager.Instance != null)
                 {
-                    // Garante que o Persistencia vai ler o slot que acabamos de selecionar
-                    PersistenciaManager.Instance.LimparDicionario();
-                    cenaSalva = PersistenciaManager.Instance.ObterString($"Slot_{slot}_Cena");
-                }
-                
-                if (!string.IsNullOrEmpty(cenaSalva))
-                {
-                    cenaAlvo = cenaSalva;
-                }
-                else
-                {
-                    Debug.LogWarning("[SAVE] Cena não encontrada no Save. Usando cena padrão.");
+                    PersistenciaManager.Instance.CarregarDoDisco(slot);
+                    string cenaSalva = PersistenciaManager.Instance.ObterString($"Slot_{slot}_Cena");
+                    if (!string.IsNullOrEmpty(cenaSalva)) cenaAlvo = cenaSalva;
                 }
             }
             else
             {
                 SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false; 
-                // Se é save novo, limpa qualquer lixo da RAM
-                if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.LimparDicionario();
+                
+                if (PersistenciaManager.Instance != null) 
+                    PersistenciaManager.Instance.IniciarNovoJogo(slot);
+                    
+                EstadoGlobal.ResetarTudo();
             }
         }
         
@@ -278,35 +256,11 @@ public class InterfaceManager : MonoBehaviour
 
     public void BotaoApagarSlot(int slot)
     {
-        if (modoDesenvolvedor)
-        {
-            if (PlayerPrefs.GetInt($"Slot_{slot}_SaveExistente", 0) == 0) return; 
-
-            if (slotConfirmacao == slot)
-            {
-                PlayerPrefs.DeleteKey($"Slot_{slot}_SaveExistente");
-                PlayerPrefs.DeleteKey($"Slot_{slot}_Data");
-                PlayerPrefs.Save();
-                slotConfirmacao = -1;
-            }
-            else slotConfirmacao = slot;
-            
-            AtualizarTextosSlots();
-            return;
-        }
-
         if (SistemaGlobal.Instance == null || !SistemaGlobal.Instance.ExisteSave(slot)) return;
 
         if (slotConfirmacao == slot)
         {
             SistemaGlobal.Instance.ApagarSave(slot);
-            
-            // 🔥 CORREÇÃO: Limpa a RAM se estiver apagando o slot que estava carregado.
-            if (PersistenciaManager.Instance != null)
-            {
-                 PersistenciaManager.Instance.LimparDicionario();
-            }
-
             slotConfirmacao = -1;
         }
         else slotConfirmacao = slot;
@@ -333,14 +287,12 @@ public class InterfaceManager : MonoBehaviour
     {
         if (slotParaRestaurar != -1 && !modoDesenvolvedor && SistemaGlobal.Instance != null && PersistenciaManager.Instance != null)
         {
-            // 🔥 CORREÇÃO: Força o slot atual temporariamente para o SaveTudo ir para o arquivo correto
             int slotAntigo = SistemaGlobal.Instance.slotAtual;
             SistemaGlobal.Instance.slotAtual = slotParaRestaurar;
 
             PersistenciaManager.Instance.RestaurarBackup(slotParaRestaurar);
             PersistenciaManager.Instance.SalvarTudo();
 
-            // Restaura
             SistemaGlobal.Instance.slotAtual = slotAntigo;
 
             AtualizarTextosSlots(); 
@@ -373,9 +325,7 @@ public class InterfaceManager : MonoBehaviour
             if (textosDosSlots[i] == null) continue;
             int slotNum = i + 1;
 
-            bool temSave = false;
-            if (modoDesenvolvedor) temSave = (PlayerPrefs.GetInt($"Slot_{slotNum}_SaveExistente", 0) == 1);
-            else if (SistemaGlobal.Instance != null) temSave = SistemaGlobal.Instance.ExisteSave(slotNum);
+            bool temSave = (SistemaGlobal.Instance != null && SistemaGlobal.Instance.ExisteSave(slotNum));
 
             if (textosBotaoApagar != null && i < textosBotaoApagar.Length && textosBotaoApagar[i] != null)
             {
@@ -390,7 +340,7 @@ public class InterfaceManager : MonoBehaviour
             }
             else if (temSave)
             {
-                string data = modoDesenvolvedor ? PlayerPrefs.GetString($"Slot_{slotNum}_Data", "") : (SistemaGlobal.Instance != null ? SistemaGlobal.Instance.GetDataSave(slotNum) : "");
+                string data = (SistemaGlobal.Instance != null ? SistemaGlobal.Instance.GetDataSave(slotNum) : "");
                 if (string.IsNullOrEmpty(data)) data = System.DateTime.Now.ToString("dd/MM HH:mm");
                 
                 textosDosSlots[i].text = cabecalho + $"<size=50%>{data}</size>";
@@ -616,24 +566,13 @@ public class InterfaceManager : MonoBehaviour
     {
         Time.timeScale = 1f; 
         AudioListener.pause = false; 
-
         ClearFreezeTexture();
 
         if (playerMaster != null && SistemaGlobal.Instance != null)
         {
             SistemaGlobal.Instance.SalvarJogo(playerMaster.transform.position, SceneManager.GetActiveScene().name);
-            
-            if (PersistenciaManager.Instance != null)
-            {
-                PersistenciaManager.Instance.SalvarString($"Slot_{SistemaGlobal.Instance.slotAtual}_Cena", SceneManager.GetActiveScene().name);
-                
-                if (!PersistenciaManager.Instance.ModoSemSave())
-                {
-                    PersistenciaManager.Instance.SalvarTudo();
-                }
-            }
-            PlayerPrefs.Save();
         }
+
         SceneManager.LoadScene("MenuPrincipal"); 
     }
 
@@ -709,66 +648,28 @@ public class InterfaceManager : MonoBehaviour
         operacao.allowSceneActivation = true;
     }
 
-    IEnumerator RotinaLoadingDevMode()
-    {
-        estadoAtual = EstadoInterface.Loading;
-        
-        if (fadeAtual != null) StopCoroutine(fadeAtual);
-        fadeAtual = StartCoroutine(FadeOutMusica());
-        
-        LigarDesligarPainel(painelLoading, true);
-        LigarDesligarPainel(painelSlots, false);
-        LigarDesligarPainel(painelMenuPrincipal, false);
-
-        if (barraDeProgresso) barraDeProgresso.SetFill(0.8f); 
-
-        float progressoVisual = 0.8f;
-        float tempoExtra = 0f;
-        
-        while (tempoExtra < 2f) 
-        {
-            tempoExtra += Time.unscaledDeltaTime;
-            progressoVisual = Mathf.Lerp(0.8f, 1f, tempoExtra / 2f); 
-            if (barraDeProgresso) barraDeProgresso.SetFill(progressoVisual);
-            yield return null;
-        }
-
-        LigarDesligarPainel(painelLoading, false);
-        LigarDesligarPainel(painelSlots, true);
-        AtualizarTextosSlots(); 
-        estadoAtual = EstadoInterface.Slots;
-    }
-
     IEnumerator SequenciaInicializacaoJogo()
     {
         yield return new WaitForEndOfFrame();
         
+        // 🔥 PUXA A POSIÇÃO DIRETO DO NOSSO JSON BLINDADO
         if (SistemaGlobal.Instance != null && playerMaster != null && SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar)
         {
-            SistemaGlobal.Instance.CarregarJogo(SistemaGlobal.Instance.slotAtual);
-            
-            string p = "Slot_" + SistemaGlobal.Instance.slotAtual;
-            float x = 0, y = 0, z = 0;
-            bool achouPos = false;
-            
-            if (PersistenciaManager.Instance != null && PersistenciaManager.Instance.TemFloat(p + "_PosX"))
+            EstadoGlobal.CarregarDoSlot(SistemaGlobal.Instance.slotAtual);
+
+            if (PersistenciaManager.Instance != null)
             {
-                x = PersistenciaManager.Instance.ObterFloat(p + "_PosX");
-                y = PersistenciaManager.Instance.ObterFloat(p + "_PosY");
-                z = PersistenciaManager.Instance.ObterFloat(p + "_PosZ");
-                achouPos = true;
-            }
-            else if (PlayerPrefs.HasKey(p + "_PosX"))
-            {
-                x = PlayerPrefs.GetFloat(p + "_PosX");
-                y = PlayerPrefs.GetFloat(p + "_PosY");
-                z = PlayerPrefs.GetFloat(p + "_PosZ");
-                achouPos = true;
-            }
-            
-            if (achouPos)
-            {
-                playerMaster.Teleportar(new Vector3(x, y + 0.1f, z));
+                string p = "Slot_" + SistemaGlobal.Instance.slotAtual;
+                
+                if (PersistenciaManager.Instance.TemFloat(p + "_PosX"))
+                {
+                    float x = PersistenciaManager.Instance.ObterFloat(p + "_PosX");
+                    float y = PersistenciaManager.Instance.ObterFloat(p + "_PosY");
+                    float z = PersistenciaManager.Instance.ObterFloat(p + "_PosZ");
+
+                    playerMaster.Teleportar(new Vector3(x, y + 0.1f, z));
+                    Physics.SyncTransforms();
+                }
             }
             
             SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false; 

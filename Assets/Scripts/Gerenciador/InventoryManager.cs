@@ -10,10 +10,6 @@ public class InventoryManager : MonoBehaviour
     [Header("--- INVENTÁRIO (Arraste os prefabs aqui) ---")]
     public List<GameObject> itensRegistrados; 
 
-    [Header("--- DEBUG / TESTES (Editor) ---")]
-    public bool comecarComTudo = false;
-    public bool debug_DarUpgradeLuzNoStart = false;
-
     [Header("--- CONFIGURAÇÕES DE GAMEPLAY ---")]
     public float delayTroca = 0.2f;
     public int itemSelecionado = -1; 
@@ -32,7 +28,13 @@ public class InventoryManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            if (transform.parent == null) DontDestroyOnLoad(gameObject);
+            if (itensRegistrados != null)
+            {
+                foreach (var item in itensRegistrados) 
+                {
+                    if (item != null) item.SetActive(false);
+                }
+            }
         }
         else Destroy(gameObject);
     }
@@ -42,10 +44,9 @@ public class InventoryManager : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // Ao carregar a cena, o item selecionado deve ser persistente também
         if (PersistenciaManager.Instance != null)
         {
-            itemSelecionado = PersistenciaManager.Instance.ObterInt("Inv_ItemSelected");
+            itemSelecionado = PersistenciaManager.Instance.ObterInt("Inv_ItemSelected", -1);
         }
         StartCoroutine(ReequiparVisualmente());
     }
@@ -68,19 +69,7 @@ public class InventoryManager : MonoBehaviour
             if (itensRegistrados[i] != null)
                 posicoesOriginais[i] = itensRegistrados[i].transform.localPosition;
         }
-
-        if (Application.isEditor) AplicarDebugInicial();
-        
         AtualizarVisual(false);
-    }
-
-    void AplicarDebugInicial()
-    {
-        if (comecarComTudo)
-        {
-            for (int i = 0; i < itensRegistrados.Count; i++)
-                DesbloquearItem(i);
-        }
     }
 
     void Update()
@@ -105,7 +94,12 @@ public class InventoryManager : MonoBehaviour
     {
         DesbloquearItem(id);
         itemSelecionado = id; 
-        PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", id);
+        
+        if (PersistenciaManager.Instance != null) 
+        {
+            PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", id);
+            PersistenciaManager.Instance.SalvarTudo(); // CRAVA NO HD
+        }
 
         if (id >= 0 && id < itensRegistrados.Count && itensRegistrados[id] != null)
         {
@@ -115,7 +109,6 @@ public class InventoryManager : MonoBehaviour
         }
 
         AtualizarVisual(true);
-        PersistenciaManager.Instance.SalvarTudo(); // Salva o item imediatamente
     }
 
     public void ReceberItemDeVolta(int id) { ReceberItem(id); }
@@ -126,10 +119,13 @@ public class InventoryManager : MonoBehaviour
         if (itemSelecionado == id)
         {
             itemSelecionado = -1; 
-            PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", -1);
+            if (PersistenciaManager.Instance != null) 
+            {
+                PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", -1);
+                PersistenciaManager.Instance.SalvarTudo();
+            }
             AtualizarVisual(true);
         }
-        PersistenciaManager.Instance.SalvarTudo();
     }
 
     public void TentarEquipar(int id)
@@ -139,7 +135,8 @@ public class InventoryManager : MonoBehaviour
             if (itemSelecionado != id)
             {
                 itemSelecionado = id;
-                PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", id);
+                if (PersistenciaManager.Instance != null) 
+                    PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", id);
                 AtualizarVisual(true);
             }
         }
@@ -159,7 +156,8 @@ public class InventoryManager : MonoBehaviour
             if (tentativa == -1 || ItemEstaDesbloqueado(tentativa))
             {
                 itemSelecionado = tentativa;
-                PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", tentativa);
+                if (PersistenciaManager.Instance != null) 
+                    PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", tentativa);
                 AtualizarVisual(true);
                 return;
             }
@@ -196,7 +194,9 @@ public class InventoryManager : MonoBehaviour
 
     IEnumerator RotinaDeSaque(int index)
     {
+        // 🔥 A GAMBIARRA FOI ARRANCADA. A arma só desliza pra cima agora sem disparar o OnEnable e foder as posições.
         Transform itemTransform = itensRegistrados[index].transform;
+
         Vector3 posFinal = posicoesOriginais[index];
         Vector3 posInicial = posFinal + new Vector3(0, -forcaDropSaque, 0);
         itemTransform.localPosition = posInicial;
@@ -212,22 +212,21 @@ public class InventoryManager : MonoBehaviour
         itemTransform.localPosition = posFinal;
     }
 
-    // 🔥 VÍNCULO DIRETO COM O PERSISTENCIA MANAGER
     bool ItemEstaDesbloqueado(int id) 
     {
         if (PersistenciaManager.Instance == null) return false;
-        return PersistenciaManager.Instance.ObterEstado("InvItemUnlocked_" + id);
+        return PersistenciaManager.Instance.ObterEstado("InvUnlocked_" + id, false);
     }
 
     void DesbloquearItem(int id) 
     { 
         if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.RegistrarEstado("InvItemUnlocked_" + id, true);
+            PersistenciaManager.Instance.RegistrarEstado("InvUnlocked_" + id, true);
     }
 
     void BloquearItem(int id) 
     { 
         if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.RegistrarEstado("InvItemUnlocked_" + id, false);
+            PersistenciaManager.Instance.RegistrarEstado("InvUnlocked_" + id, false);
     }
 }

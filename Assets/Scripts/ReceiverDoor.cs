@@ -33,23 +33,20 @@ public class ReceiverDoor : MonoBehaviour
 
         if (doorVisual != null)
         {
-            // 1. Identificar a borda real lendo a malha 3D
             Vector3 tamanhoLocal = doorVisual.localScale;
             MeshFilter mf = doorVisual.GetComponentInChildren<MeshFilter>();
             
             if (mf != null)
             {
                 tamanhoLocal = mf.sharedMesh.bounds.size;
-                tamanhoLocal.Scale(doorVisual.localScale); // Ajusta pela escala que tá na cena
+                tamanhoLocal.Scale(doorVisual.localScale); 
             }
 
-            // 2. Cria o Pivô Invisível na borda exata da porta
             pivotAutomatico = new GameObject(doorVisual.name + "_PivotSumico").transform;
             pivotAutomatico.SetParent(doorVisual.parent);
             
             Vector3 posicaoDaBorda = doorVisual.localPosition;
             
-            // Puxa o pivô pra extremidade
             if (direcaoParaSumir == LadoSumir.Esquerda) posicaoDaBorda.x -= tamanhoLocal.x / 2f;
             else if (direcaoParaSumir == LadoSumir.Direita) posicaoDaBorda.x += tamanhoLocal.x / 2f;
             else if (direcaoParaSumir == LadoSumir.Cima) posicaoDaBorda.y += tamanhoLocal.y / 2f;
@@ -58,23 +55,30 @@ public class ReceiverDoor : MonoBehaviour
             pivotAutomatico.localPosition = posicaoDaBorda;
             pivotAutomatico.localRotation = doorVisual.localRotation;
             
-            // Coloca a porta como filha do pivô
             doorVisual.SetParent(pivotAutomatico);
 
             escalaFechada = pivotAutomatico.localScale;
             escalaAberta = escalaFechada;
 
-            // Define qual eixo vai "sumir" virando zero
             if (direcaoParaSumir == LadoSumir.Esquerda || direcaoParaSumir == LadoSumir.Direita)
                 escalaAberta.x = 0f;
             else
                 escalaAberta.y = 0f;
         }
 
-        int estadoSalvo = PlayerPrefs.GetInt(doorID, 0); 
-        shouldBeOpen = (estadoSalvo == 1);
+        // 🔥 CORREÇÃO DE RACE CONDITION NO LOAD
+        StartCoroutine(CarregarSeguro());
+    }
 
-        // Aplica o estado guardado imediatamente
+    System.Collections.IEnumerator CarregarSeguro()
+    {
+        yield return null; 
+
+        if (!Application.isEditor && PersistenciaManager.Instance != null && !string.IsNullOrEmpty(doorID))
+        {
+            shouldBeOpen = PersistenciaManager.Instance.ObterEstado(doorID);
+        }
+
         if (pivotAutomatico != null)
         {
             pivotAutomatico.localScale = shouldBeOpen ? escalaAberta : escalaFechada;
@@ -85,7 +89,6 @@ public class ReceiverDoor : MonoBehaviour
     {
         if (pivotAutomatico == null) return;
 
-        // Animação cravada: encolhe até sumir no eixo certo
         Vector3 alvo = shouldBeOpen ? escalaAberta : escalaFechada;
         pivotAutomatico.localScale = Vector3.Lerp(pivotAutomatico.localScale, alvo, Time.deltaTime * speed);
     }
@@ -97,10 +100,11 @@ public class ReceiverDoor : MonoBehaviour
             shouldBeOpen = shouldOpen;
             PlaySound();
 
-            if (!string.IsNullOrEmpty(doorID))
+            if (!Application.isEditor && PersistenciaManager.Instance != null && !string.IsNullOrEmpty(doorID))
             {
-                PlayerPrefs.SetInt(doorID, shouldBeOpen ? 1 : 0);
-                PlayerPrefs.Save();
+                PersistenciaManager.Instance.RegistrarEstado(doorID, shouldBeOpen);
+                // Ele salva no disco se a porta faz parte do seu core gameplay
+                PersistenciaManager.Instance.SalvarTudo();
             }
         }
     }

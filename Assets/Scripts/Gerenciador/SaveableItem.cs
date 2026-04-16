@@ -1,92 +1,65 @@
 using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 
 public class SaveableItem : MonoBehaviour
 {
-    [Header("Identificação Única")]
+    [Header("NÃO DEIXE ID REPETIDO!")]
     public string uniqueID;
 
-    [Header("Configuração de Persistência")]
-    public bool salvarPosicao = false;
-    public bool autoRegistrarAoDesativar = true;
+    public static Dictionary<string, SaveableItem> registroGlobal = new Dictionary<string, SaveableItem>();
 
-    private bool carregado = false;
+    void Awake()
+    {
+        if (string.IsNullOrEmpty(uniqueID))
+        {
+            Debug.LogError($"[ERRO DE SAVE] O objeto {gameObject.name} tá sem ID!");
+            return;
+        }
+
+        if (registroGlobal.ContainsKey(uniqueID) && registroGlobal[uniqueID] != this)
+        {
+            Debug.LogError($"<color=red>[ERRO FATAL]</color> ID DUPLICADO: '{uniqueID}' em '{gameObject.name}'.");
+        }
+        else
+        {
+            registroGlobal[uniqueID] = this;
+        }
+    }
 
     void Start()
     {
-        if (string.IsNullOrEmpty(uniqueID) || PersistenciaManager.Instance == null) return;
-
-        StartCoroutine(CarregarComDelay());
+        AplicarEstadoDoSave();
     }
 
-    IEnumerator CarregarComDelay()
+    void AplicarEstadoDoSave()
     {
-        yield return null; 
-        CarregarDados();
-    }
-
-    private void CarregarDados()
-    {
-        if (carregado) return;
-
-        if (PersistenciaManager.Instance.TemEstadoSalvo(uniqueID))
+        if (PersistenciaManager.Instance != null && PersistenciaManager.Instance.TemEstadoSalvo(uniqueID))
         {
-            bool estadoSalvo = PersistenciaManager.Instance.ObterEstado(uniqueID);
-
-            if (gameObject.activeSelf != estadoSalvo)
+            bool taAtivo = PersistenciaManager.Instance.ObterEstado(uniqueID, gameObject.activeSelf);
+            
+            if (gameObject.activeSelf != taAtivo) 
             {
-                gameObject.SetActive(estadoSalvo);
+                gameObject.SetActive(taAtivo);
             }
 
-            if (estadoSalvo && salvarPosicao)
+            if (taAtivo) 
             {
                 PersistenciaManager.Instance.CarregarTransform(uniqueID, transform);
-                Physics.SyncTransforms();
+                Physics.SyncTransforms(); 
             }
         }
-
-        carregado = true;
     }
 
-    public void RegistrarColeta()
+    void OnDestroy()
     {
-        if (PersistenciaManager.Instance == null) return;
-
-        PersistenciaManager.Instance.RegistrarEstado(uniqueID, false);
-        gameObject.SetActive(false);
-    }
-
-    public void RegistrarPosicaoEAtivo()
-    {
-        if (PersistenciaManager.Instance == null) return;
-
-        PersistenciaManager.Instance.RegistrarEstado(uniqueID, gameObject.activeSelf);
-
-        if (salvarPosicao)
+        if (registroGlobal.ContainsKey(uniqueID) && registroGlobal[uniqueID] == this)
         {
-            PersistenciaManager.Instance.SalvarTransform(uniqueID, transform);
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (!Application.isPlaying) return;
-        if (gameObject != null && !gameObject.scene.isLoaded) return;
-
-        if (autoRegistrarAoDesativar && carregado && PersistenciaManager.Instance != null && !PersistenciaManager.Instance.ModoSemSave())
-        {
-            PersistenciaManager.Instance.RegistrarEstado(uniqueID, false);
+            registroGlobal.Remove(uniqueID);
         }
     }
 
     [ContextMenu("Gerar ID Único")]
-    private void GenerateID()
-    {
-        uniqueID = System.Guid.NewGuid().ToString().ToUpper();
-    }
+    private void GenerateID() { uniqueID = System.Guid.NewGuid().ToString().ToUpper(); }
 
-    private void OnValidate()
-    {
-        if (string.IsNullOrEmpty(uniqueID)) GenerateID();
-    }
+    private void OnValidate() { if (string.IsNullOrEmpty(uniqueID)) GenerateID(); }
 }

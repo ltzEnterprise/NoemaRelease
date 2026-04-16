@@ -23,12 +23,28 @@ public class ItemPickup : MonoBehaviour
 
     private bool jaPegou = false; // Trava contra duplo clique e bug de Raycast
 
+    void Awake()
+    {
+        // 🔥 VERIFICAÇÃO DE EXCELÊNCIA 1: Impede o desenvolvedor de causar um paradoxo no JSON
+        if (GetComponent<SaveableItem>() != null)
+        {
+            Debug.LogError($"<color=red>[ERRO FATAL]</color> O objeto '{gameObject.name}' tem 'ItemPickup' E 'SaveableItem'. Eles usam lógicas opostas de Save! Remova o 'SaveableItem' deste objeto imediatamente.");
+        }
+
+        // 🔥 VERIFICAÇÃO DE EXCELÊNCIA 2: Impede o respawn infinito por falta de ID
+        if (string.IsNullOrEmpty(uniqueID))
+        {
+            Debug.LogError($"[ERRO DE LÓGICA] A arma/item '{gameObject.name}' está sem UniqueID. Ela não vai salvar e dará respawn toda vez que a cena carregar.");
+        }
+    }
+
     void Start() 
     { 
-        // 🔥 PUXA DO NOSSO SISTEMA DE SAVE OFICIAL (JSON) 🔥
-        if (!Application.isEditor && PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+        // 🔥 VERIFICAÇÃO DE EXCELÊNCIA 3: Removido o bloqueio do Editor. O save TEM que funcionar na engine.
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
-            if (PersistenciaManager.Instance.ObterEstado(uniqueID))
+            // Neste script, o estado TRUE significa "Item já foi pego". O valor padrão de um jogo novo é FALSE.
+            if (PersistenciaManager.Instance.ObterEstado(uniqueID, false))
             {
                 Destroy(gameObject);
                 return;
@@ -65,10 +81,14 @@ public class ItemPickup : MonoBehaviour
         
         if (objetoDeTexto) objetoDeTexto.SetActive(false);
 
+        // 🔥 VERIFICAÇÃO DE EXCELÊNCIA 4: Desliga colisores e malhas ANTES de destruir pra não cortar eventos e áudios.
         Collider col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
 
-        // 1. Grava no cérebro do jogo que esse item sumiu (NO SLOT ATUAL)
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        foreach(var r in renderers) r.enabled = false;
+
+        // 1. Grava no cérebro do jogo que esse item sumiu (Registra TRUE para "Morto")
         if (!string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
@@ -81,10 +101,10 @@ public class ItemPickup : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[ItemPickup] InventoryManager não encontrado!");
+            Debug.LogError("[ItemPickup] InventoryManager não encontrado na cena!");
         }
 
-        // 3. Executa eventos extras (Tocar Som, rodar cutscene, etc)
+        // 3. Executa eventos extras com segurança (Agora eles não serão decepados pela Unity)
         if (onPickup != null) onPickup.Invoke();
 
         // 4. Salvar Fisicamente no HD
@@ -94,11 +114,10 @@ public class ItemPickup : MonoBehaviour
         }
         else if (PersistenciaManager.Instance != null)
         {
-            // Se não for um Save Point completo, pelo menos salva o JSON pra garantir que o item tá no bolso se o jogo fechar
             PersistenciaManager.Instance.SalvarTudo();
         }
 
-        // 5. Some com a arma
-        Destroy(gameObject);
+        // 5. Some com a arma da memória com 0.1s de delay para garantir que a fila de eventos (como partículas) foi processada
+        Destroy(gameObject, 0.1f);
     }
 }

@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
 using System;
-using System.Collections; // Necessário para a Coroutine de Autosave
+using System.Collections; 
 
 [Serializable] public class IntEntry { public string k; public int v; }
 [Serializable] public class FloatEntry { public string k; public float v; }
@@ -19,6 +19,10 @@ public class PersistenciaManager : MonoBehaviour
 {
     public static PersistenciaManager Instance;
 
+    [Header("--- DEV MODE ---")]
+    [Tooltip("Se marcado, IGNORA gravação no HD durante o Play na Unity para não corromper saves oficiais.")]
+    public bool desativarSaveNoEditor = false; 
+
     private Dictionary<string, bool> estadosObjetosRAM = new Dictionary<string, bool>();
     private Dictionary<string, int> cacheInt = new Dictionary<string, int>();
     private Dictionary<string, float> cacheFloat = new Dictionary<string, float>();
@@ -26,11 +30,13 @@ public class PersistenciaManager : MonoBehaviour
 
     private DadosDeSave dadosParaSerializar = new DadosDeSave();
 
-    private int slotCarregado = -1;
+    private int slotCarregado = -1; 
     private bool inicializado = false;
-
     private float ultimoSaveTempo = 0f;
     private float intervaloMinimoSave = 2f;
+
+    // 🔥 TRAVA DE SEGURANÇA: Avisa o resto do jogo se a leitura de disco terminou.
+    public bool DadosProntosParaUso { get; private set; } = false;
 
     public string DiretorioSaves => Path.Combine(Application.persistentDataPath, "Saves");
 
@@ -39,64 +45,38 @@ public class PersistenciaManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-
-            if (transform.parent == null)
-                DontDestroyOnLoad(gameObject);
-
-            if (!Directory.Exists(DiretorioSaves))
-                Directory.CreateDirectory(DiretorioSaves);
-
-            inicializado = true;
+            if (transform.parent == null) DontDestroyOnLoad(gameObject);
             
-            // Inicia o Autosave a cada 5 minutos (300 segundos)
+            if (!Directory.Exists(DiretorioSaves)) 
+                Directory.CreateDirectory(DiretorioSaves);
+                
+            inicializado = true;
             StartCoroutine(RotinaAutoSave());
         }
         else Destroy(gameObject);
     }
 
-    // =========================
-    // AUTO SAVE
-    // =========================
-    
-    // Salva a cada 5 minutos em background (super leve)
     private IEnumerator RotinaAutoSave()
     {
         while (true)
         {
             yield return new WaitForSecondsRealtime(300f);
-            if (!ModoSemSave() && inicializado)
-            {
-                SalvarTudo();
-            }
+            if (inicializado && slotCarregado != -1 && !ModoSemSave()) SalvarTudo();
         }
     }
 
-    void OnApplicationQuit() => SalvarTudo();
+    void OnApplicationQuit() { if (slotCarregado != -1) SalvarTudo(); }
 
     void OnApplicationFocus(bool focus)
     {
-        if (!focus && Time.unscaledTime - ultimoSaveTempo > intervaloMinimoSave)
+        if (!focus && Time.unscaledTime - ultimoSaveTempo > intervaloMinimoSave && slotCarregado != -1)
         {
             SalvarTudo();
             ultimoSaveTempo = Time.unscaledTime;
         }
     }
 
-    public bool ModoSemSave() =>
-        SistemaGlobal.Instance == null || SistemaGlobal.Instance.slotAtual <= 0;
-
-    // =========================
-    // LOAD
-    // =========================
-    private void GarantirDadosCarregados()
-    {
-        if (ModoSemSave()) return;
-
-        int slot = SistemaGlobal.Instance.slotAtual;
-
-        if (slotCarregado != slot && slot > 0)
-            CarregarDoDisco(slot);
-    }
+    public bool ModoSemSave() => SistemaGlobal.Instance == null || SistemaGlobal.Instance.slotAtual <= 0;
 
     private void GarantirListasValidas()
     {
@@ -105,150 +85,146 @@ public class PersistenciaManager : MonoBehaviour
         if (dadosParaSerializar.strings == null) dadosParaSerializar.strings = new List<StringEntry>();
     }
 
-    private void CarregarDoDisco(int slot)
+    public void IniciarNovoJogo(int slot)
     {
+        ResetarDicionarios();
+        slotCarregado = slot; 
+        DadosProntosParaUso = true; 
+        Debug.Log($"[SAVE] Iniciado NOVO JOGO no Slot {slot}. RAM limpa.");
+    }
+
+    public void CarregarDoDisco(int slot)
+    {
+        DadosProntosParaUso = false;
         slotCarregado = slot;
+
+        #if UNITY_EDITOR
+        if (desativarSaveNoEditor)
+        {
+            ResetarDicionarios();
+            DadosProntosParaUso = true;
+            return;
+        }
+        #endif
 
         string caminho = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
 
-        if (!File.Exists(caminho))
-        {
-            ResetarDicionarios();
-            return;
+        if (!File.Exists(caminho)) 
+        { 
+            ResetarDicionarios(); 
+            DadosProntosParaUso = true;
+            return; 
         }
 
         try
         {
             string json = File.ReadAllText(caminho);
             dadosParaSerializar = JsonUtility.FromJson<DadosDeSave>(json);
-
-            if (dadosParaSerializar == null)
+            
+            if (dadosParaSerializar == null) { ResetarDicionarios(); }
+            else 
             {
-                ResetarDicionarios();
-                return;
+                GarantirListasValidas();
+                SincronizarListasParaCache();
             }
-
-            GarantirListasValidas();
-            SincronizarListasParaCache();
         }
         catch (Exception e)
         {
-            Debug.LogError("[SAVE] Erro ao carregar: " + e.Message);
+            Debug.LogError("[SAVE] Erro crítico ao ler JSON: " + e.Message + " | Tentando Backup.");
             TentarBackup(slot);
+        }
+        finally
+        {
+            DadosProntosParaUso = true;
+            Debug.Log($"[SAVE] Carregamento do Slot {slot} finalizado na RAM.");
         }
     }
 
     private void TentarBackup(int slot)
     {
         string caminho = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json.bak");
-
-        if (!File.Exists(caminho))
-        {
-            ResetarDicionarios();
-            return;
-        }
-
+        if (!File.Exists(caminho)) { ResetarDicionarios(); return; }
         try
         {
             dadosParaSerializar = JsonUtility.FromJson<DadosDeSave>(File.ReadAllText(caminho));
             GarantirListasValidas();
             SincronizarListasParaCache();
         }
-        catch
-        {
-            ResetarDicionarios();
-        }
+        catch { ResetarDicionarios(); }
     }
 
     private void SincronizarListasParaCache()
     {
-        // 🔥 AQUI ESTAVA O MAIOR ERRO: O cache da RAM precisava ser limpo ao carregar um novo slot!
         estadosObjetosRAM.Clear(); 
-        
-        cacheInt.Clear();
-        foreach (var e in dadosParaSerializar.ints)
-            cacheInt[e.k] = e.v;
-
-        cacheFloat.Clear();
-        foreach (var e in dadosParaSerializar.floats)
-            cacheFloat[e.k] = e.v;
-
-        cacheString.Clear();
-        foreach (var e in dadosParaSerializar.strings)
-            cacheString[e.k] = e.v;
+        cacheInt.Clear(); foreach (var e in dadosParaSerializar.ints) cacheInt[e.k] = e.v;
+        cacheFloat.Clear(); foreach (var e in dadosParaSerializar.floats) cacheFloat[e.k] = e.v;
+        cacheString.Clear(); foreach (var e in dadosParaSerializar.strings) cacheString[e.k] = e.v;
     }
 
-    private void ResetarDicionarios()
+    public void ResetarDicionarios()
     {
-        cacheInt.Clear();
-        cacheFloat.Clear();
-        cacheString.Clear();
-        estadosObjetosRAM.Clear();
-
-        dadosParaSerializar = new DadosDeSave();
-        GarantirListasValidas();
+        cacheInt.Clear(); cacheFloat.Clear(); cacheString.Clear(); estadosObjetosRAM.Clear();
+        dadosParaSerializar = new DadosDeSave(); GarantirListasValidas();
     }
 
-    // =========================
-    // SAVE
-    // =========================
+    public void LimparDicionario()
+    {
+        slotCarregado = -1;
+        DadosProntosParaUso = false;
+        ResetarDicionarios();
+    }
+
     public void SalvarTudo()
     {
-        if (!inicializado || ModoSemSave()) return;
+        #if UNITY_EDITOR
+        if (desativarSaveNoEditor) return;
+        #endif
 
+        if (!inicializado || ModoSemSave() || slotCarregado == -1) return;
         int slot = SistemaGlobal.Instance.slotAtual;
         if (slot <= 0) return;
 
+        foreach (var kvp in SaveableItem.registroGlobal)
+        {
+            if (kvp.Value != null)
+            {
+                RegistrarEstado(kvp.Key, kvp.Value.gameObject.activeSelf);
+                if (kvp.Value.gameObject.activeSelf) 
+                {
+                    SalvarTransform(kvp.Key, kvp.Value.transform);
+                }
+            }
+        }
+
         try
         {
-            dadosParaSerializar.ints.Clear();
-            foreach (var kv in cacheInt)
-                dadosParaSerializar.ints.Add(new IntEntry { k = kv.Key, v = kv.Value });
-
-            dadosParaSerializar.floats.Clear();
-            foreach (var kv in cacheFloat)
-                dadosParaSerializar.floats.Add(new FloatEntry { k = kv.Key, v = kv.Value });
-
-            dadosParaSerializar.strings.Clear();
-            foreach (var kv in cacheString)
-                dadosParaSerializar.strings.Add(new StringEntry { k = kv.Key, v = kv.Value });
+            dadosParaSerializar.ints.Clear(); foreach (var kv in cacheInt) dadosParaSerializar.ints.Add(new IntEntry { k = kv.Key, v = kv.Value });
+            dadosParaSerializar.floats.Clear(); foreach (var kv in cacheFloat) dadosParaSerializar.floats.Add(new FloatEntry { k = kv.Key, v = kv.Value });
+            dadosParaSerializar.strings.Clear(); foreach (var kv in cacheString) dadosParaSerializar.strings.Add(new StringEntry { k = kv.Key, v = kv.Value });
 
             string json = JsonUtility.ToJson(dadosParaSerializar, true);
             string caminho = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
 
-            if (File.Exists(caminho))
-                File.Copy(caminho, caminho + ".bak", true);
-
+            if (File.Exists(caminho)) File.Copy(caminho, caminho + ".bak", true);
             File.WriteAllText(caminho, json);
         }
-        catch (Exception e)
-        {
-            Debug.LogError("[SAVE] Erro ao salvar: " + e.Message);
-        }
+        catch (Exception e) { Debug.LogError("[SAVE] Erro ao escrever no disco: " + e.Message); }
     }
 
-    // =========================
-    // API
-    // =========================
-    public void SalvarInt(string k, int v) { GarantirDadosCarregados(); cacheInt[k] = v; }
-    public int ObterInt(string k) { GarantirDadosCarregados(); return cacheInt.TryGetValue(k, out int v) ? v : 0; }
-
-    public void SalvarFloat(string k, float v) { GarantirDadosCarregados(); cacheFloat[k] = v; }
-    public float ObterFloat(string k) { GarantirDadosCarregados(); return cacheFloat.TryGetValue(k, out float v) ? v : 0f; }
-
-    public void SalvarString(string k, string v) { GarantirDadosCarregados(); cacheString[k] = v ?? ""; }
-    public string ObterString(string k) { GarantirDadosCarregados(); return cacheString.TryGetValue(k, out string v) ? v : ""; }
-
-    public bool TemFloat(string k)
-    {
-        GarantirDadosCarregados();
-        return cacheFloat.ContainsKey(k);
-    }
+    public void SalvarInt(string k, int v) { cacheInt[k] = v; }
+    public int ObterInt(string k, int padrao = 0) { return cacheInt.TryGetValue(k, out int v) ? v : padrao; }
+    
+    public void SalvarFloat(string k, float v) { cacheFloat[k] = v; }
+    public float ObterFloat(string k, float padrao = 0f) { return cacheFloat.TryGetValue(k, out float v) ? v : padrao; }
+    
+    public void SalvarString(string k, string v) { cacheString[k] = v ?? ""; }
+    public string ObterString(string k, string padrao = "") { return cacheString.TryGetValue(k, out string v) ? v : padrao; }
+    
+    public bool TemFloat(string k) { return cacheFloat.ContainsKey(k); }
 
     public bool TemEstadoSalvo(string id)
     {
         if (string.IsNullOrEmpty(id)) return false;
-        GarantirDadosCarregados();
         if (cacheInt.ContainsKey(id + "_Active")) return true;
         if (estadosObjetosRAM.ContainsKey(id)) return true;
         return false;
@@ -257,86 +233,49 @@ public class PersistenciaManager : MonoBehaviour
     public void RegistrarEstado(string id, bool estado)
     {
         if (string.IsNullOrEmpty(id)) return;
-
         estadosObjetosRAM[id] = estado;
         SalvarInt(id + "_Active", estado ? 1 : 0);
     }
 
-    public bool ObterEstado(string id)
+    public bool ObterEstado(string id, bool valorPadrao = false)
     {
-        if (string.IsNullOrEmpty(id)) return false;
-
-        GarantirDadosCarregados();
-
-        if (cacheInt.TryGetValue(id + "_Active", out int v))
-            return v == 1;
-
-        return estadosObjetosRAM.ContainsKey(id) && estadosObjetosRAM[id];
-    }
-
-    // =========================
-    // RESTORE BACKUP
-    // =========================
-    public void RestaurarBackup(int slot)
-    {
-        string path = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
-        string backup = path + ".bak";
-
-        if (!File.Exists(backup))
-        {
-            Debug.LogWarning("[SAVE] Backup não encontrado.");
-            return;
-        }
-
-        try
-        {
-            File.Copy(backup, path, true);
-            slotCarregado = -1;
-            ResetarDicionarios();
-            CarregarDoDisco(slot);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("[SAVE] Erro ao restaurar backup: " + e.Message);
-        }
+        if (string.IsNullOrEmpty(id)) return valorPadrao;
+        if (cacheInt.TryGetValue(id + "_Active", out int v)) return v == 1;
+        if (estadosObjetosRAM.ContainsKey(id)) return estadosObjetosRAM[id];
+        return valorPadrao;
     }
 
     public void SalvarTransform(string id, Transform t)
     {
-        SalvarFloat(id + "_x", t.position.x);
-        SalvarFloat(id + "_y", t.position.y);
-        SalvarFloat(id + "_z", t.position.z);
+        SalvarFloat(id + "_px", t.position.x); SalvarFloat(id + "_py", t.position.y); SalvarFloat(id + "_pz", t.position.z);
+        SalvarFloat(id + "_rx", t.eulerAngles.x); SalvarFloat(id + "_ry", t.eulerAngles.y); SalvarFloat(id + "_rz", t.eulerAngles.z);
     }
 
     public void CarregarTransform(string id, Transform t)
     {
-        if (cacheFloat.ContainsKey(id + "_x"))
+        if (cacheFloat.ContainsKey(id + "_px"))
         {
-            t.position = new Vector3(
-                ObterFloat(id + "_x"),
-                ObterFloat(id + "_y"),
-                ObterFloat(id + "_z")
-            );
+            t.position = new Vector3(ObterFloat(id + "_px"), ObterFloat(id + "_py"), ObterFloat(id + "_pz"));
+            t.eulerAngles = new Vector3(ObterFloat(id + "_rx"), ObterFloat(id + "_ry"), ObterFloat(id + "_rz"));
         }
     }
-    
-    // =========================
-    // COMPATIBILIDADE COM SCRIPTS ANTIGOS
-    // =========================
-    public bool CarregarEstadoObjeto(string id, bool valorPadrao)
+
+    public void RestaurarBackup(int slot)
     {
-        if (!TemEstadoSalvo(id)) return valorPadrao;
-        return ObterEstado(id);
+        string path = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
+        string backup = path + ".bak";
+        if (!File.Exists(backup)) return;
+
+        try
+        {
+            File.Copy(backup, path, true);
+            LimparDicionario(); 
+            CarregarDoDisco(slot); 
+        }
+        catch (Exception e) { Debug.LogError("[SAVE] Falha ao restaurar: " + e.Message); }
     }
 
-    public bool CarregarEstadoObjeto(string id)
-    {
-        return ObterEstado(id);
-    }
-
-    public void LimparDicionario()
-    {
-        slotCarregado = -1; // Força re-leitura do disco se precisar
-        ResetarDicionarios();
-    }
+    // 🔥 AS FUNÇÕES RESTAURADAS 🔥
+    public bool CarregarEstadoObjeto(string id, bool valorPadrao) { return ObterEstado(id, valorPadrao); }
+    public bool CarregarEstadoObjeto(string id) { return ObterEstado(id, false); }
 }

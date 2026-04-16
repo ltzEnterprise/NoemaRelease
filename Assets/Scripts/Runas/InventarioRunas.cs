@@ -50,13 +50,15 @@ public class InventarioRunas : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
+    public void RecarregarDoSave()
+    {
+        runasNaMao.Clear();
+        CarregarRunasDoSave();
+    }
+
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // 🔥 A MÁGICA TÁ AQUI: Se for a cena 2D, aborta o desenho da UI.
-        // As runas continuam salvas na lista 'runasNaMao', só não vão pra tela.
         if (scene.name == nomeDaCena2D) return;
-
-        // Se for a cena 3D, desenha tudo que tá guardado na memória.
         StartCoroutine(RedesenharRunasNaTela());
     }
 
@@ -64,27 +66,28 @@ public class InventarioRunas : MonoBehaviour
     {
         yield return null; 
         
+        if (AreaDasRunas.Instance != null) 
+            AreaDasRunas.Instance.LimparTodasAsRunasDaTela();
+
         foreach (var runa in runasNaMao)
         {
             AtualizarUI(runa.icone);
         }
     }
 
-    // CARREGA AS RUNAS QUANDO O JOGO ABRE
     private void CarregarRunasDoSave()
     {
         if (Application.isEditor || PersistenciaManager.Instance == null) return;
 
         foreach (var slot in configuracaoRunas)
         {
-            bool temRuna = PersistenciaManager.Instance.ObterEstado("Runa_" + slot.nomeIdentificador);
+            bool temRuna = PersistenciaManager.Instance.ObterEstado("Runa_" + slot.nomeIdentificador, false);
             if (temRuna && !runasNaMao.Contains(slot.data))
             {
                 runasNaMao.Add(slot.data);
             }
         }
 
-        // Também protege no Start caso o jogo comece direto no 2D por algum motivo
         if (SceneManager.GetActiveScene().name != nomeDaCena2D)
         {
             StartCoroutine(RedesenharRunasNaTela());
@@ -108,17 +111,46 @@ public class InventarioRunas : MonoBehaviour
                 runasNaMao.Add(slot.data);
                 if (slot.eventoParaColetar != null) slot.eventoParaColetar.Invoke();
                 
-                // Só desenha a UI nova se não estiver no mundo 2D
                 if (SceneManager.GetActiveScene().name != nomeDaCena2D)
                 {
                     AtualizarUI(slot.data.icone);
                 }
 
-                // --- SALVA A RUNA IMEDIATAMENTE NO DISCO ---
                 if (!Application.isEditor && PersistenciaManager.Instance != null)
                 {
                     PersistenciaManager.Instance.RegistrarEstado("Runa_" + nome, true);
                     PersistenciaManager.Instance.SalvarTudo();
+                }
+
+                if (runasNaMao.Count == 3 && DayNightCycle.Instance != null)
+                {
+                    DayNightCycle.Instance.ChangeTo(DayNightCycle.TimeState.DramaticDay); 
+                }
+            }
+        }
+    }
+
+    // 🔥 A FUNÇÃO SECRETA: Registra a runa na RAM, mas NÃO SALVA no HD. Proteção contra Softlock!
+    public void ColetarRunaSemForcarSaveHD(string nome)
+    {
+        SlotConfigRuna slot = configuracaoRunas.Find(x => x.nomeIdentificador == nome);
+        
+        if (slot != null)
+        {
+            if (!runasNaMao.Contains(slot.data))
+            {
+                runasNaMao.Add(slot.data);
+                if (slot.eventoParaColetar != null) slot.eventoParaColetar.Invoke();
+                
+                if (SceneManager.GetActiveScene().name != nomeDaCena2D)
+                {
+                    AtualizarUI(slot.data.icone);
+                }
+
+                if (!Application.isEditor && PersistenciaManager.Instance != null)
+                {
+                    // Fica só na RAM temporária. Se fechar o jogo, a runa volta pro mapa.
+                    PersistenciaManager.Instance.RegistrarEstado("Runa_" + nome, true);
                 }
 
                 if (runasNaMao.Count == 3 && DayNightCycle.Instance != null)
@@ -145,7 +177,6 @@ public class InventarioRunas : MonoBehaviour
         runasNaMao.Clear();
         if (AreaDasRunas.Instance != null) AreaDasRunas.Instance.LimparTodasAsRunasDaTela();
 
-        // --- ZERA AS RUNAS DO SAVE ---
         if (!Application.isEditor && PersistenciaManager.Instance != null)
         {
             foreach (var slot in configuracaoRunas)

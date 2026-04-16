@@ -35,7 +35,7 @@ public class DoorWithKeyTeleport : MonoBehaviour
     private bool isOpen = false;
     private bool isTransitioning = false;
     private bool isShowingMessage = false; 
-    private bool taOlhando = false; // 🔥 NOVA TRAVA AQUI 🔥
+    private bool taOlhando = false; 
 
     private bool TaBloqueado()
     {
@@ -53,7 +53,15 @@ public class DoorWithKeyTeleport : MonoBehaviour
             fadeImage.color = new Color(0,0,0,0);
         }
 
-        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        // 🔥 CORREÇÃO DE RACE CONDITION NO LOAD
+        StartCoroutine(CarregarSeguro());
+    }
+
+    IEnumerator CarregarSeguro()
+    {
+        yield return null; 
+
+        if (!Application.isEditor && PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
             isOpen = PersistenciaManager.Instance.CarregarEstadoObjeto(uniqueID, false);
             if (isOpen) needsKey = false;
@@ -70,7 +78,7 @@ public class DoorWithKeyTeleport : MonoBehaviour
 
     public void AoOlhar()
     {
-        taOlhando = true; // 🔥 Avisa que o player botou a mira na porta 🔥
+        taOlhando = true; 
 
         if (TaBloqueado()) return; 
 
@@ -81,7 +89,7 @@ public class DoorWithKeyTeleport : MonoBehaviour
 
     public void AoSair()
     {
-        taOlhando = false; // 🔥 Avisa que o player tirou a mira da porta 🔥
+        taOlhando = false; 
 
         if (interactText) interactText.SetActive(false);
     }
@@ -114,7 +122,10 @@ public class DoorWithKeyTeleport : MonoBehaviour
         KeySystem.GastarChave(requiredKeyID);
 
         if (!Application.isEditor && PersistenciaManager.Instance != null)
+        {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
+            PersistenciaManager.Instance.SalvarTudo(); // Salva logo no disco que gastou a chave e destrancou
+        }
 
         if (audioSource && unlockSound) audioSource.PlayOneShot(unlockSound);
         StartCoroutine(TeleportSequence());
@@ -138,7 +149,6 @@ public class DoorWithKeyTeleport : MonoBehaviour
         
         isShowingMessage = false; 
 
-        // 🔥 O SEGREDO TÁ AQUI: Só acende o texto de novo SE o player ainda estiver olhando pra porta! 🔥
         if (taOlhando && interactText && !isTransitioning && !TaBloqueado()) 
         {
             interactText.SetActive(true);

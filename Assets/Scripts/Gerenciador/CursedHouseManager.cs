@@ -4,12 +4,16 @@ using TMPro;
 public class CursedHouseManager : MonoBehaviour
 {
     [Header("--- CONFIGURAÇÃO ---")]
-    public string nomeDaRuna = "Runa_Investigacao"; // Tem que ser igual ao ID no InventarioRunas
+    public string nomeDaRuna = "Runa_Investigacao"; 
+
+    [Header("--- SAVE SYSTEM (TRAVA) ---")]
+    [Tooltip("Se ativado, salva o jogo no HD assim que pegar a runa. DEIXE DESMARCADO dentro da casa para evitar softlock!")]
+    public bool forcarSaveNoHD = false; // 🔥 CAIXINHA NOVA AQUI
 
     [Header("--- AUDIO ---")]
     public AudioSource fonteAudio;
-    public AudioClip somPortaTrancando;     // Toca ao iniciar (ambiente tenso)
-    public AudioClip somPortaDestrancando;  // Toca ao resolver o puzzle
+    public AudioClip somPortaTrancando;     
+    public AudioClip somPortaDestrancando;  
 
     [Header("--- UI ---")]
     public GameObject painelRecompensa;
@@ -19,35 +23,35 @@ public class CursedHouseManager : MonoBehaviour
 
     void Start()
     {
-        // 1. Toca som de "Trancou você aqui dentro"
         if(fonteAudio && somPortaTrancando) 
             fonteAudio.PlayOneShot(somPortaTrancando);
         
         if(painelRecompensa) painelRecompensa.SetActive(false);
     }
 
-    // --- CONECTE ISSO NO EVENTO "ON SUCCESS" DO SEU KEYPAD/PUZZLE ---
     public void OnPuzzleSolved()
     {
         if (puzzleResolvido) return;
         puzzleResolvido = true;
 
-        // 2. Entrega a Runa para o Inventário Global (que persiste entre cenas)
         if(InventarioRunas.Instance != null)
         {
-            InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
-            Debug.Log("Runa adicionada ao inventário global!");
+            // 🔥 LÓGICA CONDICIONAL 🔥
+            if (forcarSaveNoHD)
+                InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
+            else
+                InventarioRunas.Instance.ColetarRunaSemForcarSaveHD(nomeDaRuna);
+                
+            Debug.Log("Runa adicionada ao inventário global (RAM)!");
         }
         else
         {
             Debug.LogError("ERRO CRÍTICO: InventarioRunas não encontrado! A runa não será salva.");
         }
 
-        // 3. Som de Vitória/Destrancar a porta
         if(fonteAudio && somPortaDestrancando) 
             fonteAudio.PlayOneShot(somPortaDestrancando);
 
-        // 4. Mostra UI
         if(painelRecompensa)
         {
             painelRecompensa.SetActive(true);

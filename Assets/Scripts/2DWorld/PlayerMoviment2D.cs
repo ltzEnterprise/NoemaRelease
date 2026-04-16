@@ -10,7 +10,7 @@ public class PlayerMovement2D : MonoBehaviour
     public float climbSpeed = 6f;
     public float levitateSpeed = 5f;
 
-    [Header("🦶 Detecção de Chão")]
+    [Header("Detecção de Chão")]
     public Transform groundCheckPos;
     public LayerMask groundLayer; 
     public float raioDoPe = 0.4f; 
