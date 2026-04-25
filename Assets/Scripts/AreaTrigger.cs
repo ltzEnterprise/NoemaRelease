@@ -2,26 +2,26 @@ using UnityEngine;
 
 public class AreaTrigger : MonoBehaviour
 {
-    private BoxCollider detector;
-    public string thisArea;
-    private SoundtrackManager soundtrackManager;
+    [Tooltip("Qual música deve tocar quando o jogador bater neste colisor?")]
+    public string nomeDestaArea;
+
+    private SoundtrackManager manager;
 
     void Start()
     {
-        detector = GetComponent<BoxCollider>();
-        // Garante que é Trigger para não bater no player como parede
+        var detector = GetComponent<BoxCollider>();
         if (detector) detector.isTrigger = true; 
         
-        // Busca o gerenciador de som na cena
         GameObject sm = GameObject.Find("SoundtrackManager");
-        if (sm) soundtrackManager = sm.GetComponent<SoundtrackManager>();
+        if (sm) manager = sm.GetComponent<SoundtrackManager>();
     }
 
-    private void OnTriggerEnter(Collider other) // Mudei pra Enter, costuma ser melhor pra música
+    private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player") && soundtrackManager != null)
+        // Bateu no colisor da porta, manda o Cérebro mudar pra essa música. Foda-se o Exit.
+        if (other.CompareTag("Player") && manager != null)
         {
-            soundtrackManager.SwitchSoundtrack(thisArea);
+            manager.SwitchSoundtrack(nomeDestaArea);
         }
     }
 }

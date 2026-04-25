@@ -62,6 +62,9 @@ public class RealityCamera : MonoBehaviour
     
     private float fovOriginal;
     private Renderer[] renderersVisuais;
+    
+    // 🔥 Referência para podermos resetar o flash se o cara spammar clique
+    private Coroutine flashCoroutine;
 
     void Awake()
     {
@@ -83,7 +86,6 @@ public class RealityCamera : MonoBehaviour
 
     void Start()
     {
-        // 🔥 PUXA DO SAVE JSON EM VEZ DO PLAYER PREFS
         if (PersistenciaManager.Instance != null)
         {
             if (PersistenciaManager.Instance.ObterEstado("Camera_TemUpgradeLanterna"))
@@ -99,7 +101,6 @@ public class RealityCamera : MonoBehaviour
 
         temUpgradeLanterna = true;
         
-        // 🔥 SALVA NO JSON
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado("Camera_TemUpgradeLanterna", true);
@@ -275,12 +276,20 @@ public class RealityCamera : MonoBehaviour
     {
         if (audioSource && somFotoSucesso) audioSource.PlayOneShot(somFotoSucesso);
 
+        // 🔥 A MÁGICA ACONTECE AQUI. MANDA O SISTEMA GLOBAL RODAR O FLASH.
         if (flashBranco) 
         { 
-            flashBranco.transform.SetAsLastSibling(); 
-            flashBranco.gameObject.SetActive(true);
-            StopCoroutine("FlashEffect");
-            StartCoroutine("FlashEffect"); 
+            if (SistemaGlobal.Instance != null)
+            {
+                if (flashCoroutine != null) SistemaGlobal.Instance.StopCoroutine(flashCoroutine);
+                flashCoroutine = SistemaGlobal.Instance.StartCoroutine(RotinaFlashBlindada(flashBranco));
+            }
+            else 
+            {
+                // Fallback de segurança se o SistemaGlobal não existir (ex: testando cena isolada)
+                if (flashCoroutine != null) StopCoroutine(flashCoroutine);
+                flashCoroutine = StartCoroutine(RotinaFlashBlindada(flashBranco));
+            }
         }
 
         switch (alvo.tipoDeInteracao)
@@ -300,11 +309,17 @@ public class RealityCamera : MonoBehaviour
         alvo.Sumir(); 
     }
 
-    IEnumerator FlashEffect()
+    // 🔥 NOVA ROTINA DE FLASH INDEPENDENTE E BLINDADA
+    private IEnumerator RotinaFlashBlindada(Image flash)
     {
-        CanvasRenderer cr = flashBranco.GetComponent<CanvasRenderer>();
-        cr.SetAlpha(1f); 
-        flashBranco.color = Color.white;
+        if (flash == null) yield break;
+
+        flash.transform.SetAsLastSibling();
+        flash.gameObject.SetActive(true);
+        flash.color = Color.white;
+        
+        CanvasRenderer cr = flash.GetComponent<CanvasRenderer>();
+        if (cr != null) cr.SetAlpha(1f); 
 
         yield return new WaitForSeconds(0.05f);
 
@@ -312,10 +327,14 @@ public class RealityCamera : MonoBehaviour
         while (tempo > 0)
         {
             tempo -= Time.deltaTime;
-            flashBranco.canvasRenderer.SetAlpha(tempo * 2); 
+            if (flash != null && flash.canvasRenderer != null) 
+            {
+                flash.canvasRenderer.SetAlpha(tempo * 2); 
+            }
             yield return null;
         }
-        flashBranco.gameObject.SetActive(false);
+        
+        if (flash != null) flash.gameObject.SetActive(false);
     }
 
     void DesligarLuzesTotais()

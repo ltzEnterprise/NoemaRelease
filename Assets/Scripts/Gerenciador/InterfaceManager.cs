@@ -62,8 +62,8 @@ public class InterfaceManager : MonoBehaviour
 
     [HideInInspector] public bool jogoPausado = false;
     
-    private int slotConfirmacao = -1;
-    private int slotParaRestaurar = -1; 
+    [HideInInspector] public int slotConfirmacao = -1;
+    [HideInInspector] public int slotParaRestaurar = -1; 
 
     private Vector3 escalaOpcoes = Vector3.one;
     private bool escalaSalva = false;
@@ -71,6 +71,7 @@ public class InterfaceManager : MonoBehaviour
 
     private enum EstadoInterface { Menu, Slots, Opcoes, Jogando, Pausado, Loading }
     private EstadoInterface estadoAtual;
+
     private Coroutine loadingAtual;
     private Coroutine fadeAtual;
 
@@ -85,19 +86,25 @@ public class InterfaceManager : MonoBehaviour
             escalaSalva = true;
         }
 
-        ForcarAutoSizeCentral();
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.ForcarAutoSizeCentral();
 
         LigarDesligarPainel(painelLoading, false);
-        if (painelConfirmacaoBackup) LigarDesligarPainel(painelConfirmacaoBackup, false);
+
+        if (painelConfirmacaoBackup != null)
+            LigarDesligarPainel(painelConfirmacaoBackup, false);
         
-        if (imagemCongelada) 
+        if (imagemCongelada != null) 
         {
             imagemCongelada.gameObject.SetActive(false);
             ClearFreezeTexture(); 
             ForcarTelaCheia(imagemCongelada.rectTransform);
 
             Canvas canvasFundo = imagemCongelada.gameObject.GetComponent<Canvas>();
-            if (canvasFundo == null) canvasFundo = imagemCongelada.gameObject.AddComponent<Canvas>();
+
+            if (canvasFundo == null)
+                canvasFundo = imagemCongelada.gameObject.AddComponent<Canvas>();
+
             canvasFundo.overrideSorting = true;
             canvasFundo.sortingOrder = -100; 
         }
@@ -105,14 +112,17 @@ public class InterfaceManager : MonoBehaviour
         if (isCenaDeJogo)
         {
             estadoAtual = EstadoInterface.Jogando;
+
             Cursor.lockState = mouseLivreNoJogo ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = mouseLivreNoJogo;
 
-            if (FPS_Master.Instance != null) FPS_Master.travadoInteracao = false;      
+            if (FPS_Master.Instance != null)
+                FPS_Master.travadoInteracao = false;      
 
             LigarDesligarPainel(painelPause, false);
             LigarDesligarPainel(painelOpcoes, false);
             LigarDesligarPainel(painelMenuPrincipal, false);
+            LigarDesligarPainel(painelSlots, false);
 
             if (painelOpcoes != null)
             {
@@ -124,26 +134,55 @@ public class InterfaceManager : MonoBehaviour
         }
         else
         {
-            if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.LimparDicionario();
-
             estadoAtual = EstadoInterface.Menu;
+
             Cursor.lockState = CursorLockMode.None;   
             Cursor.visible = true;                    
 
             LigarDesligarPainel(painelMenuPrincipal, true);
             LigarDesligarPainel(painelSlots, false);
             LigarDesligarPainel(painelOpcoes, false);
+            LigarDesligarPainel(painelPause, false);
             
-            AtualizarTextosSlots();
+            StartCoroutine(AtualizarTextosMenuSeguro());
 
             if (musicaDoMenu != null && clipeMusicaMenu != null)
             {
                 musicaDoMenu.clip = clipeMusicaMenu;
                 musicaDoMenu.volume = volumeMaximoMusica; 
                 musicaDoMenu.loop = true;
-                if (!musicaDoMenu.isPlaying) musicaDoMenu.Play();
+
+                if (!musicaDoMenu.isPlaying)
+                    musicaDoMenu.Play();
             }
         }
+    }
+
+    IEnumerator AtualizarTextosMenuSeguro()
+    {
+        yield return new WaitForSecondsRealtime(0.1f);
+
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.AtualizarTextosSlots();
+
+        yield return new WaitForSecondsRealtime(0.4f);
+
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.AtualizarTextosSlots();
+    }
+
+    public void IniciarLoadingParaCena(string cenaAlvo)
+    {
+        if (string.IsNullOrEmpty(cenaAlvo))
+        {
+            Debug.LogError("[InterfaceManager] Tentando carregar cena vazia.");
+            return;
+        }
+
+        if (loadingAtual != null)
+            StopCoroutine(loadingAtual);
+
+        loadingAtual = StartCoroutine(RotinaLoadingPorcentagem(cenaAlvo));
     }
 
     public void LigarDesligarPainel(GameObject painel, bool estado)
@@ -156,14 +195,17 @@ public class InterfaceManager : MonoBehaviour
         painel.SetActive(estado);
 
         SM_Window janela = painel.GetComponent<SM_Window>();
+
         if (janela != null)
         {
             if (janela.content != null)
             {
                 Animator animContent = janela.content.GetComponent<Animator>();
                 if (animContent != null) animContent.enabled = false;
+
                 janela.content.gameObject.SetActive(estado);
             }
+
             janela.Toggle(estado);
         }
 
@@ -177,12 +219,20 @@ public class InterfaceManager : MonoBehaviour
                 contentOpcoes.SetActive(true);
 
                 CanvasGroup cg = contentOpcoes.GetComponent<CanvasGroup>();
-                if (cg != null) { cg.alpha = 1f; cg.interactable = true; cg.blocksRaycasts = true; }
+
+                if (cg != null)
+                {
+                    cg.alpha = 1f;
+                    cg.interactable = true;
+                    cg.blocksRaycasts = true;
+                }
                 
-                if (escalaSalva) contentOpcoes.transform.localScale = escalaOpcoes;
+                if (escalaSalva)
+                    contentOpcoes.transform.localScale = escalaOpcoes;
             }
 
             SettingsManager settings = painel.GetComponentInChildren<SettingsManager>(true);
+
             if (settings != null)
             {
                 settings.enabled = true;
@@ -191,20 +241,31 @@ public class InterfaceManager : MonoBehaviour
                 if (settings.controladorDeAbas != null && settings.janelaGameplay != null)
                 {
                     Animator animTabGroup = settings.controladorDeAbas.GetComponent<Animator>();
-                    if (animTabGroup != null) animTabGroup.enabled = false;
+
+                    if (animTabGroup != null)
+                        animTabGroup.enabled = false;
 
                     settings.controladorDeAbas.ChangeTab(settings.janelaGameplay);
 
                     Transform tabContent = settings.janelaGameplay.content;
+
                     if (tabContent != null)
                     {
                         Animator animTab = tabContent.GetComponent<Animator>();
-                        if (animTab != null) animTab.enabled = false;
+
+                        if (animTab != null)
+                            animTab.enabled = false;
 
                         tabContent.gameObject.SetActive(true);
                         
                         CanvasGroup cgTab = tabContent.GetComponent<CanvasGroup>();
-                        if (cgTab != null) { cgTab.alpha = 1f; cgTab.interactable = true; cgTab.blocksRaycasts = true; }
+
+                        if (cgTab != null)
+                        {
+                            cgTab.alpha = 1f;
+                            cgTab.interactable = true;
+                            cgTab.blocksRaycasts = true;
+                        }
                         
                         tabContent.localScale = Vector3.one; 
                     }
@@ -213,165 +274,10 @@ public class InterfaceManager : MonoBehaviour
         }
     }
 
-    public void ClicarNoSlot(int slot)
-    {
-        if (slotConfirmacao != -1)
-        {
-            slotConfirmacao = -1;
-            AtualizarTextosSlots();
-            return;
-        }
-
-        string cenaAlvo = nomeDaCenaDoJogo; 
-
-        if (SistemaGlobal.Instance != null) 
-        {
-            SistemaGlobal.Instance.slotAtual = slot; 
-
-            if (SistemaGlobal.Instance.ExisteSave(slot))
-            {
-                SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = true;
-                
-                if (PersistenciaManager.Instance != null)
-                {
-                    PersistenciaManager.Instance.CarregarDoDisco(slot);
-                    string cenaSalva = PersistenciaManager.Instance.ObterString($"Slot_{slot}_Cena");
-                    if (!string.IsNullOrEmpty(cenaSalva)) cenaAlvo = cenaSalva;
-                }
-            }
-            else
-            {
-                SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false; 
-                
-                if (PersistenciaManager.Instance != null) 
-                    PersistenciaManager.Instance.IniciarNovoJogo(slot);
-                    
-                EstadoGlobal.ResetarTudo();
-            }
-        }
-        
-        if (loadingAtual != null) StopCoroutine(loadingAtual);
-        loadingAtual = StartCoroutine(RotinaLoadingPorcentagem(cenaAlvo));
-    }
-
-    public void BotaoApagarSlot(int slot)
-    {
-        if (SistemaGlobal.Instance == null || !SistemaGlobal.Instance.ExisteSave(slot)) return;
-
-        if (slotConfirmacao == slot)
-        {
-            SistemaGlobal.Instance.ApagarSave(slot);
-            slotConfirmacao = -1;
-        }
-        else slotConfirmacao = slot;
-        
-        AtualizarTextosSlots();
-    }
-
-    public void CancelarConfirmacaoDelete()
-    {
-        if (slotConfirmacao != -1)
-        {
-            slotConfirmacao = -1;
-            AtualizarTextosSlots();
-        }
-    }
-
-    public void BotaoPedirRestauracao(int slot)
-    {
-        slotParaRestaurar = slot; 
-        LigarDesligarPainel(painelConfirmacaoBackup, true); 
-    }
-
-    public void ConfirmarRestauracaoBackup()
-    {
-        if (slotParaRestaurar != -1 && !modoDesenvolvedor && SistemaGlobal.Instance != null && PersistenciaManager.Instance != null)
-        {
-            int slotAntigo = SistemaGlobal.Instance.slotAtual;
-            SistemaGlobal.Instance.slotAtual = slotParaRestaurar;
-
-            PersistenciaManager.Instance.RestaurarBackup(slotParaRestaurar);
-            PersistenciaManager.Instance.SalvarTudo();
-
-            SistemaGlobal.Instance.slotAtual = slotAntigo;
-
-            AtualizarTextosSlots(); 
-        }
-        
-        slotParaRestaurar = -1; 
-        LigarDesligarPainel(painelConfirmacaoBackup, false); 
-    }
-
-    public void CancelarRestauracaoBackup()
-    {
-        slotParaRestaurar = -1; 
-        LigarDesligarPainel(painelConfirmacaoBackup, false); 
-    }
-
-    void AtualizarTextosSlots()
-    {
-        int lang = 0;
-        if (LanguageManager.Instance != null) lang = LanguageManager.Instance.currentLanguage;
-        else lang = PlayerPrefs.GetInt("Idioma", 0);
-
-        string txtNovo = (lang == 0) ? textoNovoJogo_PT : textoNovoJogo_EN;
-        string txtApagarBtn = (lang == 0) ? textoApagar_PT : textoApagar_EN;
-        string txtConfirmarBtn = (lang == 0) ? textoConfirmar_PT : textoConfirmar_EN;
-        string txtApagarSave = (lang == 0) ? textoApagarSave_PT : textoApagarSave_EN;
-        string txtSlot = (lang == 0) ? textoSlot_PT : textoSlot_EN;
-
-        for (int i = 0; i < textosDosSlots.Length; i++)
-        {
-            if (textosDosSlots[i] == null) continue;
-            int slotNum = i + 1;
-
-            bool temSave = (SistemaGlobal.Instance != null && SistemaGlobal.Instance.ExisteSave(slotNum));
-
-            if (textosBotaoApagar != null && i < textosBotaoApagar.Length && textosBotaoApagar[i] != null)
-            {
-                textosBotaoApagar[i].text = (slotConfirmacao == slotNum) ? txtConfirmarBtn : txtApagarBtn;
-            }
-
-            string cabecalho = $"<size=40%>{txtSlot} {slotNum}</size>\n";
-
-            if (slotConfirmacao == slotNum)
-            {
-                textosDosSlots[i].text = cabecalho + $"<color=red>{txtApagarSave}</color>";
-            }
-            else if (temSave)
-            {
-                string data = (SistemaGlobal.Instance != null ? SistemaGlobal.Instance.GetDataSave(slotNum) : "");
-                if (string.IsNullOrEmpty(data)) data = System.DateTime.Now.ToString("dd/MM HH:mm");
-                
-                textosDosSlots[i].text = cabecalho + $"<size=50%>{data}</size>";
-            }
-            else 
-            {
-                textosDosSlots[i].text = cabecalho + txtNovo;
-            }
-        }
-    }
-
-    void ForcarAutoSizeCentral()
-    {
-        if (textosDosSlots == null) return;
-        foreach (var t in textosDosSlots) 
-        {
-            if (t == null) continue;
-            t.enableAutoSizing = true;
-            t.fontSizeMin = 10;
-            t.fontSizeMax = 60; 
-            t.alignment = TextAlignmentOptions.Center;
-            t.textWrappingMode = TextWrappingModes.Normal;
-            t.overflowMode = TextOverflowModes.Truncate;
-            t.margin = new Vector4(5, 5, 5, 5);
-            t.rectTransform.localScale = Vector3.one;
-        }
-    }
-
     void ForcarTelaCheia(RectTransform rt)
     {
         if (rt == null) return;
+
         rt.anchorMin = Vector2.zero; 
         rt.anchorMax = Vector2.one;  
         rt.pivot = new Vector2(0.5f, 0.5f); 
@@ -383,15 +289,20 @@ public class InterfaceManager : MonoBehaviour
     {
         estadoAtual = EstadoInterface.Slots;
         slotConfirmacao = -1;
+
         LigarDesligarPainel(painelMenuPrincipal, false);
         LigarDesligarPainel(painelOpcoes, false);
+        LigarDesligarPainel(painelPause, false);
         LigarDesligarPainel(painelSlots, true);
-        AtualizarTextosSlots();
+
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.AtualizarTextosSlots();
     }
 
     public void AbrirOpcoes()
     {
         estadoAtual = EstadoInterface.Opcoes;
+
         LigarDesligarPainel(painelMenuPrincipal, false);
         LigarDesligarPainel(painelPause, false);
         LigarDesligarPainel(painelSlots, false);
@@ -400,16 +311,29 @@ public class InterfaceManager : MonoBehaviour
 
     public void BotaoSair() 
     { 
+        if (isCenaDeJogo && playerMaster != null && SistemaGlobal.Instance != null)
+        {
+            SistemaGlobal.Instance.SalvarJogo(playerMaster.transform.position, SceneManager.GetActiveScene().name);
+        }
+        else if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.SalvarTudo(false);
+        }
+
         Application.Quit(); 
     }
 
     public void BotaoVoltarGenerico()
     {
-        if (estadoAtual == EstadoInterface.Opcoes) FecharOpcoesVoltar();
+        if (estadoAtual == EstadoInterface.Opcoes)
+        {
+            FecharOpcoesVoltar();
+        }
         else if (estadoAtual == EstadoInterface.Slots)
         {
             estadoAtual = EstadoInterface.Menu;
             slotConfirmacao = -1;
+
             LigarDesligarPainel(painelSlots, false);
             LigarDesligarPainel(painelMenuPrincipal, true);
         }
@@ -417,19 +341,13 @@ public class InterfaceManager : MonoBehaviour
 
     void Update()
     {
-        if (slotConfirmacao != -1 && Input.GetMouseButtonDown(0))
-        {
-            if (UnityEngine.EventSystems.EventSystem.current != null && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
-            {
-                CancelarConfirmacaoDelete();
-            }
-        }
-
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (painelConfirmacaoBackup != null && painelConfirmacaoBackup.activeSelf)
             {
-                CancelarRestauracaoBackup();
+                if (SaveSlotManager.Instance != null)
+                    SaveSlotManager.Instance.BOTAO_CANCELAR_BACKUP_TELA_PRETA();
+
                 return;
             }
 
@@ -458,19 +376,27 @@ public class InterfaceManager : MonoBehaviour
             case EstadoInterface.Opcoes:
                 FecharOpcoesVoltar();
                 break;
+
             case EstadoInterface.Jogando:
-                if (!isProcessandoPause) StartCoroutine(PausarComPrint());
+                if (!isProcessandoPause)
+                    StartCoroutine(PausarComPrint());
                 break;
+
             case EstadoInterface.Pausado:
-                if (!isProcessandoPause) ResumeJogo();
+                if (!isProcessandoPause)
+                    ResumeJogo();
                 break;
+
             case EstadoInterface.Slots:
                 BotaoVoltarGenerico();
                 break;
         }
     }
     
-    public void FecharJanelaConfirmacao() { LigarDesligarPainel(painelConfirmacaoReset, false); }
+    public void FecharJanelaConfirmacao()
+    {
+        LigarDesligarPainel(painelConfirmacaoReset, false);
+    }
 
     public void BotaoConfirmarReset()
     {
@@ -478,10 +404,16 @@ public class InterfaceManager : MonoBehaviour
         PlayerPrefs.DeleteKey("PlayerFOV");
         PlayerPrefs.Save();
 
-        if (FPS_Master.Instance != null) FPS_Master.Instance.CarregarConfiguracoes();
+        if (FPS_Master.Instance != null)
+            FPS_Master.Instance.CarregarConfiguracoes();
 
-        SettingsManager settings = painelOpcoes.GetComponentInChildren<SettingsManager>(true);
-        if (settings != null) settings.LoadAndApplyAllSettings(); 
+        if (painelOpcoes != null)
+        {
+            SettingsManager settings = painelOpcoes.GetComponentInChildren<SettingsManager>(true);
+
+            if (settings != null)
+                settings.LoadAndApplyAllSettings();
+        }
 
         FecharJanelaConfirmacao();
     }
@@ -497,11 +429,14 @@ public class InterfaceManager : MonoBehaviour
         }
         
         PausarJogoLogica();
+
         isProcessandoPause = false; 
     }
 
     private void CapturarTela()
     {
+        if (imagemCongelada == null) return;
+
         ClearFreezeTexture();
 
         int width = Screen.width;
@@ -531,10 +466,14 @@ public class InterfaceManager : MonoBehaviour
     {
         estadoAtual = EstadoInterface.Pausado;
         jogoPausado = true; 
+
         LigarDesligarPainel(painelPause, true);
+
         Time.timeScale = 0f;
         AudioListener.pause = true; 
-        if (FPS_Master.Instance != null) FPS_Master.travadoInteracao = true;
+
+        if (FPS_Master.Instance != null)
+            FPS_Master.travadoInteracao = true;
         
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -546,7 +485,7 @@ public class InterfaceManager : MonoBehaviour
         isProcessandoPause = false; 
         jogoPausado = false; 
         
-        if (imagemCongelada) 
+        if (imagemCongelada != null) 
         {
             imagemCongelada.gameObject.SetActive(false);
             ClearFreezeTexture();
@@ -554,9 +493,12 @@ public class InterfaceManager : MonoBehaviour
         
         LigarDesligarPainel(painelOpcoes, false);
         LigarDesligarPainel(painelPause, false);
+
         Time.timeScale = 1f;
         AudioListener.pause = false;
-        if (FPS_Master.Instance != null) FPS_Master.travadoInteracao = false;
+
+        if (FPS_Master.Instance != null)
+            FPS_Master.travadoInteracao = false;
 
         Cursor.lockState = mouseLivreNoJogo ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = mouseLivreNoJogo;
@@ -566,11 +508,16 @@ public class InterfaceManager : MonoBehaviour
     {
         Time.timeScale = 1f; 
         AudioListener.pause = false; 
+
         ClearFreezeTexture();
 
-        if (playerMaster != null && SistemaGlobal.Instance != null)
+        if (isCenaDeJogo && playerMaster != null && SistemaGlobal.Instance != null)
         {
             SistemaGlobal.Instance.SalvarJogo(playerMaster.transform.position, SceneManager.GetActiveScene().name);
+        }
+        else if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.SalvarTudo(false);
         }
 
         SceneManager.LoadScene("MenuPrincipal"); 
@@ -579,6 +526,7 @@ public class InterfaceManager : MonoBehaviour
     public void FecharOpcoesVoltar()
     {
         LigarDesligarPainel(painelOpcoes, false);
+
         if (isCenaDeJogo) 
         {
             estadoAtual = EstadoInterface.Pausado;
@@ -593,7 +541,8 @@ public class InterfaceManager : MonoBehaviour
 
     IEnumerator FadeOutMusica()
     {
-        if (musicaDoMenu == null) yield break;
+        if (musicaDoMenu == null)
+            yield break;
         
         float volumeInicial = musicaDoMenu.volume;
         float tempoPassado = 0f;
@@ -604,6 +553,7 @@ public class InterfaceManager : MonoBehaviour
             musicaDoMenu.volume = Mathf.Lerp(volumeInicial, 0f, tempoPassado / tempoDeFade);
             yield return null;
         }
+
         musicaDoMenu.volume = 0f;
     }
 
@@ -611,16 +561,28 @@ public class InterfaceManager : MonoBehaviour
     {
         estadoAtual = EstadoInterface.Loading;
         
-        if (fadeAtual != null) StopCoroutine(fadeAtual);
+        if (fadeAtual != null)
+            StopCoroutine(fadeAtual);
+
         fadeAtual = StartCoroutine(FadeOutMusica());
         
         LigarDesligarPainel(painelLoading, true);
         LigarDesligarPainel(painelSlots, false);
         LigarDesligarPainel(painelMenuPrincipal, false);
+        LigarDesligarPainel(painelOpcoes, false);
+        LigarDesligarPainel(painelPause, false);
 
-        if (barraDeProgresso) barraDeProgresso.SetFill(0f); 
+        if (barraDeProgresso != null)
+            barraDeProgresso.SetFill(0f); 
 
         AsyncOperation operacao = SceneManager.LoadSceneAsync(nomeCena);
+
+        if (operacao == null)
+        {
+            Debug.LogError("[InterfaceManager] Falha ao iniciar carregamento da cena: " + nomeCena);
+            yield break;
+        }
+
         operacao.allowSceneActivation = false; 
 
         float progressoVisual = 0f;
@@ -630,18 +592,25 @@ public class InterfaceManager : MonoBehaviour
             float progressoReal = Mathf.Clamp01(operacao.progress / 0.9f) * 0.8f;
             progressoVisual = Mathf.MoveTowards(progressoVisual, progressoReal, Time.unscaledDeltaTime * 0.8f); 
 
-            if (barraDeProgresso) barraDeProgresso.SetFill(progressoVisual);
+            if (barraDeProgresso != null)
+                barraDeProgresso.SetFill(progressoVisual);
 
-            if (operacao.progress >= 0.9f && progressoVisual >= 0.79f) break;
+            if (operacao.progress >= 0.9f && progressoVisual >= 0.79f)
+                break;
+
             yield return null;
         }
 
         float tempoExtra = 0f;
+
         while (tempoExtra < 2f)
         {
             tempoExtra += Time.unscaledDeltaTime;
             progressoVisual = Mathf.Lerp(0.8f, 1f, tempoExtra / 2f); 
-            if (barraDeProgresso) barraDeProgresso.SetFill(progressoVisual);
+
+            if (barraDeProgresso != null)
+                barraDeProgresso.SetFill(progressoVisual);
+
             yield return null;
         }
 
@@ -650,26 +619,26 @@ public class InterfaceManager : MonoBehaviour
 
     IEnumerator SequenciaInicializacaoJogo()
     {
+        yield return new WaitUntil(() => PersistenciaManager.Instance != null);
+        yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
         yield return new WaitForEndOfFrame();
         
-        // 🔥 PUXA A POSIÇÃO DIRETO DO NOSSO JSON BLINDADO
-        if (SistemaGlobal.Instance != null && playerMaster != null && SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar)
+        if (SistemaGlobal.Instance != null &&
+            playerMaster != null &&
+            SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar)
         {
             EstadoGlobal.CarregarDoSlot(SistemaGlobal.Instance.slotAtual);
 
-            if (PersistenciaManager.Instance != null)
+            string p = "Slot_" + SistemaGlobal.Instance.slotAtual;
+            
+            if (PersistenciaManager.Instance.TemFloat(p + "_PosX"))
             {
-                string p = "Slot_" + SistemaGlobal.Instance.slotAtual;
-                
-                if (PersistenciaManager.Instance.TemFloat(p + "_PosX"))
-                {
-                    float x = PersistenciaManager.Instance.ObterFloat(p + "_PosX");
-                    float y = PersistenciaManager.Instance.ObterFloat(p + "_PosY");
-                    float z = PersistenciaManager.Instance.ObterFloat(p + "_PosZ");
+                float x = PersistenciaManager.Instance.ObterFloat(p + "_PosX");
+                float y = PersistenciaManager.Instance.ObterFloat(p + "_PosY");
+                float z = PersistenciaManager.Instance.ObterFloat(p + "_PosZ");
 
-                    playerMaster.Teleportar(new Vector3(x, y + 0.1f, z));
-                    Physics.SyncTransforms();
-                }
+                playerMaster.Teleportar(new Vector3(x, y + 0.1f, z));
+                Physics.SyncTransforms();
             }
             
             SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false; 
@@ -680,11 +649,50 @@ public class InterfaceManager : MonoBehaviour
     {
         if (imagemCongelada != null && imagemCongelada.texture != null)
         {
-            Texture texCorrompida = imagemCongelada.texture;
+            Texture texturaAntiga = imagemCongelada.texture;
             imagemCongelada.texture = null;
-            Destroy(texCorrompida); 
+            Destroy(texturaAntiga); 
         }
     }
 
-    private void OnDisable() => ClearFreezeTexture();
+    private void OnDisable()
+    {
+        ClearFreezeTexture();
+    }
+
+    public void ClicarNoSlot(int slot)
+    {
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.BOTAO_JOGAR_SLOT(slot);
+    }
+
+    public void BotaoApagarSlot(int slot)
+    {
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.BOTAO_APAGAR_SLOT(slot);
+    }
+
+    public void CancelarConfirmacaoDelete()
+    {
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.BOTAO_CANCELAR_APAGAR();
+    }
+
+    public void BotaoPedirRestauracao(int slot)
+    {
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.BOTAO_PREPARAR_BACKUP_SLOT(slot);
+    }
+
+    public void ConfirmarRestauracaoBackup()
+    {
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.BOTAO_CONFIRMAR_BACKUP_TELA_PRETA();
+    }
+
+    public void CancelarRestauracaoBackup()
+    {
+        if (SaveSlotManager.Instance != null)
+            SaveSlotManager.Instance.BOTAO_CANCELAR_BACKUP_TELA_PRETA();
+    }
 }

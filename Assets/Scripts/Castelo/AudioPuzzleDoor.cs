@@ -153,7 +153,8 @@ public class AudioPuzzleDoor : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape)) 
+        // 🔥 Removido o Input.GetKeyDown(KeyCode.Escape) daqui
+        if (Input.GetKeyDown(KeyCode.E)) 
         {
             SairDoPuzzle();
             return;
@@ -296,7 +297,6 @@ public class AudioPuzzleDoor : MonoBehaviour
         if (audioSourceSFX && somSucesso) audioSourceSFX.PlayOneShot(somSucesso);
         textoVisorSenha.color = Color.green;
 
-        // 🔥 OTIMIZAÇÃO: Usa o InventoryManager pra dar o disco e ativar a UI!
         if (InventoryManager.Instance != null) 
             InventoryManager.Instance.ReceberItem(idDoDiscoParaDar);
         else if (EstadoGlobal.armasDesbloqueadas != null && idDoDiscoParaDar < EstadoGlobal.armasDesbloqueadas.Length)
@@ -308,7 +308,6 @@ public class AudioPuzzleDoor : MonoBehaviour
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID)) 
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
 
-        // 🔥 TRAVA DE SAVE DE AÇO
         if (SistemaGlobal.Instance != null)
         {
             EstadoGlobal.SalvarNoSlot(SistemaGlobal.Instance.slotAtual);
@@ -397,11 +396,20 @@ public class AudioPuzzleDoor : MonoBehaviour
     IEnumerator EfeitoDigitar(string frase, float velocidade)
     {
         if(textoDialogoCutscene) textoDialogoCutscene.text = "";
-        if (audioSourceVoz && somDigitandoTexto) { audioSourceVoz.clip = somDigitandoTexto; audioSourceVoz.loop = false; audioSourceVoz.Play(); }
+        
+        // 🔥 CORREÇÃO: loop = true para tocar sem parar até a frase acabar
+        if (audioSourceVoz && somDigitandoTexto) 
+        { 
+            audioSourceVoz.clip = somDigitandoTexto; 
+            audioSourceVoz.loop = true; 
+            audioSourceVoz.Play(); 
+        }
+        
         foreach (char letra in frase.ToCharArray()) {
             if(textoDialogoCutscene) textoDialogoCutscene.text += letra;
             yield return new WaitForSeconds(velocidade); 
         }
+        
         if (audioSourceVoz) audioSourceVoz.Stop();
     }
 

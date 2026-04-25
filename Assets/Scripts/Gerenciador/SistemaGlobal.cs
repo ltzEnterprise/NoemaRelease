@@ -10,10 +10,12 @@ public class SistemaGlobal : MonoBehaviour
     public string nomeCenaPadrao = "DreamSceane"; 
     
     [Header("ESTADO DO SAVE")]
-    public int slotAtual = 1; 
-    
-    // Flag importante para o InterfaceManager
+    public int slotAtual = -1; 
+    public bool slotFoiDefinido = false;
+    public bool sistemaPronto = false; 
+
     [HideInInspector] public bool deveCarregarPosicaoAoIniciar = false;
+    [HideInInspector] public bool acabouDeCarregar = false; 
 
     void Awake()
     {
@@ -28,93 +30,131 @@ public class SistemaGlobal : MonoBehaviour
         }
     }
 
+    public void DefinirSlot(int slot)
+    {
+        if (slot <= 0)
+        {
+            Debug.LogError("[SISTEMA] Tentativa de definir slot inválido: " + slot);
+            return;
+        }
+
+        slotAtual = slot;
+        slotFoiDefinido = true;
+
+        Debug.Log($"<color=yellow>[SISTEMA] Slot {slot} definido e validado para esta sessão.</color>");
+    }
+
     public void SalvarJogo(Vector3 posicaoPlayer, string nomeCena)
     {
-        if (PersistenciaManager.Instance == null) return;
+        if (!slotFoiDefinido || slotAtual <= 0)
+        {
+            Debug.LogError("[SistemaGlobal] Tentativa de salvar sem slot definido.");
+            return;
+        }
+
+        if (PersistenciaManager.Instance == null)
+        {
+            Debug.LogError("[SistemaGlobal] PersistenciaManager.Instance está nulo.");
+            return;
+        }
+
+        if (!sistemaPronto)
+        {
+            Debug.LogWarning("[SistemaGlobal] Save abortado: sistema ainda não está pronto.");
+            return;
+        }
 
         string prefixo = "Slot_" + slotAtual;
-        
-        // Tudo vai pro JSON agora!
+
         PersistenciaManager.Instance.SalvarString(prefixo + "_Cena", nomeCena);
         PersistenciaManager.Instance.SalvarFloat(prefixo + "_PosX", posicaoPlayer.x);
         PersistenciaManager.Instance.SalvarFloat(prefixo + "_PosY", posicaoPlayer.y);
         PersistenciaManager.Instance.SalvarFloat(prefixo + "_PosZ", posicaoPlayer.z);
 
-        // Atualiza os dados do EstadoGlobal antes de fechar o pacote
         EstadoGlobal.SalvarNoSlot(slotAtual);
-        
-        // O PersistenciaManager pega tudo isso e crava no arquivo físico
-        PersistenciaManager.Instance.SalvarTudo();
-        
-        Debug.Log("<color=cyan>[SistemaGlobal] Jogo Salvo 100% no arquivo JSON (Slot " + slotAtual + ")</color>");
+
+        PersistenciaManager.Instance.SalvarTudo(true);
+
+        Debug.Log($"<color=cyan>[SAVE SUCCESS] Slot: {slotAtual} | Cena: {nomeCena}</color>");
     }
 
     public void CarregarJogo(int slot)
     {
-        slotAtual = slot;
+        sistemaPronto = false;
+        DefinirSlot(slot);
+
+        if (PersistenciaManager.Instance == null)
+        {
+            Debug.LogError("[SistemaGlobal] Não existe PersistenciaManager para carregar o jogo.");
+            return;
+        }
 
         if (ExisteSave(slot))
         {
-            // Força a limpeza da RAM pra ler o arquivo certinho
-            if(PersistenciaManager.Instance) PersistenciaManager.Instance.LimparDicionario(); 
-            
+            PersistenciaManager.Instance.LimparDicionario();
+            PersistenciaManager.Instance.CarregarDoDisco(slot);
+
             EstadoGlobal.CarregarDoSlot(slot);
-            deveCarregarPosicaoAoIniciar = true; // ATIVA O TELEPORTE
-            
+
+            deveCarregarPosicaoAoIniciar = true;
+            acabouDeCarregar = true;
+
             string cenaParaCarregar = PersistenciaManager.Instance.ObterString("Slot_" + slot + "_Cena");
-            if (string.IsNullOrEmpty(cenaParaCarregar)) cenaParaCarregar = nomeCenaPadrao;
-            
+
+            if (string.IsNullOrEmpty(cenaParaCarregar))
+                cenaParaCarregar = nomeCenaPadrao;
+
+            Debug.Log($"<color=green>[LOAD] Slot {slot} carregando cena {cenaParaCarregar}</color>");
+
             SceneManager.LoadScene(cenaParaCarregar);
         }
         else
         {
             EstadoGlobal.ResetarTudo();
-            if(PersistenciaManager.Instance) PersistenciaManager.Instance.LimparDicionario();
-            
-            deveCarregarPosicaoAoIniciar = false; // NÃO TELEPORTA (Novo Jogo)
-            
-            if (!string.IsNullOrEmpty(nomeCenaPadrao))
-                SceneManager.LoadScene(nomeCenaPadrao);
-            else
-                Debug.LogError("ERRO: Nome da cena padrão vazio no SistemaGlobal!");
+
+            PersistenciaManager.Instance.LimparDicionario();
+            PersistenciaManager.Instance.IniciarNovoJogo(slot);
+            PersistenciaManager.Instance.SalvarString("Slot_" + slot + "_Cena", nomeCenaPadrao);
+            PersistenciaManager.Instance.SalvarTudo(true);
+
+            deveCarregarPosicaoAoIniciar = false;
+            acabouDeCarregar = false;
+
+            SceneManager.LoadScene(nomeCenaPadrao);
         }
     }
 
     public void ApagarSave(int slot)
     {
-        // Deleta os arquivos diretos do HD! Sem laço de repetição escroto.
-        string caminho = Path.Combine(Application.persistentDataPath, "Saves", $"Save_Slot_{slot}.json");
-        string caminhoBak = caminho + ".bak";
+        string pasta = Path.Combine(Application.persistentDataPath, "Saves");
+        string caminho = Path.Combine(pasta, $"Save_Slot_{slot}.json");
+        string backup = caminho + ".bak";
+        string temp = caminho + ".tmp";
 
         if (File.Exists(caminho)) File.Delete(caminho);
-        if (File.Exists(caminhoBak)) File.Delete(caminhoBak);
+        if (File.Exists(backup)) File.Delete(backup);
+        if (File.Exists(temp)) File.Delete(temp);
 
         EstadoGlobal.ResetarTudo();
-        
-        // Se apagou o save que tava jogando, limpa a memória
-        if (slotAtual == slot && PersistenciaManager.Instance != null)
+
+        if (slotAtual == slot)
         {
-            PersistenciaManager.Instance.LimparDicionario();
+            slotFoiDefinido = false;
+            sistemaPronto = false;
+            slotAtual = -1;
+            deveCarregarPosicaoAoIniciar = false;
+            acabouDeCarregar = false;
+
+            if (PersistenciaManager.Instance != null)
+                PersistenciaManager.Instance.LimparDicionario();
         }
 
-        Debug.Log($"[SistemaGlobal] Save do Slot {slot} pulverizado do HD.");
+        Debug.Log($"[SistemaGlobal] Save do slot {slot} apagado.");
     }
 
-    public bool ExisteSave(int slot) 
-    { 
-        // Vê fisicamente se o arquivo tá lá
+    public bool ExisteSave(int slot)
+    {
         string caminho = Path.Combine(Application.persistentDataPath, "Saves", $"Save_Slot_{slot}.json");
-        return File.Exists(caminho); 
-    }
-
-    public string GetDataSave(int slot) 
-    { 
-        // Em vez de salvar a data num texto e dar trabalho pra ler, eu puxo a data de modificação real do arquivo pelo Windows!
-        string caminho = Path.Combine(Application.persistentDataPath, "Saves", $"Save_Slot_{slot}.json");
-        if (File.Exists(caminho))
-        {
-            return File.GetLastWriteTime(caminho).ToString("dd/MM HH:mm");
-        }
-        return "Vazio";
+        return File.Exists(caminho);
     }
 }

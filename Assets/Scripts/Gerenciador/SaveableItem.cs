@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class SaveableItem : MonoBehaviour
@@ -8,58 +9,107 @@ public class SaveableItem : MonoBehaviour
 
     public static Dictionary<string, SaveableItem> registroGlobal = new Dictionary<string, SaveableItem>();
 
+    private bool estadoAplicado = false;
+
     void Awake()
     {
         if (string.IsNullOrEmpty(uniqueID))
         {
-            Debug.LogError($"[ERRO DE SAVE] O objeto {gameObject.name} tá sem ID!");
+            Debug.LogError($"[ERRO DE SAVE] O objeto {gameObject.name} está sem ID.");
             return;
         }
 
-        if (registroGlobal.ContainsKey(uniqueID) && registroGlobal[uniqueID] != this)
-        {
-            Debug.LogError($"<color=red>[ERRO FATAL]</color> ID DUPLICADO: '{uniqueID}' em '{gameObject.name}'.");
-        }
-        else
-        {
-            registroGlobal[uniqueID] = this;
-        }
+        RegistrarNoGlobal();
+    }
+
+    void OnEnable()
+    {
+        RegistrarNoGlobal();
     }
 
     void Start()
     {
-        AplicarEstadoDoSave();
+        StartCoroutine(AplicarEstadoSeguro());
     }
 
-    void AplicarEstadoDoSave()
+    private void RegistrarNoGlobal()
     {
-        if (PersistenciaManager.Instance != null && PersistenciaManager.Instance.TemEstadoSalvo(uniqueID))
+        if (string.IsNullOrEmpty(uniqueID)) return;
+
+        if (registroGlobal.ContainsKey(uniqueID))
         {
-            bool taAtivo = PersistenciaManager.Instance.ObterEstado(uniqueID, gameObject.activeSelf);
-            
-            if (gameObject.activeSelf != taAtivo) 
+            if (registroGlobal[uniqueID] == null)
             {
-                gameObject.SetActive(taAtivo);
+                registroGlobal[uniqueID] = this;
+                return;
             }
 
-            if (taAtivo) 
+            if (registroGlobal[uniqueID] != this)
             {
-                PersistenciaManager.Instance.CarregarTransform(uniqueID, transform);
-                Physics.SyncTransforms(); 
+                Debug.LogError($"[SAVE] ID DUPLICADO REAL: '{uniqueID}' em '{gameObject.name}'. O save desse objeto pode conflitar.");
+                registroGlobal[uniqueID] = this;
             }
         }
+        else
+        {
+            registroGlobal.Add(uniqueID, this);
+        }
+    }
+
+    IEnumerator AplicarEstadoSeguro()
+    {
+        if (estadoAplicado) yield break;
+
+        yield return new WaitUntil(() => PersistenciaManager.Instance != null);
+        yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+        yield return null;
+
+        if (string.IsNullOrEmpty(uniqueID)) yield break;
+
+        if (PersistenciaManager.Instance.TemEstadoSalvo(uniqueID))
+        {
+            bool estadoAtivoSalvo = PersistenciaManager.Instance.ObterEstado(uniqueID, gameObject.activeSelf);
+
+            if (estadoAtivoSalvo)
+            {
+                PersistenciaManager.Instance.CarregarTransform(uniqueID, transform);
+                Physics.SyncTransforms();
+
+                if (!gameObject.activeSelf)
+                    gameObject.SetActive(true);
+            }
+            else
+            {
+                PersistenciaManager.Instance.CarregarTransform(uniqueID, transform);
+                Physics.SyncTransforms();
+
+                if (gameObject.activeSelf)
+                    gameObject.SetActive(false);
+            }
+        }
+
+        estadoAplicado = true;
     }
 
     void OnDestroy()
     {
-        if (registroGlobal.ContainsKey(uniqueID) && registroGlobal[uniqueID] == this)
+        if (!string.IsNullOrEmpty(uniqueID) &&
+            registroGlobal.ContainsKey(uniqueID) &&
+            registroGlobal[uniqueID] == this)
         {
             registroGlobal.Remove(uniqueID);
         }
     }
 
     [ContextMenu("Gerar ID Único")]
-    private void GenerateID() { uniqueID = System.Guid.NewGuid().ToString().ToUpper(); }
+    private void GenerateID()
+    {
+        uniqueID = System.Guid.NewGuid().ToString().ToUpper();
+    }
 
-    private void OnValidate() { if (string.IsNullOrEmpty(uniqueID)) GenerateID(); }
+    private void OnValidate()
+    {
+        if (string.IsNullOrEmpty(uniqueID))
+            GenerateID();
+    }
 }

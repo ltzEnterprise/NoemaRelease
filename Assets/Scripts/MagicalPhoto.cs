@@ -3,6 +3,10 @@ using System.Collections;
 
 public class MagicalPhoto : MonoBehaviour
 {
+    [Header("--- HORÁRIO NECESSÁRIO ---")]
+    [Tooltip("Em qual momento do dia essa foto específica tem poder?")]
+    public DayNightCycle.TimeState horarioNecessario = DayNightCycle.TimeState.InitialDay;
+
     [Header("--- PHOTO ANIMATION (HAND) ---")]
     public Vector3 restingPosition;
     public Vector3 restingRotation;
@@ -25,6 +29,8 @@ public class MagicalPhoto : MonoBehaviour
     public bool hideInsteadOfReveal = false; 
     public AudioSource audioSource;
     public AudioClip revealSound;
+    [Tooltip("Som que vai tocar se o jogador clicar na hora errada do dia.")]
+    public AudioClip erroHorarioSound; // 🔥 VARIÁVEL NOVA AQUI
 
     [Header("--- UI ---")]
     [Tooltip("Coloque aqui o texto que avisa o jogador para clicar quando estiver no ângulo certo.")]
@@ -34,21 +40,17 @@ public class MagicalPhoto : MonoBehaviour
     private bool alreadyUsed = false;
 
     void Start() {
-        // Garante que o texto de dica comece desligado
         if (textoDicaMagica) textoDicaMagica.SetActive(false);
 
-        // Verifica no save se a mágica já foi feita
         bool jaResolvido = false;
         if (PersistenciaManager.Instance != null && objectToReveal != null) {
             jaResolvido = PersistenciaManager.Instance.ObterEstado(objectToReveal.name);
         }
 
         if (jaResolvido) {
-            // Já usou no passado! Aplica o resultado final e desativa a foto da mão para sempre.
             if (objectToReveal) objectToReveal.SetActive(hideInsteadOfReveal ? false : true);
             gameObject.SetActive(false); 
         } else {
-            // Ainda não usou. Prepara o objeto no estado inicial e deixa a foto pronta para uso.
             if (objectToReveal) objectToReveal.SetActive(hideInsteadOfReveal ? true : false);
         }
     }
@@ -70,8 +72,10 @@ public class MagicalPhoto : MonoBehaviour
         // --- SISTEMA DA DICA NA TELA ---
         bool noPontoCerto = false;
         
-        // Só verifica a distância/ângulo se o player estiver de fato mirando
-        if (isAiming && idealPoint != null && Camera.main != null)
+        // 🔥 VERIFICA SE ESTÁ NA HORA CERTA DO DIA
+        bool horarioCerto = (DayNightCycle.Instance != null && DayNightCycle.Instance.currentState == horarioNecessario);
+        
+        if (isAiming && idealPoint != null && Camera.main != null && horarioCerto)
         {
             float dist = Vector3.Distance(Camera.main.transform.position, idealPoint.position);
             float angle = Quaternion.Angle(Camera.main.transform.rotation, idealPoint.rotation);
@@ -82,21 +86,27 @@ public class MagicalPhoto : MonoBehaviour
             }
         }
 
-        // Liga a UI se estiver perfeito, desliga se sair do foco ou soltar o botão de mirar
         if (textoDicaMagica) textoDicaMagica.SetActive(noPontoCerto);
 
-        // --- TENTA REVELAR O OBJETO ---
         if (isAiming && Input.GetMouseButtonDown(0)) TryRevealObject();
     }
 
     void TryRevealObject() {
+        // 🔥 TRAVA DE SEGURANÇA COM ÁUDIO DE ERRO
+        bool horarioCerto = (DayNightCycle.Instance != null && DayNightCycle.Instance.currentState == horarioNecessario);
+        if (!horarioCerto) 
+        {
+            // Se tentou clicar na hora errada, toca o som e cancela a função
+            if (audioSource && erroHorarioSound) audioSource.PlayOneShot(erroHorarioSound);
+            return;
+        }
+
         if (idealPoint == null || Camera.main == null) return;
         float dist = Vector3.Distance(Camera.main.transform.position, idealPoint.position);
         float angle = Quaternion.Angle(Camera.main.transform.rotation, idealPoint.rotation);
 
         if (dist <= maxDistance && angle <= maxAngle) 
         {
-            // Apaga a UI de dica imediatamente ao clicar
             if (textoDicaMagica) textoDicaMagica.SetActive(false); 
             StartCoroutine(SequenciaVitoria());
         }
@@ -109,31 +119,26 @@ public class MagicalPhoto : MonoBehaviour
     IEnumerator SequenciaVitoria() {
         alreadyUsed = true;
         
-        // Aplica a mágica invertendo o estado dependendo da caixinha
         if (objectToReveal) objectToReveal.SetActive(hideInsteadOfReveal ? false : true);
         if (audioSource && revealSound) audioSource.PlayOneShot(revealSound);
 
-        // REGISTRA NO LINK DO MANAGER (Gravamos 'true' para dizer que a foto já foi ativada neste objeto)
         if (PersistenciaManager.Instance != null && objectToReveal != null) {
             PersistenciaManager.Instance.RegistrarEstado(objectToReveal.name, true);
         }
 
-        // Animação da foto saindo da tela E ENCOLHENDO pra não bugar na câmera
         float t = 0;
         Vector3 currentPos = transform.localPosition;
         Vector3 currentScale = transform.localScale;
         
         while (t < 1f) {
-            t += Time.deltaTime * 6f; // Acelerei um tiquinho pra sair do caminho mais rápido
+            t += Time.deltaTime * 6f; 
             transform.localPosition = Vector3.Lerp(currentPos, currentPos + (Vector3.down * 2f), t);
-            transform.localScale = Vector3.Lerp(currentScale, Vector3.zero, t); // Aqui é a mágica que evita o bug
+            transform.localScale = Vector3.Lerp(currentScale, Vector3.zero, t); 
             yield return null;
         }
 
-        // SALVA DE VERDADE SÓ DEPOIS DA CENA
         if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
         
-        // FOTO SOME DA MÃO DE VEZ
         gameObject.SetActive(false);
     }
 }

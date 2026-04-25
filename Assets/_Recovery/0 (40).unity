@@ -47759,7 +47759,7 @@ MonoBehaviour:
   - nomeArea: CasaBranca
     audioClip: {fileID: 8300000, guid: 3e8bd3c38547a2a4d856d95c01f9f58e, type: 3}
     multiplicadorVolume: 2
-    tempoContinuarTocando: 0
+    tempoContinuarTocando: 3
     fadeOutNormal: 5
     intervaloSemMusica: 2
     fadeInTime: 4
@@ -192500,10 +192500,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SistemaGlobal
   nomeCenaPadrao: DreamSceane
   slotAtual: 1
-  slotFoiDefinido: 0
-  sistemaPronto: 0
   deveCarregarPosicaoAoIniciar: 0
-  acabouDeCarregar: 0
 --- !u!1 &2144562376
 GameObject:
   m_ObjectHideFlags: 0
@@ -231834,10 +231831,6 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 572407317}
     - target: {fileID: 510166124333310611, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
-      propertyPath: erroHorarioSound
-      value: 
-      objectReference: {fileID: 8300000, guid: 6badc82930e38c34891f46e1f01f63d3, type: 3}
-    - target: {fileID: 510166124333310611, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
       propertyPath: horarioNecessario
       value: 2
       objectReference: {fileID: 0}
@@ -231862,10 +231855,6 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 572407317}
     - target: {fileID: 2890737333222754586, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
-      propertyPath: erroHorarioSound
-      value: 
-      objectReference: {fileID: 8300000, guid: 6badc82930e38c34891f46e1f01f63d3, type: 3}
-    - target: {fileID: 2890737333222754586, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
       propertyPath: horarioNecessario
       value: 1
       objectReference: {fileID: 0}
@@ -231881,10 +231870,6 @@ PrefabInstance:
       propertyPath: textoDicaMagica
       value: 
       objectReference: {fileID: 572407317}
-    - target: {fileID: 2997595949658379766, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
-      propertyPath: erroHorarioSound
-      value: 
-      objectReference: {fileID: 8300000, guid: 6badc82930e38c34891f46e1f01f63d3, type: 3}
     - target: {fileID: 2997595949658379766, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
       propertyPath: horarioNecessario
       value: 1
@@ -231965,10 +231950,6 @@ PrefabInstance:
       propertyPath: textoDicaMagica
       value: 
       objectReference: {fileID: 572407317}
-    - target: {fileID: 8929806650855316938, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
-      propertyPath: erroHorarioSound
-      value: 
-      objectReference: {fileID: 8300000, guid: 6badc82930e38c34891f46e1f01f63d3, type: 3}
     - target: {fileID: 8929806650855316938, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
       propertyPath: horarioNecessario
       value: 1
@@ -234158,8 +234139,6 @@ MonoBehaviour:
   volumeMaximoMusica: 1
   tempoDeFade: 1.5
   jogoPausado: 0
-  slotConfirmacao: -1
-  slotParaRestaurar: -1
 --- !u!1 &9002563510699424822
 GameObject:
   m_ObjectHideFlags: 0

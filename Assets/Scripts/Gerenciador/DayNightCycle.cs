@@ -64,7 +64,8 @@ public class DayNightCycle : MonoBehaviour
     [Header("--- GAMEPLAY ---")]
     public bool isNight = false; 
     
-    private TimeState currentState;
+    // 🔥 Deixei público para as fotos mágicas poderem ler o horário atual
+    public TimeState currentState;
 
     void Awake() 
     { 
@@ -80,10 +81,8 @@ public class DayNightCycle : MonoBehaviour
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
 
-        // 🔥 CARREGA O ESTADO DO CÉU DO SAVE
         if (!Application.isEditor && PersistenciaManager.Instance != null)
         {
-            // Usa uma chave global fixa pra não precisar de uniqueID num script único
             if (PersistenciaManager.Instance.ObterInt("Global_TimeState") != 0 || PersistenciaManager.Instance.TemEstadoSalvo("Global_TimeState_Saved")) 
             {
                 startWith = (TimeState)PersistenciaManager.Instance.ObterInt("Global_TimeState");
@@ -98,10 +97,9 @@ public class DayNightCycle : MonoBehaviour
         currentState = newState;
         ApplyProfile(newState);
 
-        // 🔥 SALVA O NOVO HORÁRIO SEMPRE QUE MUDAR
         if (!Application.isEditor && PersistenciaManager.Instance != null)
         {
-            PersistenciaManager.Instance.RegistrarEstado("Global_TimeState_Saved", true); // Flag de segurança
+            PersistenciaManager.Instance.RegistrarEstado("Global_TimeState_Saved", true); 
             PersistenciaManager.Instance.SalvarInt("Global_TimeState", (int)newState);
             PersistenciaManager.Instance.SalvarTudo();
         }

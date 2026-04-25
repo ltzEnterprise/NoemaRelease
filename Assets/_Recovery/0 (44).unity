@@ -47759,7 +47759,7 @@ MonoBehaviour:
   - nomeArea: CasaBranca
     audioClip: {fileID: 8300000, guid: 3e8bd3c38547a2a4d856d95c01f9f58e, type: 3}
     multiplicadorVolume: 2
-    tempoContinuarTocando: 0
+    tempoContinuarTocando: 3
     fadeOutNormal: 5
     intervaloSemMusica: 2
     fadeInTime: 4
@@ -192500,10 +192500,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SistemaGlobal
   nomeCenaPadrao: DreamSceane
   slotAtual: 1
-  slotFoiDefinido: 0
-  sistemaPronto: 0
   deveCarregarPosicaoAoIniciar: 0
-  acabouDeCarregar: 0
 --- !u!1 &2144562376
 GameObject:
   m_ObjectHideFlags: 0
@@ -231947,7 +231944,7 @@ PrefabInstance:
       objectReference: {fileID: 1028264213}
     - target: {fileID: 6677624972235882159, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
       propertyPath: comecarComTodosOsItens
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7039684783472384744, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
       propertyPath: m_Name
@@ -234158,8 +234155,6 @@ MonoBehaviour:
   volumeMaximoMusica: 1
   tempoDeFade: 1.5
   jogoPausado: 0
-  slotConfirmacao: -1
-  slotParaRestaurar: -1
 --- !u!1 &9002563510699424822
 GameObject:
   m_ObjectHideFlags: 0
