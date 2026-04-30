@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class RotationPuzzleManager : MonoBehaviour
@@ -28,13 +29,15 @@ public class RotationPuzzleManager : MonoBehaviour
     private Dictionary<Transform, Quaternion> rotacoesCorretas = new Dictionary<Transform, Quaternion>();
 
     private bool verificarVitoriaPendente = false;
+    private bool inicializado = false;
 
     void Awake()
     {
         if (string.IsNullOrEmpty(uniqueID)) 
-            Debug.LogError($"[Puzzle] O puzzle {gameObject.name} tá sem UniqueID!");
+            Debug.LogError($"[Puzzle] O puzzle {gameObject.name} está sem UniqueID.");
 
-        if (finalQuadToPhotograph) finalQuadToPhotograph.SetActive(false);
+        if (finalQuadToPhotograph)
+            finalQuadToPhotograph.SetActive(false);
 
         foreach (Transform piece in puzzlePieces)
         {
@@ -43,7 +46,10 @@ public class RotationPuzzleManager : MonoBehaviour
                 rotacoesCorretas[piece] = piece.localRotation;
                 
                 RotatingPiece script = piece.gameObject.GetComponent<RotatingPiece>();
-                if (script == null) script = piece.gameObject.AddComponent<RotatingPiece>();
+
+                if (script == null)
+                    script = piece.gameObject.AddComponent<RotatingPiece>();
+
                 script.Setup(this);
             }
         }
@@ -51,7 +57,16 @@ public class RotationPuzzleManager : MonoBehaviour
 
     void Start()
     {
+        StartCoroutine(InicializarSeguro());
+    }
+
+    IEnumerator InicializarSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
         LoadSaveData();
+        inicializado = true;
     }
 
     void LoadSaveData()
@@ -65,15 +80,19 @@ public class RotationPuzzleManager : MonoBehaviour
         if (isPhotoTaken)
         {
             HideAllPieces();
+
+            if (finalQuadToPhotograph)
+                finalQuadToPhotograph.SetActive(false);
         }
         else if (isPuzzleSolved)
         {
             HideAllPieces();
-            if (finalQuadToPhotograph) finalQuadToPhotograph.SetActive(true);
+
+            if (finalQuadToPhotograph)
+                finalQuadToPhotograph.SetActive(true);
         }
         else
         {
-            // Se não ganhou ainda, aplica as rotações manuais que você escolheu
             ApplyManualTurns();
         }
     }
@@ -83,7 +102,9 @@ public class RotationPuzzleManager : MonoBehaviour
         for (int i = 0; i < puzzlePieces.Count; i++)
         {
             if (puzzlePieces[i] == null) continue;
+
             int turnos = 0;
+
             if (manualStartingTurns != null && i < manualStartingTurns.Length)
                 turnos = manualStartingTurns[i];
             
@@ -93,14 +114,14 @@ public class RotationPuzzleManager : MonoBehaviour
 
     void Update()
     {
-        // Só roda a checagem SEGURO aqui, pra não deletar as peças durante o giro delas
+        if (!inicializado) return;
+
         if (verificarVitoriaPendente)
         {
             verificarVitoriaPendente = false;
             ProcessarVitoriaSegura();
         }
 
-        // Fica vigiando o quad da foto
         if (isPuzzleSolved && !isPhotoTaken && finalQuadToPhotograph != null && !finalQuadToPhotograph.activeInHierarchy)
         {
             RewardNewPhoto();
@@ -109,12 +130,14 @@ public class RotationPuzzleManager : MonoBehaviour
 
     public void AvisarQueGiroTerminou()
     {
+        if (!inicializado) return;
         verificarVitoriaPendente = true;
     }
 
     public void PlayTurnSound()
     {
-        if (audioSource && pieceTurnSound) audioSource.PlayOneShot(pieceTurnSound);
+        if (audioSource && pieceTurnSound)
+            audioSource.PlayOneShot(pieceTurnSound);
     }
 
     private void ProcessarVitoriaSegura()
@@ -122,8 +145,12 @@ public class RotationPuzzleManager : MonoBehaviour
         if (isPuzzleSolved) return;
 
         bool allCorrect = true;
+
         foreach (Transform piece in puzzlePieces)
         {
+            if (piece == null) continue;
+            if (!rotacoesCorretas.ContainsKey(piece)) continue;
+
             if (Quaternion.Angle(piece.localRotation, rotacoesCorretas[piece]) > 1f)
             {
                 allCorrect = false;
@@ -131,51 +158,75 @@ public class RotationPuzzleManager : MonoBehaviour
             }
         }
 
-        if (allCorrect) WinPuzzle();
+        if (allCorrect)
+            WinPuzzle();
     }
 
     void WinPuzzle()
     {
         isPuzzleSolved = true;
-        if (audioSource && puzzleSolvedSound) audioSource.PlayOneShot(puzzleSolvedSound);
+
+        if (audioSource && puzzleSolvedSound)
+            audioSource.PlayOneShot(puzzleSolvedSound);
         
         HideAllPieces(); 
-        if (finalQuadToPhotograph) finalQuadToPhotograph.SetActive(true);
 
-        // MANDA O LINK PRO SEU SCRIPT DE SAVE
+        if (finalQuadToPhotograph)
+            finalQuadToPhotograph.SetActive(true);
+
         if (PersistenciaManager.Instance != null && !Application.isEditor)
         {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Solved", true);
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgressoSeguro();
         }
     }
 
     void RewardNewPhoto()
     {
         isPhotoTaken = true;
+
         if (InventoryManager.Instance != null)
         {
             InventoryManager.Instance.ReceberItem(newPhotoID);
             InventoryManager.Instance.TentarEquipar(newPhotoID);
         }
+
         HideAllPieces();
 
-        // MANDA O LINK PRO SEU SCRIPT DE SAVE
+        if (finalQuadToPhotograph)
+            finalQuadToPhotograph.SetActive(false);
+
         if (PersistenciaManager.Instance != null && !Application.isEditor)
         {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_PhotoTaken", true);
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgressoSeguro();
         }
     }
 
     void HideAllPieces()
     {
         foreach (Transform piece in puzzlePieces)
-            if (piece != null) piece.gameObject.SetActive(false);
+        {
+            if (piece != null)
+                piece.gameObject.SetActive(false);
+        }
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }
 
 // =========================================================================================
+
 public class RotatingPiece : MonoBehaviour
 {
     private RotationPuzzleManager manager;
@@ -190,6 +241,7 @@ public class RotatingPiece : MonoBehaviour
     }
 
     public void AoOlhar() { }
+
     public void AoSair() { }
 
     public void Interagir()
@@ -198,26 +250,33 @@ public class RotatingPiece : MonoBehaviour
         
         targetRotation = transform.localRotation * Quaternion.Euler(manager.rotationAxis * 90f);
         isTurning = true;
+
         manager.PlayTurnSound();
 
-        if (meuColisor != null) meuColisor.enabled = false;
+        if (meuColisor != null)
+            meuColisor.enabled = false;
     }
 
     void Update()
     {
         if (isTurning)
         {
-            transform.localRotation = Quaternion.RotateTowards(transform.localRotation, targetRotation, 450f * Time.unscaledDeltaTime);
+            transform.localRotation = Quaternion.RotateTowards(
+                transform.localRotation,
+                targetRotation,
+                450f * Time.unscaledDeltaTime
+            );
             
             if (Quaternion.Angle(transform.localRotation, targetRotation) < 0.1f)
             {
                 transform.localRotation = targetRotation;
                 isTurning = false;
                 
-                if (meuColisor != null) meuColisor.enabled = true;
+                if (meuColisor != null)
+                    meuColisor.enabled = true;
                 
-                // DELEGA A CHECAGEM PRO MANAGER (Evita o maldito crash de memória)
-                manager.AvisarQueGiroTerminou();
+                if (manager != null)
+                    manager.AvisarQueGiroTerminou();
             }
         }
     }

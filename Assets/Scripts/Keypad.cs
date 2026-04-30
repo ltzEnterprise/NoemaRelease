@@ -13,7 +13,7 @@ public class Keypad : MonoBehaviour
 
     [Header("--- SAVE SYSTEM (TRAVA) ---")]
     [Tooltip("Se ativado, salva o jogo no HD assim que pegar a runa. DEIXE DESMARCADO dentro de cenas instanciadas para evitar softlock!")]
-    public bool forcarSaveNoHD = false; // 🔥 CAIXINHA NOVA AQUI
+    public bool forcarSaveNoHD = false;
 
     [Header("--- SENHA EXTRA (Opcional) ---")]
     public string senhaExtra = ""; 
@@ -50,6 +50,8 @@ public class Keypad : MonoBehaviour
     private Coroutine rotinaReset;
     private bool aguardandoLimpeza = false;
     private bool estaOlhando = false; 
+    private bool inicializado = false;
+    private bool aguardandoSoltarE = false;
 
     private bool TaBloqueado()
     {
@@ -69,11 +71,21 @@ public class Keypad : MonoBehaviour
         if(painelAvisoRuna) painelAvisoRuna.SetActive(false);
         if(quadPainelExtra) quadPainelExtra.SetActive(false);
 
-        AtualizarDisplay(); 
+        StartCoroutine(InicializarSeguro());
+    }
+
+    IEnumerator InicializarSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
+        AtualizarDisplay();
+        inicializado = true;
     }
 
     public void AoOlhar() 
     { 
+        if (!inicializado) return;
         estaOlhando = true;
         if (TaBloqueado()) return; 
 
@@ -90,6 +102,7 @@ public class Keypad : MonoBehaviour
 
     public void Interagir()
     {
+        if (!inicializado) return;
         if (TaBloqueado()) return; 
         if (!jogadorUsando) EntrarModoKeypad();
     }
@@ -108,6 +121,14 @@ public class Keypad : MonoBehaviour
         }
 
         if (!jogadorUsando) return;
+
+        if (aguardandoSoltarE)
+        {
+            if (!Input.GetKey(KeyCode.E))
+                aguardandoSoltarE = false;
+
+            return;
+        }
 
         if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape))
         {
@@ -146,11 +167,14 @@ public class Keypad : MonoBehaviour
     void EntrarModoKeypad()
     {
         jogadorUsando = true;
+        aguardandoSoltarE = true;
+
         if (textoInteragirProprio) textoInteragirProprio.SetActive(false);
 
         if (pontoDeRetorno != null && FPS_Master.Instance != null)
         {
             FPS_Master.Instance.Teleportar(pontoDeRetorno.position);
+            Physics.SyncTransforms();
         }
 
         if (FPS_Master.Instance != null)
@@ -178,6 +202,7 @@ public class Keypad : MonoBehaviour
     void SairModoKeypad()
     {
         jogadorUsando = false;
+        aguardandoSoltarE = false;
         
         if(cameraFixaKeypad) 
         {
@@ -266,7 +291,6 @@ public class Keypad : MonoBehaviour
 
             if (darRunaAoAcertar && InventarioRunas.Instance != null)
             {
-                // 🔥 LÓGICA CONDICIONAL 🔥
                 if (forcarSaveNoHD)
                     InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
                 else
@@ -318,6 +342,18 @@ public class Keypad : MonoBehaviour
         
         if (rotinaReset != null) StopCoroutine(rotinaReset);
         rotinaReset = StartCoroutine(ResetDisplayDelay());
+    }
+
+    void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 
     IEnumerator DelaySaida() 

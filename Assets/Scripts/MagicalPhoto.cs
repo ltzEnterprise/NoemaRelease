@@ -4,7 +4,6 @@ using System.Collections;
 public class MagicalPhoto : MonoBehaviour
 {
     [Header("--- HORÁRIO NECESSÁRIO ---")]
-    [Tooltip("Em qual momento do dia essa foto específica tem poder?")]
     public DayNightCycle.TimeState horarioNecessario = DayNightCycle.TimeState.InitialDay;
 
     [Header("--- PHOTO ANIMATION (HAND) ---")]
@@ -25,37 +24,63 @@ public class MagicalPhoto : MonoBehaviour
 
     [Header("--- THE MAGIC ---")]
     public GameObject objectToReveal;
-    [Tooltip("Se marcado, a mágica faz o objeto SUMIR ao invés de aparecer.")]
     public bool hideInsteadOfReveal = false; 
     public AudioSource audioSource;
     public AudioClip revealSound;
-    [Tooltip("Som que vai tocar se o jogador clicar na hora errada do dia.")]
-    public AudioClip erroHorarioSound; // 🔥 VARIÁVEL NOVA AQUI
+    public AudioClip erroHorarioSound;
+
+    [Header("--- CONSUMIR ITEM DO INVENTÁRIO ---")]
+    public bool consumirFotoAoUsar = true;
+    public int idDaFotoNoInventario = 0;
 
     [Header("--- UI ---")]
-    [Tooltip("Coloque aqui o texto que avisa o jogador para clicar quando estiver no ângulo certo.")]
     public GameObject textoDicaMagica;
 
     private bool isAiming = false;
     private bool alreadyUsed = false;
+    private bool inicializado = false;
 
-    void Start() {
+    void Start()
+    {
         if (textoDicaMagica) textoDicaMagica.SetActive(false);
-
-        bool jaResolvido = false;
-        if (PersistenciaManager.Instance != null && objectToReveal != null) {
-            jaResolvido = PersistenciaManager.Instance.ObterEstado(objectToReveal.name);
-        }
-
-        if (jaResolvido) {
-            if (objectToReveal) objectToReveal.SetActive(hideInsteadOfReveal ? false : true);
-            gameObject.SetActive(false); 
-        } else {
-            if (objectToReveal) objectToReveal.SetActive(hideInsteadOfReveal ? true : false);
-        }
+        StartCoroutine(CarregarEstadoSeguro());
     }
 
-    void Update() {
+    IEnumerator CarregarEstadoSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
+        bool jaResolvido = false;
+
+        if (PersistenciaManager.Instance != null && objectToReveal != null)
+            jaResolvido = PersistenciaManager.Instance.ObterEstado(objectToReveal.name, false);
+
+        if (jaResolvido)
+        {
+            if (objectToReveal)
+                objectToReveal.SetActive(hideInsteadOfReveal ? false : true);
+
+            alreadyUsed = true;
+
+            if (consumirFotoAoUsar && InventoryManager.Instance != null)
+                InventoryManager.Instance.ConsumirItem(idDaFotoNoInventario);
+
+            gameObject.SetActive(false);
+            yield break;
+        }
+        else
+        {
+            if (objectToReveal)
+                objectToReveal.SetActive(hideInsteadOfReveal ? true : false);
+        }
+
+        inicializado = true;
+    }
+
+    void Update()
+    {
+        if (!inicializado) return;
         if (alreadyUsed) return;
 
         if (Input.GetMouseButtonDown(1)) isAiming = true;
@@ -69,76 +94,90 @@ public class MagicalPhoto : MonoBehaviour
         transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRot, Time.deltaTime * animationSpeed);
         transform.localScale = Vector3.Lerp(transform.localScale, targetScale, Time.deltaTime * animationSpeed);
 
-        // --- SISTEMA DA DICA NA TELA ---
         bool noPontoCerto = false;
-        
-        // 🔥 VERIFICA SE ESTÁ NA HORA CERTA DO DIA
-        bool horarioCerto = (DayNightCycle.Instance != null && DayNightCycle.Instance.currentState == horarioNecessario);
+        bool horarioCerto = DayNightCycle.Instance != null && DayNightCycle.Instance.currentState == horarioNecessario;
         
         if (isAiming && idealPoint != null && Camera.main != null && horarioCerto)
         {
             float dist = Vector3.Distance(Camera.main.transform.position, idealPoint.position);
             float angle = Quaternion.Angle(Camera.main.transform.rotation, idealPoint.rotation);
-            
-            if (dist <= maxDistance && angle <= maxAngle)
-            {
-                noPontoCerto = true;
-            }
+            noPontoCerto = dist <= maxDistance && angle <= maxAngle;
         }
 
-        if (textoDicaMagica) textoDicaMagica.SetActive(noPontoCerto);
+        if (textoDicaMagica)
+            textoDicaMagica.SetActive(noPontoCerto);
 
-        if (isAiming && Input.GetMouseButtonDown(0)) TryRevealObject();
+        if (isAiming && Input.GetMouseButtonDown(0))
+            TryRevealObject();
     }
 
-    void TryRevealObject() {
-        // 🔥 TRAVA DE SEGURANÇA COM ÁUDIO DE ERRO
-        bool horarioCerto = (DayNightCycle.Instance != null && DayNightCycle.Instance.currentState == horarioNecessario);
+    void TryRevealObject()
+    {
+        bool horarioCerto = DayNightCycle.Instance != null && DayNightCycle.Instance.currentState == horarioNecessario;
+
         if (!horarioCerto) 
         {
-            // Se tentou clicar na hora errada, toca o som e cancela a função
-            if (audioSource && erroHorarioSound) audioSource.PlayOneShot(erroHorarioSound);
+            if (audioSource && erroHorarioSound)
+                audioSource.PlayOneShot(erroHorarioSound);
+
             return;
         }
 
         if (idealPoint == null || Camera.main == null) return;
+
         float dist = Vector3.Distance(Camera.main.transform.position, idealPoint.position);
         float angle = Quaternion.Angle(Camera.main.transform.rotation, idealPoint.rotation);
 
         if (dist <= maxDistance && angle <= maxAngle) 
         {
-            if (textoDicaMagica) textoDicaMagica.SetActive(false); 
+            if (textoDicaMagica)
+                textoDicaMagica.SetActive(false); 
+
             StartCoroutine(SequenciaVitoria());
-        }
-        else 
-        {
-            Debug.Log($"Fora de foco. Dist: {dist:F1} | Ang: {angle:F1}");
         }
     }
 
-    IEnumerator SequenciaVitoria() {
+    IEnumerator SequenciaVitoria()
+    {
         alreadyUsed = true;
         
-        if (objectToReveal) objectToReveal.SetActive(hideInsteadOfReveal ? false : true);
-        if (audioSource && revealSound) audioSource.PlayOneShot(revealSound);
+        if (objectToReveal)
+            objectToReveal.SetActive(hideInsteadOfReveal ? false : true);
 
-        if (PersistenciaManager.Instance != null && objectToReveal != null) {
+        if (audioSource && revealSound)
+            audioSource.PlayOneShot(revealSound);
+
+        if (PersistenciaManager.Instance != null && objectToReveal != null)
             PersistenciaManager.Instance.RegistrarEstado(objectToReveal.name, true);
-        }
+
+        if (consumirFotoAoUsar && InventoryManager.Instance != null)
+            InventoryManager.Instance.ConsumirItem(idDaFotoNoInventario);
 
         float t = 0;
         Vector3 currentPos = transform.localPosition;
         Vector3 currentScale = transform.localScale;
         
-        while (t < 1f) {
+        while (t < 1f)
+        {
             t += Time.deltaTime * 6f; 
             transform.localPosition = Vector3.Lerp(currentPos, currentPos + (Vector3.down * 2f), t);
             transform.localScale = Vector3.Lerp(currentScale, Vector3.zero, t); 
             yield return null;
         }
 
-        if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
-        
+        SalvarProgressoSeguro();
         gameObject.SetActive(false);
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(true);
     }
 }

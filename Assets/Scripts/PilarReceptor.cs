@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class PilarReceptor : MonoBehaviour
@@ -16,44 +17,62 @@ public class PilarReceptor : MonoBehaviour
 
     public bool ativado = false;
 
+    private bool inicializado = false;
+
     void Awake()
     {
-        // 🔥 Limpa pilares mortos da lista caso a cena recarregue
         todosPilares.RemoveAll(item => item == null);
 
-        if (!todosPilares.Contains(this)) todosPilares.Add(this);
+        if (!todosPilares.Contains(this))
+            todosPilares.Add(this);
 
-        if (objetoNoPilar) objetoNoPilar.SetActive(false);
+        if (objetoNoPilar)
+            objetoNoPilar.SetActive(false);
     }
 
     void Start()
     {
+        StartCoroutine(CarregarEstadoSeguro());
+    }
+
+    IEnumerator CarregarEstadoSeguro()
+    {
         if (string.IsNullOrEmpty(uniqueID)) 
         {
-            Debug.LogWarning($"[Pilar] O pilar '{gameObject.name}' tá sem UniqueID configurado!");
-            return;
+            Debug.LogWarning($"[Pilar] O pilar '{gameObject.name}' está sem UniqueID configurado!");
+            inicializado = true;
+            yield break;
         }
 
-        // --- CARREGA O SAVE ---
-        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
+        if (PersistenciaManager.Instance != null)
         {
-            bool estadoSalvo = PersistenciaManager.Instance.ObterEstado(uniqueID);
+            bool estadoSalvo = PersistenciaManager.Instance.ObterEstado(uniqueID, false);
             
             if (estadoSalvo)
             {
                 ativado = true;
-                if (objetoNoPilar) objetoNoPilar.SetActive(true);
+
+                if (objetoNoPilar)
+                    objetoNoPilar.SetActive(true);
             }
         }
+
+        inicializado = true;
+        ChecarCondicaoCutscene();
     }
 
     void OnDestroy()
     {
-        if (todosPilares.Contains(this)) todosPilares.Remove(this);
+        if (todosPilares.Contains(this))
+            todosPilares.Remove(this);
     }
 
     public void AtivarObjeto()
     {
+        if (!inicializado) return;
         if (ativado) return; 
 
         ativado = true;
@@ -61,11 +80,10 @@ public class PilarReceptor : MonoBehaviour
         if (objetoNoPilar) 
             objetoNoPilar.SetActive(true);
 
-        // --- SALVA NO HD NA MESMA HORA ---
-        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgressoSeguro();
         }
 
         ChecarCondicaoCutscene();
@@ -73,21 +91,20 @@ public class PilarReceptor : MonoBehaviour
 
     void ChecarCondicaoCutscene()
     {
-        // 🔥 A MÁGICA: Em vez de contar com variável estática que buga no Load, 
-        // ele só passa o olho em todos os pilares reais da cena e conta.
         int contador = 0;
-        foreach(var pilar in todosPilares)
+
+        foreach (var pilar in todosPilares)
         {
-            if (pilar.ativado) contador++;
+            if (pilar != null && pilar.ativado)
+                contador++;
         }
 
         if (contador >= todosPilares.Count && todosPilares.Count > 0)
         {
             Debug.Log("Todos os pilares ativos! Iniciando Cutscene...");
+
             if (GerenciadorCutscene.Instance != null)
-            {
                 GerenciadorCutscene.Instance.IniciarFinal();
-            }
         }
     }
 
@@ -95,9 +112,23 @@ public class PilarReceptor : MonoBehaviour
     {
         foreach (var p in todosPilares)
         {
-            if (p.idLinkPilar == id) return p;
+            if (p != null && p.idLinkPilar == id)
+                return p;
         }
+
         return null;
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 
     [ContextMenu("Gerar ID Único")]

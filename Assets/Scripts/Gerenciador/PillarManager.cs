@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class PillarManager : MonoBehaviour
 {
@@ -12,9 +13,12 @@ public class PillarManager : MonoBehaviour
     public Transform playerTransform; 
 
     [Header("Configuração da Senha")]
-    [Tooltip("Coloque apenas o TOTAL de pilares. A senha gerada será sempre 1, 2, 3... até esse número.")]
+    [Tooltip("Coloque apenas o TOTAL de pilares. Se ordemCorretaPilares estiver vazia, a senha gerada será sempre 1, 2, 3... até esse número.")]
     public int totalDePilares = 6; 
-    
+
+    [Tooltip("Opcional. Se preencher, essa será a ordem correta dos pilares. Ex: 2, 5, 1, 4, 3, 6. Se deixar vazio, usa 1,2,3...")]
+    public List<int> ordemCorretaPilares = new List<int>();
+
     [Header("--- SISTEMA DE TEXTO (PROGRESSO) ---")]
     [Tooltip("Ordem desse puzzle no mapa (Ex: 1 para o primeiro, 2 para o segundo)")]
     public int ordemDoPuzzle = 1; 
@@ -28,6 +32,7 @@ public class PillarManager : MonoBehaviour
 
     private List<int> inputsDoJogador = new List<int>();
     private bool puzzleConcluido = false;
+    private bool saveCarregado = false;
 
     [Header("Recompensas (Plasma Branco)")]
     public GameObject pastaDePlasmas;
@@ -69,10 +74,19 @@ public class PillarManager : MonoBehaviour
 
         yield return new WaitUntil(() =>
             PersistenciaManager.Instance != null &&
-            PersistenciaManager.Instance.DadosProntosParaUso
+            PersistenciaManager.Instance.DadosProntosParaUso &&
+            !PersistenciaManager.Instance.EstaCarregando
         );
 
+        if (playerTransform == null)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+                playerTransform = player.transform;
+        }
+
         CarregarSave();
+        saveCarregado = true;
 
         yield return StartCoroutine(SetupInicialDoTexto());
     }
@@ -96,10 +110,29 @@ public class PillarManager : MonoBehaviour
         }
     }
 
+    private List<int> ObterOrdemCorreta()
+    {
+        if (ordemCorretaPilares != null && ordemCorretaPilares.Count > 0)
+            return ordemCorretaPilares;
+
+        List<int> ordemPadrao = new List<int>();
+
+        for (int i = 1; i <= totalDePilares; i++)
+            ordemPadrao.Add(i);
+
+        return ordemPadrao;
+    }
+
+    private int ObterTotalSequencia()
+    {
+        List<int> ordem = ObterOrdemCorreta();
+        return ordem != null && ordem.Count > 0 ? ordem.Count : totalDePilares;
+    }
+
     private IEnumerator SetupInicialDoTexto()
     {
         yield return new WaitForEndOfFrame();
-        
+
         int menorOrdemIncompleta = 999;
 
         foreach (var p in todosOsPuzzles) 
@@ -109,7 +142,7 @@ public class PillarManager : MonoBehaviour
                 menorOrdemIncompleta = p.ordemDoPuzzle;
             }
         }
-        
+
         puzzleAtualNaTela = menorOrdemIncompleta;
 
         if (ordemDoPuzzle == puzzleAtualNaTela && !puzzleConcluido)
@@ -123,7 +156,7 @@ public class PillarManager : MonoBehaviour
         if (textoProgresso != null)
         {
             textoProgresso.gameObject.SetActive(true);
-            textoProgresso.text = $"0/{totalDePilares}";
+            textoProgresso.text = $"0/{ObterTotalSequencia()}";
 
             if (canvasGroupDoTexto != null)
                 canvasGroupDoTexto.alpha = 1f;
@@ -147,9 +180,23 @@ public class PillarManager : MonoBehaviour
 
     public void ReceberInteracaoPilar(int numeroDoPilar)
     {
+        if (!saveCarregado) return;
         if (puzzleConcluido) return; 
 
-        int proximoEsperado = inputsDoJogador.Count + 1;
+        List<int> ordem = ObterOrdemCorreta();
+
+        if (ordem == null || ordem.Count == 0)
+            return;
+
+        int indiceEsperado = inputsDoJogador.Count;
+
+        if (indiceEsperado >= ordem.Count)
+        {
+            inputsDoJogador.Clear();
+            indiceEsperado = 0;
+        }
+
+        int proximoEsperado = ordem[indiceEsperado];
 
         if (numeroDoPilar == proximoEsperado)
         {
@@ -159,16 +206,16 @@ public class PillarManager : MonoBehaviour
         {
             inputsDoJogador.Clear();
 
-            if (numeroDoPilar == 1)
-                inputsDoJogador.Add(1);
+            if (numeroDoPilar == ordem[0])
+                inputsDoJogador.Add(numeroDoPilar);
         }
 
         if (ordemDoPuzzle == puzzleAtualNaTela && textoProgresso != null)
         {
-            textoProgresso.text = $"{inputsDoJogador.Count}/{totalDePilares}";
+            textoProgresso.text = $"{inputsDoJogador.Count}/{ordem.Count}";
         }
 
-        if (inputsDoJogador.Count == totalDePilares)
+        if (inputsDoJogador.Count == ordem.Count)
         {
             if (ordemDoPuzzle == puzzleAtualNaTela)
             {
@@ -200,7 +247,7 @@ public class PillarManager : MonoBehaviour
         yield return new WaitForSeconds(2f);
 
         puzzleAtualNaTela++;
-        
+
         foreach (var p in todosOsPuzzles)
         {
             if (p != null && p.ordemDoPuzzle == puzzleAtualNaTela && !p.puzzleConcluido)
@@ -223,7 +270,7 @@ public class PillarManager : MonoBehaviour
 
                 float t = 0f;
                 float metadeDoTempo = tempoTelaPreta / 2f;
-                
+
                 while (t < metadeDoTempo)
                 {
                     t += Time.deltaTime;
@@ -247,7 +294,7 @@ public class PillarManager : MonoBehaviour
 
             if (audioSourceFeedback && somPlasmaAbrindo)
                 audioSourceFeedback.PlayOneShot(somPlasmaAbrindo);
-                
+
             if (pastaDePlasmas != null)
                 pastaDePlasmas.SetActive(false); 
 
@@ -255,7 +302,7 @@ public class PillarManager : MonoBehaviour
             {
                 float t = 0f;
                 float metadeDoTempo = tempoTelaPreta / 2f;
-                
+
                 while (t < metadeDoTempo)
                 {
                     t += Time.deltaTime;
@@ -271,7 +318,7 @@ public class PillarManager : MonoBehaviour
         {
             if (audioSourceFeedback && somPlasmaAbrindo)
                 audioSourceFeedback.PlayOneShot(somPlasmaAbrindo);
-                
+
             if (pastaDePlasmas != null)
                 pastaDePlasmas.SetActive(false); 
         }
@@ -289,9 +336,20 @@ public class PillarManager : MonoBehaviour
                 PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", false);
         }
 
+        if (playerTransform == null)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+                playerTransform = player.transform;
+        }
+
         if (SistemaGlobal.Instance != null && playerTransform != null)
         {
-            SistemaGlobal.Instance.SalvarJogo(playerTransform.position, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            SistemaGlobal.Instance.SalvarJogo(playerTransform.position, SceneManager.GetActiveScene().name);
+        }
+        else if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
         }
         else if (PersistenciaManager.Instance != null)
         {

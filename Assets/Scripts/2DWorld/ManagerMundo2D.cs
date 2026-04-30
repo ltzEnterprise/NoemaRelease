@@ -23,7 +23,14 @@ public class ManagerMundo2D : MonoBehaviour
 
     [Header("Visual")]
     public Image imagemIrisUI; 
-    public float tempoTransicaoVisual = 0.6f; 
+
+    [Header("--- TEMPOS SEPARADOS DA IRIS ---")]
+    [Tooltip("Tempo da animação quando aperta R para resetar a fase atual.")]
+    public float tempoTransicaoResetR = 0.35f;
+
+    [Tooltip("Tempo da animação quando passa para a próxima fase.")]
+    public float tempoTransicaoTrocaFase = 0.6f;
+
     private Material materialIrisInstancia;
 
     [Header("Áudio Sources")]
@@ -48,49 +55,67 @@ public class ManagerMundo2D : MonoBehaviour
     [Header("Configuração do Fade")]
     public float tempoFadeMusica = 1.5f;
 
-    // Estado
     public int currentLevel = 0; 
     private bool isTransitioning = false;
     private bool jogoCrashou = false;
     private bool pegouAChaveFinal = false;
     private float cronometroAtual;
+    private bool save2DInicializado = false;
 
-    private static AudioSource activeMusicSource;
-    private static AudioSource activeSfxSource;
+    private static GameObject musicaPersistenteObj;
+    private static AudioSource musicaPersistente;
+    private static Coroutine fadeMusicaAtual;
+
+    private const string KEY_ABRIR_IRIS = "AbrirIrisNoStart";
+    private const string KEY_TEMPO_IRIS = "TempoAbrirIris2D";
+    private const string KEY_NIVEL_PENDENTE = "NivelAtual2D_Pendente";
 
     void Awake()
     {
         Instance = this;
 
-        if (musicSource == null || sfxSource == null) return;
+        PrepararMusicaPersistente();
 
-        musicSource.loop = true;
+        if (musicSource != null)
+            musicSource.loop = true;
+    }
 
-        if (activeMusicSource == null)
+    private void PrepararMusicaPersistente()
+    {
+        AudioSource sourceDaCena = musicSource;
+
+        if (musicaPersistente == null)
         {
-            musicSource.transform.parent = null; 
-            DontDestroyOnLoad(musicSource.gameObject);
-            activeMusicSource = musicSource;
+            musicaPersistenteObj = new GameObject("Mundo2D_MusicaPersistente");
+            DontDestroyOnLoad(musicaPersistenteObj);
 
-            if (sfxSource.gameObject != musicSource.gameObject)
+            musicaPersistente = musicaPersistenteObj.AddComponent<AudioSource>();
+            musicaPersistente.loop = true;
+            musicaPersistente.playOnAwake = false;
+            musicaPersistente.spatialBlend = 0f;
+
+            if (sourceDaCena != null)
             {
-                sfxSource.transform.parent = null;
-                DontDestroyOnLoad(sfxSource.gameObject);
+                musicaPersistente.outputAudioMixerGroup = sourceDaCena.outputAudioMixerGroup;
             }
-            activeSfxSource = sfxSource;
         }
         else
         {
-            if (musicSource != activeMusicSource && musicSource.gameObject != this.gameObject) Destroy(musicSource.gameObject);
-            if (sfxSource != activeSfxSource && sfxSource.gameObject != this.gameObject && sfxSource.gameObject != musicSource.gameObject) Destroy(sfxSource.gameObject);
-
-            musicSource = activeMusicSource;
-            sfxSource = activeSfxSource;
-            musicSource.loop = true; 
+            if (sourceDaCena != null &&
+                sourceDaCena.outputAudioMixerGroup != null &&
+                musicaPersistente.outputAudioMixerGroup == null)
+            {
+                musicaPersistente.outputAudioMixerGroup = sourceDaCena.outputAudioMixerGroup;
+            }
         }
+
+        if (sourceDaCena != null && sourceDaCena != musicaPersistente)
+            sourceDaCena.Stop();
+
+        musicSource = musicaPersistente;
     }
 
-    void Start()
+    IEnumerator Start()
     {
         if (imagemIrisUI != null)
         {
@@ -103,10 +128,21 @@ public class ManagerMundo2D : MonoBehaviour
         if (telaAzulBSOD) telaAzulBSOD.SetActive(false);
         if (hudChaveUI) hudChaveUI.SetActive(false);
 
-        // 🔥 CARREGANDO OS DADOS PELO JSON DO PERSISTENCIAMANAGER 🔥
-        if (usarSpawnDeTeste) 
+        if (PersistenciaManager.Instance != null)
+        {
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso && !PersistenciaManager.Instance.EstaCarregando);
+        }
+
+        if (PlayerPrefs.HasKey(KEY_NIVEL_PENDENTE))
+        {
+            currentLevel = PlayerPrefs.GetInt(KEY_NIVEL_PENDENTE, 0);
+            PlayerPrefs.DeleteKey(KEY_NIVEL_PENDENTE);
+            PlayerPrefs.Save();
+        }
+        else if (usarSpawnDeTeste) 
         {
             currentLevel = spawnInicialTeste;
+
             if (PersistenciaManager.Instance != null)
             {
                 PersistenciaManager.Instance.RegistrarEstado("Fase9_PegouChave", false);
@@ -118,7 +154,7 @@ public class ManagerMundo2D : MonoBehaviour
             if (PersistenciaManager.Instance != null)
                 currentLevel = PersistenciaManager.Instance.ObterInt("NivelAtual_2D", 0);
             else
-                currentLevel = 0; // Fallback de segurança
+                currentLevel = 0;
         }
 
         PosicionarPlayer();
@@ -138,10 +174,12 @@ public class ManagerMundo2D : MonoBehaviour
             }
         }
 
-        // A checagem da Iris continua no PlayerPrefs porque é uma flag efêmera só de recarregamento da cena local (não impacta o progresso de longo prazo)
-        if (PlayerPrefs.GetInt("AbrirIrisNoStart", 0) == 1)
+        if (PlayerPrefs.GetInt(KEY_ABRIR_IRIS, 0) == 1)
         {
-            PlayerPrefs.SetInt("AbrirIrisNoStart", 0);
+            float tempoAbrir = PlayerPrefs.GetFloat(KEY_TEMPO_IRIS, tempoTransicaoTrocaFase);
+
+            PlayerPrefs.SetInt(KEY_ABRIR_IRIS, 0);
+            PlayerPrefs.DeleteKey(KEY_TEMPO_IRIS);
             PlayerPrefs.Save();
             
             if (imagemIrisUI) 
@@ -150,8 +188,10 @@ public class ManagerMundo2D : MonoBehaviour
                 if (materialIrisInstancia != null) materialIrisInstancia.SetFloat("_Radius", 0f); 
             }
 
-            StartCoroutine(RotinaChegadaNaFaseNova());
+            StartCoroutine(RotinaChegadaNaFaseNova(tempoAbrir));
         }
+
+        save2DInicializado = true;
     }
 
     public void TocarSomResetAgua()
@@ -159,15 +199,23 @@ public class ManagerMundo2D : MonoBehaviour
         if (somResetAgua != null && sfxSource != null) sfxSource.PlayOneShot(somResetAgua);
     }
 
-    IEnumerator RotinaChegadaNaFaseNova()
+    IEnumerator RotinaChegadaNaFaseNova(float duracao)
     {
         isTransitioning = false; 
-        yield return StartCoroutine(AnimarIris(true)); 
+        yield return StartCoroutine(AnimarIris(true, duracao)); 
         if (imagemIrisUI) imagemIrisUI.gameObject.SetActive(false);
+
+        if (player2D != null)
+        {
+            PlayerMovement2D pm = player2D.GetComponent<PlayerMovement2D>();
+            if (pm != null) pm.podeAndar = true;
+        }
     }
 
     void VerificarMusicaDoNivel()
     {
+        if (musicSource == null) return;
+
         AudioClip clipAlvo = null;
         float volumeAlvo = 0.5f;
 
@@ -175,25 +223,38 @@ public class ManagerMundo2D : MonoBehaviour
         else if (currentLevel <= 8) { clipAlvo = musicaFases5a8; volumeAlvo = volumeFases5a8; }
         else { clipAlvo = musicaFase9; volumeAlvo = volumeFase9; }
 
+        if (clipAlvo == null) return;
+
         if (musicSource.clip == clipAlvo && musicSource.isPlaying)
         {
             musicSource.volume = volumeAlvo;
+            musicSource.loop = true;
             return;
         }
 
-        if (!musicSource.isPlaying)
+        if (!musicSource.isPlaying || musicSource.clip == null)
         {
             musicSource.volume = volumeAlvo;
             musicSource.clip = clipAlvo;
+            musicSource.loop = true;
             musicSource.Play();
         }
-        else StartCoroutine(CrossfadeMusica(clipAlvo, volumeAlvo));
+        else
+        {
+            if (fadeMusicaAtual != null)
+                StopCoroutine(fadeMusicaAtual);
+
+            fadeMusicaAtual = StartCoroutine(CrossfadeMusica(clipAlvo, volumeAlvo));
+        }
     }
 
     IEnumerator CrossfadeMusica(AudioClip novoClip, float volumeAlvo)
     {
+        if (musicSource == null || novoClip == null) yield break;
+
         float startVol = musicSource.volume;
-        for (float t = 0; t < tempoFadeMusica; t += Time.deltaTime)
+
+        for (float t = 0; t < tempoFadeMusica; t += Time.unscaledDeltaTime)
         {
             musicSource.volume = Mathf.Lerp(startVol, 0f, t / tempoFadeMusica);
             yield return null;
@@ -201,14 +262,18 @@ public class ManagerMundo2D : MonoBehaviour
         
         musicSource.volume = 0f;
         musicSource.clip = novoClip;
+        musicSource.time = 0f;
+        musicSource.loop = true;
         musicSource.Play();
         
-        for (float t = 0; t < tempoFadeMusica; t += Time.deltaTime)
+        for (float t = 0; t < tempoFadeMusica; t += Time.unscaledDeltaTime)
         {
             musicSource.volume = Mathf.Lerp(0f, volumeAlvo, t / tempoFadeMusica);
             yield return null;
         }
+
         musicSource.volume = volumeAlvo;
+        fadeMusicaAtual = null;
     }
 
     void PosicionarPlayer()
@@ -217,13 +282,20 @@ public class ManagerMundo2D : MonoBehaviour
         {
             Rigidbody2D rb = player2D.GetComponent<Rigidbody2D>();
             if (rb) rb.simulated = false;
+
             player2D.position = spawnPoints[currentLevel].position;
             
             Physics2D.gravity = new Vector2(0, -9.81f);
             player2D.rotation = Quaternion.identity;
 
             Physics2D.SyncTransforms();
-            if (rb) { rb.linearVelocity = Vector2.zero; rb.simulated = true; }
+
+            if (rb)
+            {
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+                rb.simulated = true;
+            }
         }
     }
 
@@ -245,37 +317,39 @@ public class ManagerMundo2D : MonoBehaviour
             if (pm != null) pm.podeAndar = false; 
         }
 
-        if (imagemIrisUI) imagemIrisUI.gameObject.SetActive(true);
-        yield return StartCoroutine(AnimarIris(false));
-
         currentLevel++;
-        
-        // 🔥 SALVANDO NO JSON OFICIAL 🔥
+
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.SalvarInt("NivelAtual_2D", currentLevel);
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgresso2DSeguro(true);
         }
 
-        PlayerPrefs.SetInt("AbrirIrisNoStart", 1);
+        PlayerPrefs.SetInt(KEY_NIVEL_PENDENTE, currentLevel);
+        PlayerPrefs.SetInt(KEY_ABRIR_IRIS, 1);
+        PlayerPrefs.SetFloat(KEY_TEMPO_IRIS, tempoTransicaoTrocaFase);
         PlayerPrefs.Save();
 
+        if (imagemIrisUI) imagemIrisUI.gameObject.SetActive(true);
+        yield return StartCoroutine(AnimarIris(false, tempoTransicaoTrocaFase));
+        
         Physics2D.gravity = new Vector2(0, -9.81f);
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
-    IEnumerator AnimarIris(bool abrindo)
+    IEnumerator AnimarIris(bool abrindo, float duracao)
     {
         if (materialIrisInstancia == null) yield break;
+
         float t = 0f;
         
         float start = abrindo ? 0f : 1.1f;
         float end = abrindo ? 1.5f : 0f;
         
-        while (t < tempoTransicaoVisual)
+        while (t < duracao)
         {
-            t += Time.deltaTime;
-            float p = t / tempoTransicaoVisual;
+            t += Time.unscaledDeltaTime;
+            float p = t / Mathf.Max(0.01f, duracao);
             
             if (abrindo) p = p * p * (3f - 2f * p); 
             else p = Mathf.Pow(p, 0.5f); 
@@ -283,20 +357,21 @@ public class ManagerMundo2D : MonoBehaviour
             materialIrisInstancia.SetFloat("_Radius", Mathf.Lerp(start, end, p));
             yield return null;
         }
+
         materialIrisInstancia.SetFloat("_Radius", end);
     }
 
     public void PegarChaveFinal()
     {
         if (pegouAChaveFinal) return;
+
         pegouAChaveFinal = true;
         if (hudChaveUI) hudChaveUI.SetActive(true);
         
-        // 🔥 GRAVANDO A CHAVE FINAL NO JSON 🔥
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado("Fase9_PegouChave", true);
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgresso2DSeguro(true);
         }
 
         StartCoroutine(TimerTelaAzulDaMorte(tempoTotalFaseImpossivel));
@@ -305,12 +380,14 @@ public class ManagerMundo2D : MonoBehaviour
     IEnumerator TimerTelaAzulDaMorte(float tempoInicial)
     {
         cronometroAtual = tempoInicial;
+
         while (cronometroAtual > 0)
         {
             if (jogoCrashou) yield break;
             cronometroAtual -= Time.deltaTime;
             yield return null;
         }
+
         yield return StartCoroutine(ExecutarCrashFake());
     }
 
@@ -319,39 +396,39 @@ public class ManagerMundo2D : MonoBehaviour
         jogoCrashou = true;
         isTransitioning = true;
         
-        if (musicSource != null) musicSource.Stop();
+        PararEDestruirMusicaPersistente();
+
         if (telaAzulBSOD) telaAzulBSOD.SetActive(true);
         if (somTelaAzul != null && sfxSource != null) sfxSource.PlayOneShot(somTelaAzul);
         
-        // 🔥 LIMPANDO O PROGRESSO 2D APÓS CONCLUIR E MARCA O EVENTO DE CRASH NO 3D 🔥
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.SalvarFloat("TempoRestante_Fase9", tempoTotalFaseImpossivel);
             PersistenciaManager.Instance.RegistrarEstado("Fase9_PegouChave", false);
             PersistenciaManager.Instance.SalvarInt("NivelAtual_2D", 0);
-            
-            // Avisa o ComputerController (3D) que a máquina queimou
             PersistenciaManager.Instance.RegistrarEstado("PC_Crash_Event", true); 
             
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgresso2DSeguro(true);
         }
 
         yield return new WaitForSeconds(4.0f);
         
-        if (activeMusicSource != null) Destroy(activeMusicSource.gameObject);
-        if (activeSfxSource != null && activeSfxSource.gameObject != activeMusicSource.gameObject) Destroy(activeSfxSource.gameObject);
-        
-        // Volta para o mundo 3D (aqui a lógica 3D já não usará mais as coordenadas salvas porque a cena atual é a 2D e foi limpa)
+        if (sfxSource != null)
+            sfxSource.Stop();
+
         SceneManager.LoadScene(nomeCenaPrincipal);
     }
 
     void Update()
     {
         if (jogoCrashou) return;
-        if (Input.GetKeyDown(KeyCode.R)) ReiniciarFaseAtual();
+
+        if (Input.GetKeyDown(KeyCode.R))
+            ReiniciarFaseAtual();
 
         if (musicSource != null && musicSource.clip != null && !musicSource.isPlaying && !isTransitioning)
         {
+            musicSource.loop = true;
             musicSource.Play();
         }
     }
@@ -372,24 +449,65 @@ public class ManagerMundo2D : MonoBehaviour
             if (pm != null) pm.podeAndar = false; 
         }
 
-        if (imagemIrisUI) imagemIrisUI.gameObject.SetActive(true);
-        yield return StartCoroutine(AnimarIris(false));
-
-        // 🔥 SALVA O TIMER EXATO CASO MORRA NA FASE DA TELA AZUL 🔥
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.SalvarInt("NivelAtual_2D", currentLevel);
+
             if (currentLevel >= indiceUltimaFase && pegouAChaveFinal)
             {
                 PersistenciaManager.Instance.SalvarFloat("TempoRestante_Fase9", cronometroAtual);
             }
-            PersistenciaManager.Instance.SalvarTudo();
+
+            SalvarProgresso2DSeguro(true);
         }
-            
-        PlayerPrefs.SetInt("AbrirIrisNoStart", 1);
+
+        PlayerPrefs.SetInt(KEY_NIVEL_PENDENTE, currentLevel);
+        PlayerPrefs.SetInt(KEY_ABRIR_IRIS, 1);
+        PlayerPrefs.SetFloat(KEY_TEMPO_IRIS, tempoTransicaoResetR);
         PlayerPrefs.Save();
+
+        if (imagemIrisUI) imagemIrisUI.gameObject.SetActive(true);
+        yield return StartCoroutine(AnimarIris(false, tempoTransicaoResetR));
         
         Physics2D.gravity = new Vector2(0, -9.81f);
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    private void PararEDestruirMusicaPersistente()
+    {
+        if (musicaPersistente != null)
+        {
+            musicaPersistente.Stop();
+            musicaPersistente.clip = null;
+        }
+
+        if (musicaPersistenteObj != null)
+        {
+            Destroy(musicaPersistenteObj);
+            musicaPersistenteObj = null;
+            musicaPersistente = null;
+        }
+
+        fadeMusicaAtual = null;
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+
+        if (sfxSource != null)
+            sfxSource.Stop();
+
+        if (materialIrisInstancia != null)
+            Destroy(materialIrisInstancia);
+    }
+
+    private void SalvarProgresso2DSeguro(bool forcarSaveNoDisco)
+    {
+        if (PersistenciaManager.Instance == null) return;
+        if (!save2DInicializado && !forcarSaveNoDisco) return;
+
+        PersistenciaManager.Instance.SalvarTudo(forcarSaveNoDisco);
     }
 }

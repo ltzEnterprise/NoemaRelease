@@ -70,6 +70,8 @@ public class ChildPuzzleDoor : MonoBehaviour
     private bool digitandoSenha = false;
     
     private Vector3 posicaoInicialInteracao;
+    private bool inicializado = false;
+    private bool aguardandoSoltarE = false;
 
     void Start()
     {
@@ -84,7 +86,7 @@ public class ChildPuzzleDoor : MonoBehaviour
         if (objetoAcertou) objetoAcertou.SetActive(false);
         if (objetoErrou) objetoErrou.SetActive(false);
 
-        CarregarEstadoSalvo();
+        StartCoroutine(CarregarEstadoSalvoSeguro());
 
         if (imagemChaveNoInventario)
         {
@@ -92,10 +94,17 @@ public class ChildPuzzleDoor : MonoBehaviour
         }
     }
 
+    IEnumerator CarregarEstadoSalvoSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
+        CarregarEstadoSalvo();
+        inicializado = true;
+    }
+
     void CarregarEstadoSalvo()
     {
-        if (Application.isEditor) return; 
-
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID)) {
              if(PersistenciaManager.Instance.ObterEstado(uniqueID)) casaResolvida = true;
         }
@@ -107,6 +116,7 @@ public class ChildPuzzleDoor : MonoBehaviour
 
     public void Interagir()
     {
+        if (!inicializado) return;
         if (casaResolvida || emCena) return;
 
         if (textoInteragir) textoInteragir.SetActive(false);
@@ -115,6 +125,8 @@ public class ChildPuzzleDoor : MonoBehaviour
         {
             posicaoInicialInteracao = FPS_Master.Instance.transform.position;
         }
+
+        aguardandoSoltarE = true;
 
         if (!jaViuIntroducao) 
         {
@@ -128,6 +140,23 @@ public class ChildPuzzleDoor : MonoBehaviour
 
     void Update()
     {
+        if (emCena)
+        {
+            if (aguardandoSoltarE)
+            {
+                if (!Input.GetKey(KeyCode.E))
+                    aguardandoSoltarE = false;
+
+                return;
+            }
+
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                SairDaInteracao();
+                return;
+            }
+        }
+
         if (casaResolvida) return;
         if (digitandoSenha) ProcessarEntradaSenha();
     }
@@ -136,12 +165,7 @@ public class ChildPuzzleDoor : MonoBehaviour
     {
         if (FPS_Master.Instance != null)
         {
-            FPS_Master.Instance.AlterarEstadoJogador(travar, false);
-            if (travar)
-            {
-                CharacterController cc = FPS_Master.Instance.GetComponent<CharacterController>();
-                if (cc != null) cc.Move(Vector3.zero); 
-            }
+            FPS_Master.travadoInteracao = travar;
         }
     }
 
@@ -186,7 +210,7 @@ public class ChildPuzzleDoor : MonoBehaviour
 
     IEnumerator ReverPoema()
     {
-        painelSenha.SetActive(false);
+        if (painelSenha) painelSenha.SetActive(false);
         if (textoAvisoBotaoR) textoAvisoBotaoR.SetActive(false);
         if (textoDialogoCutscene) { textoDialogoCutscene.text = ""; textoDialogoCutscene.color = Color.white; }
         
@@ -222,7 +246,6 @@ public class ChildPuzzleDoor : MonoBehaviour
     void ProcessarEntradaSenha()
     {
         if (Input.GetKeyDown(KeyCode.R)) { digitandoSenha = false; StartCoroutine(ReverPoema()); return; }
-        if (Input.GetKeyDown(KeyCode.Escape)) { SairDaInteracao(); return; }
 
         string num = "";
         for (int i = 0; i <= 9; i++) {
@@ -290,34 +313,43 @@ public class ChildPuzzleDoor : MonoBehaviour
 
         casaResolvida = true;
 
-        if (!Application.isEditor)
-        {
-            if (EstadoGlobal.casasResolvidas != null && idDessaCasa < EstadoGlobal.casasResolvidas.Length) 
-                EstadoGlobal.casasResolvidas[idDessaCasa] = true;
+        if (EstadoGlobal.casasResolvidas != null && idDessaCasa < EstadoGlobal.casasResolvidas.Length) 
+            EstadoGlobal.casasResolvidas[idDessaCasa] = true;
 
-            if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
-                PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
 
-            // 🔥 TRAVA DE SAVE DE AÇO
-            if (SistemaGlobal.Instance != null)
-            {
-                EstadoGlobal.SalvarNoSlot(SistemaGlobal.Instance.slotAtual);
-                if (PersistenciaManager.Instance) PersistenciaManager.Instance.SalvarTudo();
-            }
-        }
+        SalvarProgressoSeguro();
 
         yield return new WaitForSeconds(3.0f);
         SairDaInteracao();
     }
 
+    void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
+    }
+
     void SairDaInteracao()
     {
+        StopAllCoroutines();
+
         digitandoSenha = false;
         emCena = false;
+        aguardandoSoltarE = false;
+
         if (painelSenha) painelSenha.SetActive(false);
         if (painelTelaPreta) painelTelaPreta.SetActive(false);
         if (textoDialogoCutscene) textoDialogoCutscene.text = ""; 
         if (audioSourceMusica) audioSourceMusica.Stop(); 
+        if (audioSourceVoz) audioSourceVoz.Stop();
         if (textoAvisoBotaoR) textoAvisoBotaoR.SetActive(false);
         
         if (objetoAcertou) objetoAcertou.SetActive(false);
@@ -357,6 +389,6 @@ public class ChildPuzzleDoor : MonoBehaviour
 
     [ContextMenu("Generate Unique ID")]
     private void GenerateID() { uniqueID = System.Guid.NewGuid().ToString(); }
-    public void AoOlhar() { if (!casaResolvida && !emCena && textoInteragir) textoInteragir.SetActive(true); }
+    public void AoOlhar() { if (inicializado && !casaResolvida && !emCena && textoInteragir) textoInteragir.SetActive(true); }
     public void AoSair() { if (textoInteragir) textoInteragir.SetActive(false); }
 }

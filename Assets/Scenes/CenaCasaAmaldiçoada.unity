@@ -171,7 +171,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 28
 --- !u!114 &3818411
 MonoBehaviour:
@@ -1031,6 +1031,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: clock_wall
       objectReference: {fileID: 0}
+    - target: {fileID: 8866188851930244280, guid: a4b1276aff9e45d40818904c02bf6545, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1451,7 +1455,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 22
 --- !u!114 &531400303
 MonoBehaviour:
@@ -1473,7 +1477,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "N\xE3o tenho mais no\xE7\xE3o do tempo.\n\xC9 1997\u2026 ou 1998?\nOu
+  m_text: "N\xE3o tenho mais no\xE7\xE3o do tempo.\n\xC9 1975\u2026 ou 1976?\nOu
     ser\xE1 que o tempo est\xE1 zombando de mim?\n\n"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 7d43c7264c2035a479200f7d2fc9cc3b, type: 2}
@@ -1565,9 +1569,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 367ad717683bf1142b71d7eee7510893, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  textoPT: "N\xE3o tenho mais no\xE7\xE3o do tempo.\n\xC9 1997\u2026 ou 1998?\nOu
+  textoPT: "N\xE3o tenho mais no\xE7\xE3o do tempo.\n\xC9 1975\u2026 ou 1976?\nOu
     ser\xE1 que o tempo est\xE1 zombando de mim?\n\n"
-  textoEN: "I have lost all sense of time.\nIs it 1997\u2026 or 1998?\nOr is time
+  textoEN: "I have lost all sense of time.\nIs it 1975\u2026 or 1976?\nOr is time
     mocking me?"
   useLayoutOverride: 0
   ptAnchoredPosition: {x: 0, y: 0}
@@ -1700,7 +1704,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 22
 --- !u!114 &546295011
 MonoBehaviour:
@@ -1973,7 +1977,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 22
 --- !u!114 &561610406
 MonoBehaviour:
@@ -2464,7 +2468,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 25
 --- !u!114 &696057718
 MonoBehaviour:
@@ -2582,15 +2586,12 @@ MonoBehaviour:
   textoPT: "Uma semana depois, viajamos com a fam\xEDlia dela para celebrar o Natal,
     e ela dizia que aquele seria o in\xEDcio de uma vida perfeita.\n\nPerfeita como
     uma boneca.\n\n"
-  textoEN: 'O Gemini disse
-
-    One week later, we traveled with her family to celebrate
-    Christmas, and she said it would be the beginning of a perfect life.
+  textoEN: 'One week later, we traveled with her family to celebrate Christmas, and
+    she said it would be the beginning of a perfect life.
 
 
 
-    Perfect
-    like a doll.'
+    Perfect like a doll.'
   useLayoutOverride: 0
   ptAnchoredPosition: {x: 0, y: 0}
   ptScale: {x: 1, y: 1, z: 1}
@@ -3165,6 +3166,7 @@ GameObject:
   - component: {fileID: 971551299}
   - component: {fileID: 971551298}
   - component: {fileID: 971551300}
+  - component: {fileID: 971551303}
   m_Layer: 0
   m_Name: MANAGER
   m_TagString: Untagged
@@ -3303,6 +3305,25 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &971551303
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 971551297}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1489b284f943cab4eb6feda94b33c9b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SistemaGlobal
+  nomeCenaPadrao: DreamSceane
+  nomeCenaMenu: MenuPrincipal
+  slotAtual: -1
+  slotFoiDefinido: 0
+  sistemaPronto: 0
+  deveCarregarPosicaoAoIniciar: 0
+  acabouDeCarregar: 0
 --- !u!1001 &1025011726
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4016,13 +4037,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: Disco 01
       objectReference: {fileID: 0}
+    - target: {fileID: 1745959166205986692, guid: 565f0196fde3e894eaa83b6ba99dbe3d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5266960835022529760, guid: 565f0196fde3e894eaa83b6ba99dbe3d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 107.32
       objectReference: {fileID: 0}
     - target: {fileID: 5266960835022529760, guid: 565f0196fde3e894eaa83b6ba99dbe3d, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.25
+      value: 1.28
       objectReference: {fileID: 0}
     - target: {fileID: 5266960835022529760, guid: 565f0196fde3e894eaa83b6ba99dbe3d, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4253,7 +4278,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 25
 --- !u!114 &1128725954
 MonoBehaviour:
@@ -5254,7 +5279,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4206605987560419784, guid: 445438879f3c8b44ba0dc0dd67c8d69e, type: 3}
       propertyPath: idDaManivela
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4206605987560419784, guid: 445438879f3c8b44ba0dc0dd67c8d69e, type: 3}
       propertyPath: senhaCorreta
@@ -5278,7 +5303,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4206605987560419784, guid: 445438879f3c8b44ba0dc0dd67c8d69e, type: 3}
       propertyPath: darManivelaAoAcertar
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6700611711499890095, guid: 445438879f3c8b44ba0dc0dd67c8d69e, type: 3}
       propertyPath: m_Antialiasing
@@ -5757,7 +5782,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 25
 --- !u!114 &1422943822
 MonoBehaviour:
@@ -5781,7 +5806,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: "A cada passo, eu escuto aquele dia repetindo em minha cabe\xE7a: ela dizendo
     que me amava, e eu acreditando que amor \xE9 posse.\n\nSe ela estivesse viva,
-    ter\xEDamos celebrado 12 anos juntos...\n\n"
+    ter\xEDamos celebrado 9 anos juntos...\n\n"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 7d43c7264c2035a479200f7d2fc9cc3b, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 7d43c7264c2035a479200f7d2fc9cc3b, type: 2}
@@ -5874,13 +5899,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   textoPT: "A cada passo, eu escuto aquele dia repetindo em minha cabe\xE7a: ela
     dizendo que me amava, e eu acreditando que amor \xE9 posse.\n\nSe ela estivesse
-    viva, ter\xEDamos celebrado 12 anos juntos...\n\n"
+    viva, ter\xEDamos celebrado 9 anos juntos...\n\n"
   textoEN: 'With every step, I hear that day repeating in my head: her telling me
     she loved me, and me believing that love is possession.
 
 
     If she were alive,
-    we would have celebrated 12 years together...'
+    we would have celebrated 9 years together...'
   useLayoutOverride: 0
   ptAnchoredPosition: {x: 0, y: 0}
   ptScale: {x: 1, y: 1, z: 1}
@@ -6010,7 +6035,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 117.68, y: 289.1}
-  m_SizeDelta: {x: 200, y: 50}
+  m_SizeDelta: {x: 200.65, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1445536801
 MonoBehaviour:
@@ -6025,7 +6050,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 25
 --- !u!114 &1445536802
 MonoBehaviour:
@@ -6234,7 +6259,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6421161360496316711, guid: 22a3ece7499a3b94abff11aef27bf2a8, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.8755697
+      value: -0.84
       objectReference: {fileID: 0}
     - target: {fileID: 6421161360496316711, guid: 22a3ece7499a3b94abff11aef27bf2a8, type: 3}
       propertyPath: m_LocalPosition.z
@@ -6431,6 +6456,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6272913946123593323, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
+      propertyPath: teclaZoomIn
+      value: 105
+      objectReference: {fileID: 0}
+    - target: {fileID: 6272913946123593323, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
+      propertyPath: teclaZoomOut
+      value: 111
+      objectReference: {fileID: 0}
     - target: {fileID: 7039684783472384744, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
       propertyPath: m_Name
       value: "Invent\xE1rio"
@@ -6497,7 +6530,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 25
 --- !u!114 &1532015929
 MonoBehaviour:
@@ -7551,11 +7584,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2886809536493127851, guid: e3a9e4e6686b3754fb6ec4fdae9b86e7, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.4999999
+      value: 1.97
       objectReference: {fileID: 0}
     - target: {fileID: 2886809536493127851, guid: e3a9e4e6686b3754fb6ec4fdae9b86e7, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1.5
+      value: 1.74
       objectReference: {fileID: 0}
     - target: {fileID: 2886809536493127851, guid: e3a9e4e6686b3754fb6ec4fdae9b86e7, type: 3}
       propertyPath: m_LocalScale.z
@@ -7567,11 +7600,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2886809536493127851, guid: e3a9e4e6686b3754fb6ec4fdae9b86e7, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.55
+      value: 1.67
       objectReference: {fileID: 0}
     - target: {fileID: 2886809536493127851, guid: e3a9e4e6686b3754fb6ec4fdae9b86e7, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 3.47
+      value: 3.36
       objectReference: {fileID: 0}
     - target: {fileID: 2886809536493127851, guid: e3a9e4e6686b3754fb6ec4fdae9b86e7, type: 3}
       propertyPath: m_LocalRotation.w
@@ -8508,7 +8541,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6307899638335501666, guid: 54d6debc897909b4caee725b3cb3ea8f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.7396995
+      value: -0.86
       objectReference: {fileID: 0}
     - target: {fileID: 6307899638335501666, guid: 54d6debc897909b4caee725b3cb3ea8f, type: 3}
       propertyPath: m_LocalPosition.z
@@ -11021,7 +11054,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.01
   far clip plane: 1000
   field of view: 60.000004
   orthographic: 0
@@ -13846,8 +13879,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bfe5ea153f6598d44bbbad5e295f48f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FPS_Master
-  velocidadeAndar: 3
-  velocidadeCorrer: 5
+  velocidadeAndar: 2
+  velocidadeCorrer: 4
   forcaPulo: 6
   gravidade: 20
   aceleracao: 10
@@ -16636,6 +16669,10 @@ MonoBehaviour:
   painelLoading: {fileID: 3241633128957254317}
   barraDeProgresso: {fileID: 7789796155944983027}
   nomeDaCenaDoJogo: 
+  tempoExtraLoading: 2
+  esperaDepoisDaCenaPronta: 0.25
+  fadeOutLoadingFinal: 0.35
+  esperarGameManagerCenaPronta: 1
   textosDosSlots: []
   textosBotaoApagar: []
   textoNovoJogo_PT: NOVO JOGO
@@ -16657,6 +16694,8 @@ MonoBehaviour:
   volumeMaximoMusica: 1
   tempoDeFade: 1.5
   jogoPausado: 0
+  slotConfirmacao: -1
+  slotParaRestaurar: -1
 --- !u!224 &3978913203386622315
 RectTransform:
   m_ObjectHideFlags: 0
@@ -17685,7 +17724,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandwrittenEffect
   angleStrength: 1
-  posStrength: 1
+  posStrength: 0
   inkWearAmount: 25
 --- !u!114 &4400978571699753136
 MonoBehaviour:

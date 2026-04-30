@@ -10,6 +10,12 @@ public class SaveSlotManager : MonoBehaviour
     [Tooltip("Arraste o seu InterfaceManager aqui para o sistema de slots ler os textos dele.")]
     public InterfaceManager uiManager;
 
+    [Header("--- AJUSTE VISUAL ---")]
+    [Tooltip("Quando o botão de apagar vira CONFIRMAR, reduz a fonte esse tanto.")]
+    public float reduzirFonteConfirmarApagar = 2f;
+
+    private float[] tamanhosOriginaisBotaoApagar;
+
     public string DiretorioSaves 
     { 
         get 
@@ -35,10 +41,13 @@ public class SaveSlotManager : MonoBehaviour
 
         if (!Directory.Exists(DiretorioSaves))
             Directory.CreateDirectory(DiretorioSaves);
+
+        CachearTamanhosOriginaisApagar();
     }
 
     void Start()
     {
+        CachearTamanhosOriginaisApagar();
         ForcarAutoSizeCentral();
         AtualizarTextosSlots();
     }
@@ -65,6 +74,24 @@ public class SaveSlotManager : MonoBehaviour
         }
     }
 
+    private void CachearTamanhosOriginaisApagar()
+    {
+        if (uiManager == null) return;
+        if (uiManager.textosBotaoApagar == null) return;
+
+        if (tamanhosOriginaisBotaoApagar != null &&
+            tamanhosOriginaisBotaoApagar.Length == uiManager.textosBotaoApagar.Length)
+            return;
+
+        tamanhosOriginaisBotaoApagar = new float[uiManager.textosBotaoApagar.Length];
+
+        for (int i = 0; i < uiManager.textosBotaoApagar.Length; i++)
+        {
+            if (uiManager.textosBotaoApagar[i] != null)
+                tamanhosOriginaisBotaoApagar[i] = uiManager.textosBotaoApagar[i].fontSize;
+        }
+    }
+
     public void BOTAO_JOGAR_SLOT(int numeroDoSlot)
     {
         if (uiManager == null)
@@ -83,7 +110,6 @@ public class SaveSlotManager : MonoBehaviour
         {
             uiManager.slotConfirmacao = -1;
             AtualizarTextosSlots();
-            return;
         }
 
         if (SistemaGlobal.Instance == null)
@@ -104,7 +130,24 @@ public class SaveSlotManager : MonoBehaviour
 
         if (File.Exists(caminhoArquivo))
         {
-            SistemaGlobal.Instance.CarregarJogo(numeroDoSlot);
+            SistemaGlobal.Instance.sistemaPronto = false;
+
+            PersistenciaManager.Instance.LimparDicionario();
+            PersistenciaManager.Instance.CarregarDoDisco(numeroDoSlot);
+
+            EstadoGlobal.CarregarDoSlot(numeroDoSlot);
+
+            SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = true;
+            SistemaGlobal.Instance.acabouDeCarregar = true;
+
+            string cenaParaCarregar = PersistenciaManager.Instance.ObterString("Slot_" + numeroDoSlot + "_Cena");
+
+            if (string.IsNullOrEmpty(cenaParaCarregar))
+                cenaParaCarregar = SistemaGlobal.Instance.nomeCenaPadrao;
+
+            Debug.Log($"<color=green>[LOAD COM LOADING] Slot {numeroDoSlot} carregando cena {cenaParaCarregar}</color>");
+
+            uiManager.IniciarLoadingParaCena(cenaParaCarregar);
             return;
         }
 
@@ -118,11 +161,9 @@ public class SaveSlotManager : MonoBehaviour
         PersistenciaManager.Instance.IniciarNovoJogo(numeroDoSlot);
 
         PersistenciaManager.Instance.SalvarString($"Slot_{numeroDoSlot}_Cena", uiManager.nomeDaCenaDoJogo);
-
         PersistenciaManager.Instance.SalvarTudo(true);
 
         AtualizarTextosSlots();
-
         uiManager.IniciarLoadingParaCena(uiManager.nomeDaCenaDoJogo);
     }
 
@@ -192,7 +233,7 @@ public class SaveSlotManager : MonoBehaviour
 
             AtualizarTextosSlots(); 
         }
-        
+
         uiManager.slotParaRestaurar = -1; 
         uiManager.LigarDesligarPainel(uiManager.painelConfirmacaoBackup, false); 
     }
@@ -220,6 +261,8 @@ public class SaveSlotManager : MonoBehaviour
     {
         if (uiManager == null) return;
         if (uiManager.textosDosSlots == null) return;
+
+        CachearTamanhosOriginaisApagar();
 
         int lang = 0;
 
@@ -251,8 +294,20 @@ public class SaveSlotManager : MonoBehaviour
                 i < uiManager.textosBotaoApagar.Length &&
                 uiManager.textosBotaoApagar[i] != null)
             {
+                bool estaConfirmando = uiManager.slotConfirmacao == slotNum;
+
                 uiManager.textosBotaoApagar[i].text =
-                    (uiManager.slotConfirmacao == slotNum) ? txtConfirmarBtn : txtApagarBtn;
+                    estaConfirmando ? txtConfirmarBtn : txtApagarBtn;
+
+                if (tamanhosOriginaisBotaoApagar != null &&
+                    i < tamanhosOriginaisBotaoApagar.Length &&
+                    tamanhosOriginaisBotaoApagar[i] > 0f)
+                {
+                    uiManager.textosBotaoApagar[i].fontSize =
+                        estaConfirmando
+                            ? Mathf.Max(1f, tamanhosOriginaisBotaoApagar[i] - reduzirFonteConfirmarApagar)
+                            : tamanhosOriginaisBotaoApagar[i];
+                }
             }
 
             string cabecalho = $"<size=40%>{txtSlot} {slotNum}</size>\n";

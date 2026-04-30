@@ -31,6 +31,7 @@ public class InvestigationHouseDoor : MonoBehaviour
 
     private bool interagindo = false;
     private bool estaDestrancadaPraSempre = false; 
+    private bool inicializado = false;
 
     void Start()
     {
@@ -38,30 +39,49 @@ public class InvestigationHouseDoor : MonoBehaviour
         if (textoInteragirUI) textoInteragirUI.SetActive(false);
         if (!audioSource) audioSource = gameObject.AddComponent<AudioSource>();
 
+        StartCoroutine(CarregarEstadoSeguro());
+    }
+
+    IEnumerator CarregarEstadoSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
-            if (PersistenciaManager.Instance.ObterEstado(uniqueID))
-            {
+            if (PersistenciaManager.Instance.ObterEstado(uniqueID, false))
                 estaDestrancadaPraSempre = true;
-            }
         }
+
+        inicializado = true;
     }
 
     public void AoOlhar()
     {
+        if (!inicializado) return;
         if (interagindo) return;
+
         if (TemMadeiraBloqueando()) 
         {
-            if (textoInteragirUI) textoInteragirUI.SetActive(false);
+            if (textoInteragirUI)
+                textoInteragirUI.SetActive(false);
+
             return;
         }
-        if (textoInteragirUI) textoInteragirUI.SetActive(true);
+
+        if (textoInteragirUI)
+            textoInteragirUI.SetActive(true);
     }
 
-    public void AoSair() { if (textoInteragirUI) textoInteragirUI.SetActive(false); }
+    public void AoSair()
+    {
+        if (textoInteragirUI)
+            textoInteragirUI.SetActive(false);
+    }
 
     public void Interagir()
     {
+        if (!inicializado) return;
         if (interagindo || TemMadeiraBloqueando()) return; 
 
         if (estaDestrancadaPraSempre)
@@ -82,48 +102,88 @@ public class InvestigationHouseDoor : MonoBehaviour
 
     bool TemMadeiraBloqueando()
     {
-        foreach (GameObject m in madeirasBloqueio) if (m != null && m.activeInHierarchy) return true;
+        if (madeirasBloqueio == null) return false;
+
+        foreach (GameObject m in madeirasBloqueio)
+        {
+            if (m != null && m.activeInHierarchy)
+                return true;
+        }
+
         return false;
     }
 
-    IEnumerator EntrarNaCasa(bool gastarChave)
+    IEnumerator EntrarNaCasa(bool primeiraVezComChave)
     {
         interagindo = true;
-        if (textoInteragirUI) textoInteragirUI.SetActive(false);
-        if (FPS_Master.Instance != null) FPS_Master.travadoInteracao = true;
 
-        if (gastarChave)
+        if (textoInteragirUI)
+            textoInteragirUI.SetActive(false);
+
+        if (textoSemChaveUI)
+            textoSemChaveUI.SetActive(false);
+
+        if (FPS_Master.Instance != null)
+            FPS_Master.travadoInteracao = true;
+
+        if (primeiraVezComChave)
         {
             KeySystem.GastarChave(idChaveNecessaria);
-            if (hudIconeChaveParaApagar) hudIconeChaveParaApagar.SetActive(false);
-            if (audioSource && somDestrancar) audioSource.PlayOneShot(somDestrancar);
+
+            if (hudIconeChaveParaApagar)
+                hudIconeChaveParaApagar.SetActive(false);
+
+            if (audioSource && somDestrancar)
+                audioSource.PlayOneShot(somDestrancar);
+
             yield return new WaitForSeconds(0.5f);
+
+            estaDestrancadaPraSempre = true;
+
+            if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+                PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
+
+            SalvarEntradaDaCasa();
         }
 
-        if (audioSource && somAbrirPorta) audioSource.PlayOneShot(somAbrirPorta);
+        if (audioSource && somAbrirPorta)
+            audioSource.PlayOneShot(somAbrirPorta);
 
-        estaDestrancadaPraSempre = true;
-        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
-            PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
+        yield return new WaitForSeconds(1f); 
 
-        // 🔥 REGRA 8X APLICADA AQUI: 
-        // Se você esqueceu de arrastar a referência do EmptyObject na Unity, ele não pula o save mais! Ele pega a coordenada da própria porta e segue a vida.
+        SceneManager.LoadScene(nomeDaCenaParaCarregar);
+    }
+
+    private void SalvarEntradaDaCasa()
+    {
         if (SistemaGlobal.Instance != null)
         {
             Vector3 posDeSeguranca = pontoDeRetorno != null ? pontoDeRetorno.position : transform.position;
             SistemaGlobal.Instance.SalvarJogo(posDeSeguranca, SceneManager.GetActiveScene().name);
+            return;
         }
 
-        yield return new WaitForSeconds(1f); 
-        SceneManager.LoadScene(nomeDaCenaParaCarregar);
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(true);
     }
 
     IEnumerator MostrarMensagemSemChave()
     {
-        if (textoInteragirUI) textoInteragirUI.SetActive(false);
-        if (textoSemChaveUI) textoSemChaveUI.SetActive(true);
-        if (audioSource && somTrancada) audioSource.PlayOneShot(somTrancada);
+        if (textoInteragirUI)
+            textoInteragirUI.SetActive(false);
+
+        if (textoSemChaveUI)
+            textoSemChaveUI.SetActive(true);
+
+        if (audioSource && somTrancada)
+            audioSource.PlayOneShot(somTrancada);
+
         yield return new WaitForSeconds(2.5f);
-        if (textoSemChaveUI) textoSemChaveUI.SetActive(false);
+
+        if (textoSemChaveUI)
+            textoSemChaveUI.SetActive(false);
+
+        if (!interagindo && textoInteragirUI)
+            textoInteragirUI.SetActive(true);
     }
 }

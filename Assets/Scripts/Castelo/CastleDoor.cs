@@ -4,6 +4,10 @@ using System.Collections;
 
 public class CastleDoor : MonoBehaviour
 {
+    [Header("--- SAVE SYSTEM (OPCIONAL) ---")]
+    [Tooltip("Preencha se quiser salvar que a barricada/tábuas foram quebradas.")]
+    public string uniqueID;
+
     [Header("Configuração de Teleporte")]
     public Transform pontoDestino; // Onde o player vai sair
     
@@ -40,6 +44,21 @@ public class CastleDoor : MonoBehaviour
         {
             painelPreto.gameObject.SetActive(false);
             painelPreto.color = new Color(0, 0, 0, 0);
+        }
+
+        StartCoroutine(CarregarEstadoSeguro());
+    }
+
+    IEnumerator CarregarEstadoSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+        {
+            bool barricadaQuebrada = PersistenciaManager.Instance.ObterEstado(uniqueID + "_barricadaQuebrada", false);
+            if (barricadaQuebrada && grupoTabuas != null)
+                grupoTabuas.SetActive(false);
         }
     }
 
@@ -173,6 +192,18 @@ public class CastleDoor : MonoBehaviour
             FPS_Master.Instance.AlterarEstadoJogador(false, false);
             
         emProcesso = false;
+    }
+
+    void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 
     IEnumerator MostrarAvisoBloqueado()

@@ -8,7 +8,8 @@ public class SistemaGlobal : MonoBehaviour
 
     [Header("CONFIGURAÇÃO GERAL")]
     public string nomeCenaPadrao = "DreamSceane"; 
-    
+    public string nomeCenaMenu = "MenuPrincipal";
+
     [Header("ESTADO DO SAVE")]
     public int slotAtual = -1; 
     public bool slotFoiDefinido = false;
@@ -19,15 +20,15 @@ public class SistemaGlobal : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
+        if (Instance != null && Instance != this)
         {
-            Instance = this;
-            if (transform.parent == null) DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
+            Debug.LogWarning("[SistemaGlobal] Cópia local/duplicada destruída. Mantendo a instância global.");
             Destroy(gameObject);
+            return;
         }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     public void DefinirSlot(int slot)
@@ -110,18 +111,35 @@ public class SistemaGlobal : MonoBehaviour
         }
         else
         {
-            EstadoGlobal.ResetarTudo();
-
-            PersistenciaManager.Instance.LimparDicionario();
-            PersistenciaManager.Instance.IniciarNovoJogo(slot);
-            PersistenciaManager.Instance.SalvarString("Slot_" + slot + "_Cena", nomeCenaPadrao);
-            PersistenciaManager.Instance.SalvarTudo(true);
-
-            deveCarregarPosicaoAoIniciar = false;
-            acabouDeCarregar = false;
-
-            SceneManager.LoadScene(nomeCenaPadrao);
+            IniciarNovoJogo(slot, nomeCenaPadrao);
         }
+    }
+
+    public void IniciarNovoJogo(int slot, string cenaInicial)
+    {
+        sistemaPronto = false;
+        DefinirSlot(slot);
+
+        if (PersistenciaManager.Instance == null)
+        {
+            Debug.LogError("[SistemaGlobal] Não existe PersistenciaManager para iniciar novo jogo.");
+            return;
+        }
+
+        EstadoGlobal.ResetarTudo();
+
+        PersistenciaManager.Instance.LimparDicionario();
+        PersistenciaManager.Instance.IniciarNovoJogo(slot);
+
+        string cenaParaSalvar = string.IsNullOrEmpty(cenaInicial) ? nomeCenaPadrao : cenaInicial;
+
+        PersistenciaManager.Instance.SalvarString("Slot_" + slot + "_Cena", cenaParaSalvar);
+        PersistenciaManager.Instance.SalvarTudo(true);
+
+        deveCarregarPosicaoAoIniciar = false;
+        acabouDeCarregar = false;
+
+        SceneManager.LoadScene(cenaParaSalvar);
     }
 
     public void ApagarSave(int slot)
@@ -156,5 +174,15 @@ public class SistemaGlobal : MonoBehaviour
     {
         string caminho = Path.Combine(Application.persistentDataPath, "Saves", $"Save_Slot_{slot}.json");
         return File.Exists(caminho);
+    }
+
+    public string GetDataSave(int slot)
+    {
+        string caminho = Path.Combine(Application.persistentDataPath, "Saves", $"Save_Slot_{slot}.json");
+
+        if (File.Exists(caminho))
+            return File.GetLastWriteTime(caminho).ToString("dd/MM HH:mm");
+
+        return "Vazio";
     }
 }

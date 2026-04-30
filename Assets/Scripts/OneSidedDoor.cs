@@ -35,10 +35,10 @@ public class OneSidedDoor : MonoBehaviour
     private Quaternion rotacaoFechada;
     private Quaternion rotacaoAberta;
     
-    // Trava do Raycast e UI
     private float tempoUltimoClique = 0f;
     private bool estaOlhando = false;
     private bool mostrandoErro = false;
+    private bool inicializado = false;
 
     void Start()
     {
@@ -51,43 +51,62 @@ public class OneSidedDoor : MonoBehaviour
         if (lockedMessage) lockedMessage.SetActive(false);
         if (interactText) interactText.SetActive(false);
 
+        StartCoroutine(CarregarEstadoSalvoSeguro());
+    }
+
+    IEnumerator CarregarEstadoSalvoSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
         CarregarEstadoSalvo();
+        inicializado = true;
     }
 
     void CarregarEstadoSalvo()
     {
-        if (Application.isEditor || PersistenciaManager.Instance == null || string.IsNullOrEmpty(uniqueID)) return;
+        if (PersistenciaManager.Instance == null || string.IsNullOrEmpty(uniqueID)) return;
 
-        isUnlocked = PersistenciaManager.Instance.ObterEstado(uniqueID + "_unlocked");
-        isOpen = PersistenciaManager.Instance.ObterEstado(uniqueID + "_open");
+        isUnlocked = PersistenciaManager.Instance.ObterEstado(uniqueID + "_unlocked", false);
+        isOpen = PersistenciaManager.Instance.ObterEstado(uniqueID + "_open", false);
 
-        // Se o save diz que a porta tava aberta, teleporta a rotação pra ela não ficar abrindo sozinha na cara do player no Load
         if (isOpen)
-        {
             transform.localRotation = rotacaoAberta;
-        }
+        else
+            transform.localRotation = rotacaoFechada;
     }
 
     public void AoOlhar()
     {
+        if (!inicializado) return;
+
         estaOlhando = true;
-        if (!mostrandoErro && interactText) interactText.SetActive(true);
+
+        if (!mostrandoErro && interactText)
+            interactText.SetActive(true);
     }
 
     public void AoSair()
     {
         estaOlhando = false;
-        if (interactText) interactText.SetActive(false);
-        if (lockedMessage) lockedMessage.SetActive(false);
+
+        if (interactText)
+            interactText.SetActive(false);
+
+        if (lockedMessage)
+            lockedMessage.SetActive(false);
     }
 
     public void Interagir()
     {
+        if (!inicializado) return;
         if (Time.time < tempoUltimoClique + 0.5f) return;
         if (mostrandoErro) return; 
 
         tempoUltimoClique = Time.time;
-        if (interactText) interactText.SetActive(false);
+
+        if (interactText)
+            interactText.SetActive(false);
 
         CheckSideAndInteract();
     }
@@ -127,11 +146,8 @@ public class OneSidedDoor : MonoBehaviour
         {
             isUnlocked = true;
             
-            // 🔥 SALVA QUE O ATALHO FOI DESTRANCADO PRA SEMPRE
             if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
-            {
                 PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_unlocked", true);
-            }
 
             ToggleDoor();
         }
@@ -140,13 +156,14 @@ public class OneSidedDoor : MonoBehaviour
     void ToggleDoor()
     {
         isOpen = !isOpen;
-        if (audioSource) 
+
+        if (audioSource)
             audioSource.PlayOneShot(isOpen ? openSound : closeSound);
 
-        // 🔥 SALVA SE ELA TÁ ABERTA OU FECHADA
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_open", isOpen);
+            SalvarProgressoSeguro();
         }
     }
 
@@ -154,15 +171,32 @@ public class OneSidedDoor : MonoBehaviour
     {
         mostrandoErro = true;
 
-        if (audioSource && lockedSound) audioSource.PlayOneShot(lockedSound);
-        if (lockedMessage) lockedMessage.SetActive(true);
+        if (audioSource && lockedSound)
+            audioSource.PlayOneShot(lockedSound);
+
+        if (lockedMessage)
+            lockedMessage.SetActive(true);
         
         yield return new WaitForSeconds(2.0f);
         
-        if (lockedMessage) lockedMessage.SetActive(false);
+        if (lockedMessage)
+            lockedMessage.SetActive(false);
         
         mostrandoErro = false;
 
-        if (estaOlhando && interactText) interactText.SetActive(true);
+        if (estaOlhando && interactText)
+            interactText.SetActive(true);
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }

@@ -10993,6 +10993,8 @@ MonoBehaviour:
   volumeMaximoMusica: 1
   tempoDeFade: 1.5
   jogoPausado: 0
+  slotConfirmacao: -1
+  slotParaRestaurar: -1
 --- !u!224 &3978913204186125664
 RectTransform:
   m_ObjectHideFlags: 0

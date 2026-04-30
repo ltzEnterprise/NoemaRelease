@@ -50206,7 +50206,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.01
   far clip plane: 1000
   field of view: 60.000004
   orthographic: 0
@@ -54603,6 +54603,10 @@ MonoBehaviour:
   painelLoading: {fileID: 3241633127700983737}
   barraDeProgresso: {fileID: 7789796154416180455}
   nomeDaCenaDoJogo: 
+  tempoExtraLoading: 2
+  esperaDepoisDaCenaPronta: 0.25
+  fadeOutLoadingFinal: 0.35
+  esperarGameManagerCenaPronta: 1
   textosDosSlots: []
   textosBotaoApagar: []
   textoNovoJogo_PT: NOVO JOGO
@@ -54624,6 +54628,8 @@ MonoBehaviour:
   volumeMaximoMusica: 1
   tempoDeFade: 1.5
   jogoPausado: 0
+  slotConfirmacao: -1
+  slotParaRestaurar: -1
 --- !u!224 &3978913204001264767
 RectTransform:
   m_ObjectHideFlags: 0

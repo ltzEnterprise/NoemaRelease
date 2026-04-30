@@ -51,12 +51,13 @@ public class PersistenciaManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
+            Debug.LogWarning("[PersistenciaManager] Cópia local/duplicada destruída. Mantendo a instância global.");
             Destroy(gameObject);
             return;
         }
 
         Instance = this;
-        if (transform.parent == null) DontDestroyOnLoad(gameObject);
+        DontDestroyOnLoad(gameObject);
 
         inicializado = true;
     }

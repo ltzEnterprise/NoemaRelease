@@ -21,45 +21,69 @@ public class WeaponAltar : MonoBehaviour
     private bool isWeaponAvailable = false;
     private bool alreadyTaken = false;
     
-    // Travas para organizar a UI sem brigar com o seu Raycast central
     private bool estaOlhando = false; 
     private bool mostrandoErro = false; 
 
     void Start()
     {
-        if(runesUIPanel) runesUIPanel.SetActive(false); 
-        if(visualWeapon) visualWeapon.SetActive(false);
-        if(missingRunesText) missingRunesText.SetActive(false);
-        if(highlightLight) highlightLight.SetActive(false);
+        if (runesUIPanel) runesUIPanel.SetActive(false); 
+        if (visualWeapon) visualWeapon.SetActive(false);
+        if (missingRunesText) missingRunesText.SetActive(false);
+        if (highlightLight) highlightLight.SetActive(false);
+
+        StartCoroutine(CarregarEstadoSeguro());
+    }
+
+    IEnumerator CarregarEstadoSeguro()
+    {
+        yield return new WaitUntil(() =>
+            PersistenciaManager.Instance != null &&
+            PersistenciaManager.Instance.DadosProntosParaUso
+        );
+
+        alreadyTaken = PersistenciaManager.Instance.ObterEstado("WeaponAltar_Weapon_" + weaponIDToUnlock + "_Taken", false);
+
+        if (alreadyTaken)
+        {
+            if (visualWeapon) visualWeapon.SetActive(false);
+            if (highlightLight) highlightLight.SetActive(false);
+            if (runesUIPanel) runesUIPanel.SetActive(false);
+            if (missingRunesText) missingRunesText.SetActive(false);
+
+            if (weaponIDToUnlock >= 0 && weaponIDToUnlock < EstadoGlobal.armasDesbloqueadas.Length)
+                EstadoGlobal.armasDesbloqueadas[weaponIDToUnlock] = true;
+        }
     }
 
     public void SpawnWeaponOnAltar()
     {
+        if (alreadyTaken) return;
+
         isWeaponAvailable = true;
-        if(visualWeapon) visualWeapon.SetActive(true); 
-        if(highlightLight) highlightLight.SetActive(true);
+
+        if (visualWeapon) visualWeapon.SetActive(true); 
+        if (highlightLight) highlightLight.SetActive(true);
     }
 
-    // --- MÉTODOS DO SEU SISTEMA DE RAYCAST CENTRAL (NOMES CORRIGIDOS) ---
-
-    public void AoOlhar() // O seu laser chama isso aqui
+    public void AoOlhar()
     { 
         if (alreadyTaken) return;
 
         estaOlhando = true;
 
-        // Só mostra o painel principal se a mensagem de erro NÃO estiver na tela
-        if (runesUIPanel && !mostrandoErro) runesUIPanel.SetActive(true); 
+        if (runesUIPanel && !mostrandoErro)
+            runesUIPanel.SetActive(true); 
     }
     
-    public void AoSair() // O seu laser chama isso quando você vira a cara
+    public void AoSair()
     { 
         estaOlhando = false;
-        if(runesUIPanel) runesUIPanel.SetActive(false); 
-        if(missingRunesText) missingRunesText.SetActive(false);
+
+        if (runesUIPanel) runesUIPanel.SetActive(false); 
+        if (missingRunesText) missingRunesText.SetActive(false);
     }
 
-    public void Interagir() // O seu laser chama isso quando você aperta [E]
+    public void Interagir()
     {
         if (alreadyTaken) return;
 
@@ -77,7 +101,8 @@ public class WeaponAltar : MonoBehaviour
 
         if (runasAtuais >= requiredRunesCount || devMode)
         {
-            if (!isWeaponAvailable) SpawnWeaponOnAltar();
+            if (!isWeaponAvailable)
+                SpawnWeaponOnAltar();
 
             if (!devMode && InventarioRunas.Instance != null) 
             {
@@ -100,8 +125,9 @@ public class WeaponAltar : MonoBehaviour
     void StartPickupProcess()
     {
         alreadyTaken = true;
-        if(runesUIPanel) runesUIPanel.SetActive(false);
-        if(missingRunesText) missingRunesText.SetActive(false);
+
+        if (runesUIPanel) runesUIPanel.SetActive(false);
+        if (missingRunesText) missingRunesText.SetActive(false);
 
         if (cutsceneScript != null) 
         {
@@ -120,8 +146,8 @@ public class WeaponAltar : MonoBehaviour
         if (DayNightCycle.Instance != null) 
             DayNightCycle.Instance.ChangeTo(DayNightCycle.TimeState.Night);
 
-        if(visualWeapon) visualWeapon.SetActive(false);
-        if(highlightLight) highlightLight.SetActive(false);
+        if (visualWeapon) visualWeapon.SetActive(false);
+        if (highlightLight) highlightLight.SetActive(false);
 
         if (weaponIDToUnlock >= 0 && weaponIDToUnlock < EstadoGlobal.armasDesbloqueadas.Length)
         {
@@ -132,23 +158,40 @@ public class WeaponAltar : MonoBehaviour
         {
             InventoryManager.Instance.TentarEquipar(weaponIDToUnlock); 
         }
+
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado("WeaponAltar_Weapon_" + weaponIDToUnlock + "_Taken", true);
+            SalvarProgressoSeguro();
+        }
     }
 
     IEnumerator ShowMissingRunesWarning() 
     { 
         mostrandoErro = true;
-        if(runesUIPanel) runesUIPanel.SetActive(false); 
-        if(missingRunesText) missingRunesText.SetActive(true); 
+
+        if (runesUIPanel) runesUIPanel.SetActive(false); 
+        if (missingRunesText) missingRunesText.SetActive(true); 
         
         yield return new WaitForSeconds(2f); 
         
-        if(missingRunesText) missingRunesText.SetActive(false); 
+        if (missingRunesText) missingRunesText.SetActive(false); 
+
         mostrandoErro = false;
 
-        // Só liga a UI normal de novo se AINDA estiver olhando
         if (estaOlhando && runesUIPanel && !alreadyTaken)
-        {
             runesUIPanel.SetActive(true);
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
         }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }

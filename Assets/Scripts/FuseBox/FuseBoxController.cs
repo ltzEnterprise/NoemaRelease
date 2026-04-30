@@ -84,32 +84,55 @@ public class FuseBoxController : MonoBehaviour
     private float tempoUltimoClique = 0f;
     private float cooldownClique = 0.1f; 
     private float cooldownSairEntrar = 0f; 
+    private bool saveCarregado = false;
 
     void Start()
     {
         rotMin = Quaternion.Euler(anguloEulerMin);
         rotMax = Quaternion.Euler(anguloEulerMax);
 
-        // 🔥 TUDO AGORA É LIDO DO PERSISTENCIA MANAGER
-        if (PersistenciaManager.Instance != null)
-        {
-            if (PersistenciaManager.Instance.ObterEstado(idSaveLock)) estaDestrancada = true;
-            if (PersistenciaManager.Instance.ObterEstado("FuseBox_Dia_Resolvida")) resolvidoDia = true;
-            if (PersistenciaManager.Instance.ObterEstado("FuseBox_Noite_Resolvida")) resolvidoNoite = true;
-        }
-
         if (portaDaCaixa) portaDaCaixa.localEulerAngles = rotacaoPortaFechada;
         if (alavancaMestre) alavancaMestre.localRotation = Quaternion.AngleAxis(anguloBaixo, eixoAlavanca);
-        
+
         DesligarLuz(rendererLuzVerde);
         DesligarLuz(rendererLuzVermelha);
-        
+
         if (quadExtraNoite) quadExtraNoite.SetActive(false);
         if (textoTrancadoUI) textoTrancadoUI.SetActive(false);
         if (faderTelaPreta) faderTelaPreta.gameObject.SetActive(false);
-        
+
         foreach(var sw in interruptores) sw.ForcarDesligamento();
         RecalcularVoltagemInstantanea();
+
+        StartCoroutine(CarregarSaveSeguro());
+    }
+
+    IEnumerator CarregarSaveSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+        {
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+        }
+
+        if (PersistenciaManager.Instance != null)
+        {
+            estaDestrancada = PersistenciaManager.Instance.ObterEstado(idSaveLock, estaDestrancada);
+            resolvidoDia = PersistenciaManager.Instance.ObterEstado("FuseBox_Dia_Resolvida", resolvidoDia);
+            resolvidoNoite = PersistenciaManager.Instance.ObterEstado("FuseBox_Noite_Resolvida", resolvidoNoite);
+        }
+
+        if (resolvidoNoite && quadExtraNoite)
+        {
+            quadExtraNoite.SetActive(true);
+        }
+
+        if (resolvidoDia && !(DayNightCycle.Instance != null && DayNightCycle.Instance.isNight && !resolvidoNoite))
+        {
+            alavancaSubindo = true;
+            LigarLuz(rendererLuzVerde, corVerdeAcesa);
+        }
+
+        saveCarregado = true;
     }
 
     void Update()
@@ -139,6 +162,7 @@ public class FuseBoxController : MonoBehaviour
 
     public void Interagir()
     {
+        if (!saveCarregado) return;
         if (emCutscene || Time.time < cooldownSairEntrar) return;
 
         if (interagindo)
@@ -179,10 +203,10 @@ public class FuseBoxController : MonoBehaviour
         yield return new WaitForSeconds(1.5f); 
 
         estaDestrancada = true;
-        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado(idSaveLock, true);
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgressoSeguro();
         }
 
         if (faderTelaPreta) { faderTelaPreta.alpha = 0f; faderTelaPreta.gameObject.SetActive(false); }
@@ -296,7 +320,7 @@ public class FuseBoxController : MonoBehaviour
                 if (PersistenciaManager.Instance != null)
                 {
                     PersistenciaManager.Instance.RegistrarEstado("FuseBox_Dia_Resolvida", true);
-                    PersistenciaManager.Instance.SalvarTudo();
+                    SalvarProgressoSeguro();
                 }
                 
                 if (pcPrincipal != null) pcPrincipal.LigarPCProMundo2D(); 
@@ -309,7 +333,7 @@ public class FuseBoxController : MonoBehaviour
                 if (PersistenciaManager.Instance != null)
                 {
                     PersistenciaManager.Instance.RegistrarEstado("FuseBox_Noite_Resolvida", true);
-                    PersistenciaManager.Instance.SalvarTudo();
+                    SalvarProgressoSeguro();
                 }
 
                 if (pcPrincipal != null) pcPrincipal.LigarPcSetaNoite();
@@ -399,6 +423,23 @@ public class FuseBoxController : MonoBehaviour
         float anguloAlvo = deveEstarEmCima ? anguloCima : anguloBaixo;
         Quaternion rotAlvo = Quaternion.AngleAxis(anguloAlvo, eixoAlavanca);
         alavancaMestre.localRotation = Quaternion.Lerp(alavancaMestre.localRotation, rotAlvo, Time.deltaTime * 5f);
+    }
+
+
+    void SalvarProgressoSeguro()
+    {
+        if (!saveCarregado) return;
+
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.SalvarTudo(false);
+        }
     }
 
     public bool PodeClicar() 

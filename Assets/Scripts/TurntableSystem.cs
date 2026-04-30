@@ -51,26 +51,26 @@ public class TurntableSystem : MonoBehaviour
     public GameObject noDiskText;    
     public AudioSource sfxSource; 
 
-    // Estado Interno
     private AudioSource audioSource;
     private int currentDiskID = 0; 
     private bool isPlaying = false;
     
-    // Travas da UI de Interação
     private float tempoBloqueio = 0f; 
     private bool estaOlhando = false;
     private bool mostrandoErro = false;
     private Coroutine rotinaErro;
 
-    // Sistema de Raio de Áudio
     private AudioSource globalSoundtrack;
     private float globalOriginalVolume = 0.5f;
     private bool playerIsInsideRadius = false;
     private Coroutine fadeRoutine;
 
+    private bool inicializado = false;
+
     void Start()
     {
-        if (string.IsNullOrEmpty(uniqueID)) Debug.LogError($"[ERRO] Vitrola '{gameObject.name}' sem Unique ID!");
+        if (string.IsNullOrEmpty(uniqueID))
+            Debug.LogError($"[ERRO] Vitrola '{gameObject.name}' sem Unique ID!");
 
         audioSource = GetComponent<AudioSource>();
         audioSource.spatialBlend = 1.0f; 
@@ -88,10 +88,13 @@ public class TurntableSystem : MonoBehaviour
         }
 
         GameObject stObj = GameObject.Find("Soundtrack");
+
         if (stObj != null)
         {
             globalSoundtrack = stObj.GetComponent<AudioSource>();
-            globalOriginalVolume = globalSoundtrack.volume;
+
+            if (globalSoundtrack != null)
+                globalOriginalVolume = globalSoundtrack.volume;
         }
 
         if (visualShovelRecord) visualShovelRecord.SetActive(false);
@@ -101,7 +104,16 @@ public class TurntableSystem : MonoBehaviour
         if (noDiskText) noDiskText.SetActive(false);
         if (textoFaltaManivela) textoFaltaManivela.SetActive(false);
 
+        StartCoroutine(CarregarSaveSeguro());
+    }
+
+    IEnumerator CarregarSaveSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
         CarregarSave();
+        inicializado = true;
     }
 
     void CarregarSave()
@@ -109,36 +121,49 @@ public class TurntableSystem : MonoBehaviour
         if (PersistenciaManager.Instance == null) return;
 
         isSafeOpen = PersistenciaManager.Instance.ObterEstado(uniqueID + "_safe");
+
         if (isSafeOpen && safeDoorPivot) 
         {
             safeDoorPivot.localRotation = Quaternion.Euler(safeOpenRotation);
-            if (colliderLivro) colliderLivro.enabled = true; 
+
+            if (colliderLivro)
+                colliderLivro.enabled = true; 
         }
 
         quadroJaCaiu = PersistenciaManager.Instance.ObterEstado(uniqueID + "_quadro");
+
         if (quadroJaCaiu && quadroParaCair)
         {
             quadroParaCair.localPosition = quadroPosicaoCaido;
             quadroParaCair.localRotation = Quaternion.Euler(quadroRotacaoCaido);
-            if (documentoEscondido != null) documentoEscondido.LiberarDocumento();
+
+            if (documentoEscondido != null)
+                documentoEscondido.LiberarDocumento();
         }
 
         temManivela = PersistenciaManager.Instance.ObterEstado(uniqueID + "_manivela");
-        if (temManivela && visualManivela) visualManivela.SetActive(true);
+
+        if (temManivela && visualManivela)
+            visualManivela.SetActive(true);
 
         bool temDiscoPa = PersistenciaManager.Instance.ObterEstado(uniqueID + "_shovelDisk");
         bool temDiscoRuna = PersistenciaManager.Instance.ObterEstado(uniqueID + "_runeDisk");
 
-        if (temDiscoPa) LoadDisk(shovelRecordID, true);
-        else if (temDiscoRuna) LoadDisk(runeRecordID, true);
+        if (temDiscoPa)
+            LoadDisk(shovelRecordID, true);
+        else if (temDiscoRuna)
+            LoadDisk(runeRecordID, true);
     }
 
     void Update()
     {
+        if (!inicializado) return;
+
         if (isPlaying && currentDiskID != 0)
         {
             if (currentDiskID == shovelRecordID && visualShovelRecord) 
                 visualShovelRecord.transform.Rotate(Vector3.up * 100 * Time.deltaTime);
+
             if (currentDiskID == runeRecordID && visualRuneRecord) 
                 visualRuneRecord.transform.Rotate(Vector3.up * 100 * Time.deltaTime);
                 
@@ -151,27 +176,35 @@ public class TurntableSystem : MonoBehaviour
 
     void GerenciarRaioDeAudio()
     {
-        if (globalSoundtrack == null || FPS_Master.Instance == null) return;
+        if (globalSoundtrack == null || FPS_Master.Instance == null || audioSource == null) return;
 
         float dist = Vector3.Distance(transform.position, FPS_Master.Instance.transform.position);
-        bool shouldMuteGlobal = isPlaying && (dist <= audioSource.maxDistance);
+        bool shouldMuteGlobal = isPlaying && dist <= audioSource.maxDistance;
 
         if (shouldMuteGlobal && !playerIsInsideRadius)
         {
             playerIsInsideRadius = true;
-            if (fadeRoutine != null) StopCoroutine(fadeRoutine);
+
+            if (fadeRoutine != null)
+                StopCoroutine(fadeRoutine);
+
             fadeRoutine = StartCoroutine(FadeGlobalSoundtrack(0f)); 
         }
         else if (!shouldMuteGlobal && playerIsInsideRadius)
         {
             playerIsInsideRadius = false;
-            if (fadeRoutine != null) StopCoroutine(fadeRoutine);
+
+            if (fadeRoutine != null)
+                StopCoroutine(fadeRoutine);
+
             fadeRoutine = StartCoroutine(FadeGlobalSoundtrack(globalOriginalVolume)); 
         }
     }
 
     IEnumerator FadeGlobalSoundtrack(float targetVolume)
     {
+        if (globalSoundtrack == null) yield break;
+
         float currentVol = globalSoundtrack.volume;
         float time = 0;
         float duration = 1.5f;
@@ -182,13 +215,18 @@ public class TurntableSystem : MonoBehaviour
             time += Time.deltaTime;
             yield return null;
         }
+
         globalSoundtrack.volume = targetVolume;
     }
 
     public void AoOlhar() 
     { 
+        if (!inicializado) return;
+
         estaOlhando = true;
-        if (!mostrandoErro && interactText) interactText.SetActive(true); 
+
+        if (!mostrandoErro && interactText)
+            interactText.SetActive(true); 
         
         if (currentDiskID != 0 && !temManivela && textoFaltaManivela) 
             textoFaltaManivela.SetActive(true);
@@ -197,6 +235,7 @@ public class TurntableSystem : MonoBehaviour
     public void AoSair() 
     { 
         estaOlhando = false;
+
         if (interactText) interactText.SetActive(false); 
         if (noDiskText) noDiskText.SetActive(false); 
         if (textoFaltaManivela) textoFaltaManivela.SetActive(false);
@@ -204,7 +243,9 @@ public class TurntableSystem : MonoBehaviour
 
     public void Interagir()
     {
+        if (!inicializado) return;
         if (Time.unscaledTime < tempoBloqueio || mostrandoErro) return;
+
         tempoBloqueio = Time.unscaledTime + 0.5f; 
 
         int itemInHand = InventoryManager.Instance != null ? InventoryManager.Instance.itemSelecionado : -1;
@@ -213,12 +254,11 @@ public class TurntableSystem : MonoBehaviour
         {
             if (itemInHand == shovelRecordID || itemInHand == runeRecordID)
             {
-                InventoryManager.Instance.ConsumirItem(itemInHand);
-                LoadDisk(itemInHand, false);
+                if (InventoryManager.Instance != null)
+                    InventoryManager.Instance.ConsumirItem(itemInHand);
 
-                // 🔥 TRAVA TRANSACIONAL DE AÇO: Salva o jogo imediatamente.
-                // Garante que o disco saiu do bolso e entrou na vitrola no MESMO milissegundo no HD.
-                if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
+                LoadDisk(itemInHand, false);
+                SalvarProgressoSeguro();
             }
             else if (itemInHand == manivelaItemID && !temManivela)
             {
@@ -226,7 +266,9 @@ public class TurntableSystem : MonoBehaviour
             }
             else
             {
-                if (rotinaErro != null) StopCoroutine(rotinaErro);
+                if (rotinaErro != null)
+                    StopCoroutine(rotinaErro);
+
                 rotinaErro = StartCoroutine(ShowErrorFeedback());
             }
         }
@@ -242,35 +284,37 @@ public class TurntableSystem : MonoBehaviour
             InventoryManager.Instance.ConsumirItem(manivelaItemID);
             
         temManivela = true;
+
         if (visualManivela) visualManivela.SetActive(true);
         if (textoFaltaManivela) textoFaltaManivela.SetActive(false);
 
         if (PersistenciaManager.Instance != null)
-        {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_manivela", true);
-            PersistenciaManager.Instance.SalvarTudo();
-        }
 
         if (currentDiskID != 0)
-        {
             AtivarFuncoesDoDisco(currentDiskID, false);
-        }
+
+        SalvarProgressoSeguro();
     }
 
     void LoadDisk(int id, bool isLoadingSave)
     {
         currentDiskID = id;
-        if (interactText) interactText.SetActive(false); 
+
+        if (interactText)
+            interactText.SetActive(false); 
 
         if (id == shovelRecordID)
         {
             if (visualShovelRecord) visualShovelRecord.SetActive(true);
+
             audioSource.clip = musicShovel;
             SalvarEstadoDisco(true, false);
         }
         else if (id == runeRecordID)
         {
             if (visualRuneRecord) visualRuneRecord.SetActive(true);
+
             audioSource.clip = musicRune;
             SalvarEstadoDisco(false, true);
         }
@@ -281,35 +325,39 @@ public class TurntableSystem : MonoBehaviour
         }
         else
         {
-            if (textoFaltaManivela) textoFaltaManivela.SetActive(true);
+            if (textoFaltaManivela)
+                textoFaltaManivela.SetActive(true);
         }
     }
 
     void AtivarFuncoesDoDisco(int id, bool isLoadingSave)
     {
         isPlaying = true;
-        audioSource.Play(); 
+
+        if (audioSource.clip != null)
+            audioSource.Play(); 
 
         if (id == shovelRecordID)
         {
             if (!isSafeOpen && !isLoadingSave)
-            {
                 StartCoroutine(AbrirCofreRoutine());
-            }
         }
         else if (id == runeRecordID)
         {
-            bool eventoRunaJaAconteceu = PersistenciaManager.Instance != null && PersistenciaManager.Instance.ObterEstado(uniqueID + "_runeEventDone");
+            bool eventoRunaJaAconteceu = PersistenciaManager.Instance != null &&
+                                         PersistenciaManager.Instance.ObterEstado(uniqueID + "_runeEventDone");
 
             if (!eventoRunaJaAconteceu && !isLoadingSave)
             {
                 if (tvScript) tvScript.ReceberSinalDoDisco();
-                if (!quadroJaCaiu) StartCoroutine(RotinaDerrubarQuadro());
+
+                if (!quadroJaCaiu)
+                    StartCoroutine(RotinaDerrubarQuadro());
 
                 if (PersistenciaManager.Instance != null)
-                {
                     PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_runeEventDone", true);
-                }
+
+                SalvarProgressoSeguro();
             }
         }
     }
@@ -317,6 +365,7 @@ public class TurntableSystem : MonoBehaviour
     IEnumerator RotinaDerrubarQuadro()
     {
         quadroJaCaiu = true;
+
         yield return new WaitForSeconds(1.5f);
 
         if (quadroParaCair == null) yield break;
@@ -324,6 +373,7 @@ public class TurntableSystem : MonoBehaviour
         Vector3 startPos = quadroPosicaoPreso; 
         Quaternion startRot = Quaternion.Euler(quadroRotacaoPreso); 
         Quaternion endRot = Quaternion.Euler(quadroRotacaoCaido);
+
         float time = 0;
 
         while (time < 1f)
@@ -337,26 +387,37 @@ public class TurntableSystem : MonoBehaviour
         quadroParaCair.localPosition = quadroPosicaoCaido;
         quadroParaCair.localRotation = endRot;
 
-        if (sfxSource && somQuadroBatendo) sfxSource.PlayOneShot(somQuadroBatendo);
-        if (documentoEscondido != null) documentoEscondido.LiberarDocumento();
+        if (sfxSource && somQuadroBatendo)
+            sfxSource.PlayOneShot(somQuadroBatendo);
+
+        if (documentoEscondido != null)
+            documentoEscondido.LiberarDocumento();
 
         if (PersistenciaManager.Instance != null)
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_quadro", true);
+
+        SalvarProgressoSeguro();
     }
 
     IEnumerator AbrirCofreRoutine()
     {
         isSafeOpen = true;
         
-        if (sfxSource && safeOpenSound) sfxSource.PlayOneShot(safeOpenSound);
+        if (sfxSource && safeOpenSound)
+            sfxSource.PlayOneShot(safeOpenSound);
         
         if (PersistenciaManager.Instance != null)
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_safe", true);
 
-        if (safeDoorPivot == null) yield break;
+        if (safeDoorPivot == null)
+        {
+            SalvarProgressoSeguro();
+            yield break;
+        }
 
         Quaternion startRot = safeDoorPivot.localRotation;
         Quaternion endRot = Quaternion.Euler(safeOpenRotation);
+
         float time = 0;
 
         while (time < 1f)
@@ -365,15 +426,21 @@ public class TurntableSystem : MonoBehaviour
             safeDoorPivot.localRotation = Quaternion.Lerp(startRot, endRot, time);
             yield return null;
         }
+
         safeDoorPivot.localRotation = endRot;
 
-        if (colliderLivro) colliderLivro.enabled = true;
+        if (colliderLivro)
+            colliderLivro.enabled = true;
+
+        SalvarProgressoSeguro();
     }
 
     void EjectDisk()
     {
         isPlaying = false;
-        audioSource.Stop();
+
+        if (audioSource)
+            audioSource.Stop();
         
         int diskToReturn = currentDiskID;
         currentDiskID = 0;
@@ -383,18 +450,21 @@ public class TurntableSystem : MonoBehaviour
         if (InventoryManager.Instance != null)
             InventoryManager.Instance.ReceberItemDeVolta(diskToReturn);
 
-        if (diskToReturn == shovelRecordID && visualShovelRecord) visualShovelRecord.SetActive(false);
-        else if (diskToReturn == runeRecordID && visualRuneRecord) visualRuneRecord.SetActive(false);
+        if (diskToReturn == shovelRecordID && visualShovelRecord)
+            visualShovelRecord.SetActive(false);
+        else if (diskToReturn == runeRecordID && visualRuneRecord)
+            visualRuneRecord.SetActive(false);
 
-        if (interactText) interactText.SetActive(true);
-        
-        // 🔥 TRAVA: Salva o jogo imediatamente ao ejetar
-        if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
+        if (interactText)
+            interactText.SetActive(true);
+
+        SalvarProgressoSeguro();
     }
 
     void SalvarEstadoDisco(bool shovelIn, bool runeIn)
     {
         if (PersistenciaManager.Instance == null) return;
+
         PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_shovelDisk", shovelIn);
         PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_runeDisk", runeIn);
     }
@@ -402,16 +472,36 @@ public class TurntableSystem : MonoBehaviour
     IEnumerator ShowErrorFeedback()
     {
         mostrandoErro = true;
+
         if (interactText) interactText.SetActive(false);
 
         if (noDiskText) noDiskText.SetActive(true);
+
         yield return new WaitForSeconds(2.0f);
+
         if (noDiskText) noDiskText.SetActive(false);
 
         mostrandoErro = false;
-        if (estaOlhando && interactText) interactText.SetActive(true);
+
+        if (estaOlhando && interactText)
+            interactText.SetActive(true);
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 
     [ContextMenu("Generate Unique ID")]
-    private void GenerateID() { uniqueID = System.Guid.NewGuid().ToString(); }
+    private void GenerateID()
+    {
+        uniqueID = System.Guid.NewGuid().ToString();
+    }
 }

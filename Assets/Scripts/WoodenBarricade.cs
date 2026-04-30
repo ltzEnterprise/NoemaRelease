@@ -3,6 +3,10 @@ using System.Collections;
 
 public class WoodenBarricade : MonoBehaviour
 {
+    [Header("--- SAVE SYSTEM (OPCIONAL) ---")]
+    [Tooltip("Preencha para a barricada continuar quebrada depois de recarregar o save.")]
+    public string uniqueID;
+
     [Header("--- BLOQUEADOR ---")]
     [Tooltip("Coloque o objeto que bloqueia (ex: plasma). Se ficar vazio, funciona normal.")]
     public GameObject bloqueador;
@@ -17,7 +21,7 @@ public class WoodenBarricade : MonoBehaviour
     public AudioSource audioSource;
     public AudioClip somQuebrarMadeira;
     public GameObject textoSemFerramenta;
-    
+
     // UI de Interação (Raycast)
     public GameObject textoInteragir; // "Usar Pé de Cabra"
 
@@ -28,6 +32,8 @@ public class WoodenBarricade : MonoBehaviour
     private bool emProcesso = false;
     private bool estaOlhando = false;
     private bool mostrandoErro = false;
+    private bool inicializado = false;
+    private bool jaQuebrou = false;
 
     // Função que checa em tempo real se a parada tá bloqueada
     private bool TaBloqueado()
@@ -40,6 +46,28 @@ public class WoodenBarricade : MonoBehaviour
         if (painelTelaPreta) painelTelaPreta.SetActive(false);
         if (textoSemFerramenta) textoSemFerramenta.SetActive(false);
         if (textoInteragir) textoInteragir.SetActive(false);
+
+        StartCoroutine(CarregarEstadoSeguro());
+    }
+
+    IEnumerator CarregarEstadoSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
+        if (!string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
+        {
+            jaQuebrou = PersistenciaManager.Instance.ObterEstado(uniqueID + "_broken", false);
+        }
+
+        if (jaQuebrou)
+        {
+            if (portaBloqueada) portaBloqueada.SetActive(true);
+            gameObject.SetActive(false);
+            yield break;
+        }
+
+        inicializado = true;
     }
 
     void OnDisable()
@@ -51,8 +79,9 @@ public class WoodenBarricade : MonoBehaviour
     // --- MÉTODOS RAYCAST ---
     public void AoOlhar()
     {
+        if (!inicializado) return;
         if (TaBloqueado() || emProcesso) return; 
-        
+
         estaOlhando = true;
 
         // Só mostra o texto de [E] se NÃO estiver mostrando o erro
@@ -65,7 +94,7 @@ public class WoodenBarricade : MonoBehaviour
     public void AoSair()
     {
         estaOlhando = false;
-        
+
         // 🔥 AQUI TAVA O BUG! 🔥
         // Agora APAGA SÓ O TEXTO NORMAL. O texto de erro fica intacto pra não bugar.
         if (textoInteragir) textoInteragir.SetActive(false);
@@ -73,6 +102,7 @@ public class WoodenBarricade : MonoBehaviour
 
     public void Interagir()
     {
+        if (!inicializado) return;
         if (TaBloqueado() || emProcesso || mostrandoErro) return; 
 
         if (InventoryManager.Instance != null && InventoryManager.Instance.itemSelecionado == idDoPeDeCabra)
@@ -93,10 +123,10 @@ public class WoodenBarricade : MonoBehaviour
         // Desliga o texto normal e liga o erro
         if (textoInteragir) textoInteragir.SetActive(false);
         if (textoSemFerramenta) textoSemFerramenta.SetActive(true);
-        
+
         // Fica na tela por 2 segundos independente da mira
         yield return new WaitForSeconds(2f);
-        
+
         // Acabou o tempo, apaga o erro
         if (textoSemFerramenta) textoSemFerramenta.SetActive(false);
         mostrandoErro = false;
@@ -125,14 +155,35 @@ public class WoodenBarricade : MonoBehaviour
         yield return new WaitForSeconds(tempoTelaPreta);
 
         if (painelTelaPreta) painelTelaPreta.SetActive(false);
-        
+
         // Ativa a porta atrás
         if (portaBloqueada) portaBloqueada.SetActive(true);
+
+        jaQuebrou = true;
+
+        if (!string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_broken", true);
+        }
+
+        SalvarProgressoSeguro();
 
         // Destrava
         if (FPS_Master.Instance != null)
             FPS_Master.Instance.AlterarEstadoJogador(false, false);
-            
+
         gameObject.SetActive(false); 
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }

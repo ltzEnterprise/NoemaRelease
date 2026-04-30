@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class ReadableDocument : MonoBehaviour
 {
@@ -23,6 +24,7 @@ public class ReadableDocument : MonoBehaviour
     
     private AudioSource audioSource;
     private float tempoBloqueio = 0f; 
+    private bool inicializado = false;
 
     void Awake()
     {
@@ -41,6 +43,14 @@ public class ReadableDocument : MonoBehaviour
         audioSource.spatialBlend = 1.0f; 
         audioSource.ignoreListenerPause = true; 
 
+        StartCoroutine(CarregarEstadoSeguro());
+    }
+
+    IEnumerator CarregarEstadoSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
         // Confere se já foi liberado em algum save anterior
         if (!string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
         {
@@ -49,6 +59,8 @@ public class ReadableDocument : MonoBehaviour
                 isBlocked = false;
             }
         }
+
+        inicializado = true;
     }
 
     public void LiberarDocumento()
@@ -87,6 +99,7 @@ public class ReadableDocument : MonoBehaviour
 
     public void AoOlhar()
     {
+        if (!inicializado) return;
         estaSendoOlhado = true; 
     }
 
@@ -97,6 +110,7 @@ public class ReadableDocument : MonoBehaviour
 
     public void Interagir()
     {
+        if (!inicializado) return;
         if (isBlocked) return; 
 
         if (!isReading && Time.unscaledTime > tempoBloqueio)
@@ -112,8 +126,12 @@ public class ReadableDocument : MonoBehaviour
 
         if (isReading)
         {
+            ForcarBaúsEsconderemMensagens();
+
             if (soundEffect && audioSource) audioSource.PlayOneShot(soundEffect);
             if (uiContentPanel) uiContentPanel.SetActive(true);
+            if (uiInteractionPrompt) uiInteractionPrompt.SetActive(false);
+
             if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, true);
             
             Time.timeScale = 0f; 
@@ -124,6 +142,20 @@ public class ReadableDocument : MonoBehaviour
             if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
             
             Time.timeScale = 1f; 
+        }
+    }
+
+    void ForcarBaúsEsconderemMensagens()
+    {
+        TreasureChest[] baus = Object.FindObjectsByType<TreasureChest>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None
+        );
+
+        foreach (TreasureChest bau in baus)
+        {
+            if (bau != null)
+                bau.ForcarEsconderMensagens();
         }
     }
 }

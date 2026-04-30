@@ -8,12 +8,12 @@ public class BedController : MonoBehaviour
 {
     [Header("Configurações Base da Cama")]
     public string dreamSceneName;
-    
+
     [Header("--- FINAL DO JOGO (OPCIONAL) ---")]
     [Tooltip("Marque isso APENAS na última cama do jogo. Vai salvar tudo antes de ir pro mapa infinito.")]
     public bool isFinalSave = false;
     public Transform playerTransform; 
-    
+
     [Header("Interface")]
     public GameObject warningText; 
 
@@ -37,11 +37,27 @@ public class BedController : MonoBehaviour
     private bool isGoingToSleep = false; 
     private bool isLookingAtBed = false; // Controla pra não ficar piscando a UI atoa
     private Camera mainCam;
+    private bool savePronto = false;
 
     void Start()
     {
         if (warningText != null) warningText.SetActive(false);
         mainCam = Camera.main; // Puxa a câmera principal do jogador automaticamente
+
+        StartCoroutine(EsperarSavePronto());
+    }
+
+    IEnumerator EsperarSavePronto()
+    {
+        if (PersistenciaManager.Instance != null)
+        {
+            yield return new WaitUntil(() =>
+                PersistenciaManager.Instance.DadosProntosParaUso &&
+                !PersistenciaManager.Instance.EstaCarregando
+            );
+        }
+
+        savePronto = true;
     }
 
     void Update()
@@ -104,25 +120,13 @@ public class BedController : MonoBehaviour
     void SleepRoutine()
     {
         isGoingToSleep = true; 
-        
+
         if (warningText != null) warningText.SetActive(false); 
 
         if (isFinalSave)
         {
-            if (playerTransform != null)
-            {
-                PlayerPrefs.SetFloat("Player3D_PosX", playerTransform.position.x);
-                PlayerPrefs.SetFloat("Player3D_PosY", playerTransform.position.y);
-                PlayerPrefs.SetFloat("Player3D_PosZ", playerTransform.position.z);
-                PlayerPrefs.SetFloat("Player3D_RotY", playerTransform.eulerAngles.y);
-                PlayerPrefs.SetInt("Player3D_HasSave", 1);
-            }
-            
-            if (PersistenciaManager.Instance != null)
-            {
-                PersistenciaManager.Instance.SalvarTudo();
-            }
-            Debug.Log("Cama Final: Progresso salvo no HD antes de carregar a última cena.");
+            SalvarFinalDoJogoSeguro();
+            Debug.Log("Cama Final: Progresso salvo antes de carregar a última cena.");
         }
 
         if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
@@ -130,12 +134,46 @@ public class BedController : MonoBehaviour
         StartCoroutine(FadeAndLoadRoutine(dreamSceneName));
     }
 
+    void SalvarFinalDoJogoSeguro()
+    {
+        if (playerTransform == null)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null) playerTransform = player.transform;
+        }
+
+        if (SistemaGlobal.Instance != null &&
+            SistemaGlobal.Instance.slotFoiDefinido &&
+            PersistenciaManager.Instance != null &&
+            playerTransform != null)
+        {
+            string prefixo = "Slot_" + SistemaGlobal.Instance.slotAtual;
+
+            PersistenciaManager.Instance.SalvarFloat(prefixo + "_Final_PosX", playerTransform.position.x);
+            PersistenciaManager.Instance.SalvarFloat(prefixo + "_Final_PosY", playerTransform.position.y);
+            PersistenciaManager.Instance.SalvarFloat(prefixo + "_Final_PosZ", playerTransform.position.z);
+            PersistenciaManager.Instance.SalvarFloat(prefixo + "_Final_RotY", playerTransform.eulerAngles.y);
+            PersistenciaManager.Instance.SalvarInt(prefixo + "_Final_HasSave", 1);
+        }
+
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null && savePronto)
+        {
+            PersistenciaManager.Instance.SalvarTudo(false);
+        }
+    }
+
     public void TogglePanel(GameObject panel, bool state)
     {
         if (panel == null) return;
-        
+
         panel.SetActive(state);
-        
+
         SM_Window window = panel.GetComponent<SM_Window>();
         if (window != null) window.Toggle(state);
 
@@ -186,7 +224,7 @@ public class BedController : MonoBehaviour
     IEnumerator FadeOutMusic()
     {
         if (ambientMusic == null) yield break;
-        
+
         float initialVolume = ambientMusic.volume;
         float elapsedTime = 0f;
 
@@ -202,7 +240,7 @@ public class BedController : MonoBehaviour
     IEnumerator LoadingPercentageRoutine(string sceneName)
     {
         StartCoroutine(FadeOutMusic()); 
-        
+
         TogglePanel(loadingPanel, true);
 
         if (progressBar) progressBar.SetFill(0f); 
@@ -234,9 +272,9 @@ public class BedController : MonoBehaviour
         {
             extraTime += Time.unscaledDeltaTime;
             visualProgress = Mathf.Lerp(0.8f, 1f, extraTime / 2f); 
-            
+
             if (progressBar) progressBar.SetFill(visualProgress);
-            
+
             yield return null;
         }
 

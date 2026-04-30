@@ -26,6 +26,19 @@ public class InterfaceManager : MonoBehaviour
     public SM_Bar barraDeProgresso; 
     public string nomeDaCenaDoJogo = "CenaPrincipal3D"; 
 
+    [Header("--- LOADING POLIMENTO ---")]
+    [Tooltip("Tempo mínimo que a barra fica preenchendo de 80% até 100%.")]
+    public float tempoExtraLoading = 2f;
+
+    [Tooltip("Depois que a cena ativa, espera esse tempo antes de remover o loading. Ajuda post-processing/câmera estabilizarem.")]
+    public float esperaDepoisDaCenaPronta = 0.25f;
+
+    [Tooltip("Fade suave para tirar a tela de loading depois que a cena já está pronta.")]
+    public float fadeOutLoadingFinal = 0.35f;
+
+    [Tooltip("Se true, espera GameManager.CenaPronta antes de esconder o loading em cenas de jogo.")]
+    public bool esperarGameManagerCenaPronta = true;
+
     [Header("--- UI DOS SLOTS ---")]
     public TextMeshProUGUI[] textosDosSlots;    
     public TextMeshProUGUI[] textosBotaoApagar; 
@@ -68,6 +81,7 @@ public class InterfaceManager : MonoBehaviour
     private Vector3 escalaOpcoes = Vector3.one;
     private bool escalaSalva = false;
     private bool isProcessandoPause = false; 
+    private bool estaSaindoParaMenu = false; 
 
     private enum EstadoInterface { Menu, Slots, Opcoes, Jogando, Pausado, Loading }
     private EstadoInterface estadoAtual;
@@ -89,6 +103,7 @@ public class InterfaceManager : MonoBehaviour
         if (SaveSlotManager.Instance != null)
             SaveSlotManager.Instance.ForcarAutoSizeCentral();
 
+        PrepararPainelLoadingInicial();
         LigarDesligarPainel(painelLoading, false);
 
         if (painelConfirmacaoBackup != null)
@@ -106,7 +121,7 @@ public class InterfaceManager : MonoBehaviour
                 canvasFundo = imagemCongelada.gameObject.AddComponent<Canvas>();
 
             canvasFundo.overrideSorting = true;
-            canvasFundo.sortingOrder = -100; 
+            canvasFundo.sortingOrder = 9998; 
         }
 
         if (isCenaDeJogo)
@@ -193,6 +208,14 @@ public class InterfaceManager : MonoBehaviour
         if (animPai != null) animPai.enabled = false;
 
         painel.SetActive(estado);
+
+        CanvasGroup cgPainel = painel.GetComponent<CanvasGroup>();
+        if (cgPainel != null && painel == painelLoading && estado)
+        {
+            cgPainel.alpha = 1f;
+            cgPainel.interactable = true;
+            cgPainel.blocksRaycasts = true;
+        }
 
         SM_Window janela = painel.GetComponent<SM_Window>();
 
@@ -506,10 +529,28 @@ public class InterfaceManager : MonoBehaviour
 
     public void SairParaMenuPrincipal()
     {
+        if (estaSaindoParaMenu) return;
+        StartCoroutine(SairParaMenuSeguro());
+    }
+
+    IEnumerator SairParaMenuSeguro()
+    {
+        estaSaindoParaMenu = true;
+        estadoAtual = EstadoInterface.Loading;
+
         Time.timeScale = 1f; 
         AudioListener.pause = false; 
 
-        ClearFreezeTexture();
+        if (FPS_Master.Instance != null)
+            FPS_Master.travadoInteracao = true;
+
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        if (painelPause != null) LigarDesligarPainel(painelPause, false);
+        if (painelOpcoes != null) LigarDesligarPainel(painelOpcoes, false);
+
+        yield return StartCoroutine(FadePretoAntesDoMenu(0.25f));
 
         if (isCenaDeJogo && playerMaster != null && SistemaGlobal.Instance != null)
         {
@@ -520,7 +561,47 @@ public class InterfaceManager : MonoBehaviour
             PersistenciaManager.Instance.SalvarTudo(false);
         }
 
-        SceneManager.LoadScene("MenuPrincipal"); 
+        yield return null;
+
+        SceneManager.LoadScene("MenuPrincipal");
+    }
+
+    IEnumerator FadePretoAntesDoMenu(float duracao)
+    {
+        GameObject obj = new GameObject("FadePretoSairMenu");
+        Canvas canvas = obj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 32767;
+
+        CanvasGroup cg = obj.AddComponent<CanvasGroup>();
+        cg.alpha = 0f;
+        cg.interactable = false;
+        cg.blocksRaycasts = true;
+
+        GameObject imgObj = new GameObject("ImagemPreta");
+        imgObj.transform.SetParent(obj.transform, false);
+
+        Image img = imgObj.AddComponent<Image>();
+        img.color = Color.black;
+
+        RectTransform rt = img.rectTransform;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = Vector2.zero;
+        rt.anchoredPosition = Vector2.zero;
+
+        float t = 0f;
+
+        while (t < duracao)
+        {
+            t += Time.unscaledDeltaTime;
+            cg.alpha = Mathf.Clamp01(t / Mathf.Max(0.01f, duracao));
+            yield return null;
+        }
+
+        cg.alpha = 1f;
     }
 
     public void FecharOpcoesVoltar()
@@ -560,12 +641,16 @@ public class InterfaceManager : MonoBehaviour
     IEnumerator RotinaLoadingPorcentagem(string nomeCena)
     {
         estadoAtual = EstadoInterface.Loading;
+
+        Time.timeScale = 1f;
+        AudioListener.pause = false;
         
         if (fadeAtual != null)
             StopCoroutine(fadeAtual);
 
         fadeAtual = StartCoroutine(FadeOutMusica());
         
+        PrepararPainelLoadingInicial();
         LigarDesligarPainel(painelLoading, true);
         LigarDesligarPainel(painelSlots, false);
         LigarDesligarPainel(painelMenuPrincipal, false);
@@ -603,10 +688,10 @@ public class InterfaceManager : MonoBehaviour
 
         float tempoExtra = 0f;
 
-        while (tempoExtra < 2f)
+        while (tempoExtra < tempoExtraLoading)
         {
             tempoExtra += Time.unscaledDeltaTime;
-            progressoVisual = Mathf.Lerp(0.8f, 1f, tempoExtra / 2f); 
+            progressoVisual = Mathf.Lerp(0.8f, 1f, tempoExtra / Mathf.Max(0.01f, tempoExtraLoading)); 
 
             if (barraDeProgresso != null)
                 barraDeProgresso.SetFill(progressoVisual);
@@ -614,7 +699,92 @@ public class InterfaceManager : MonoBehaviour
             yield return null;
         }
 
+        if (barraDeProgresso != null)
+            barraDeProgresso.SetFill(1f);
+
         operacao.allowSceneActivation = true;
+
+        yield return new WaitUntil(() => operacao.isDone);
+
+        yield return null;
+        yield return new WaitForEndOfFrame();
+
+        bool carregouMenu = SceneManager.GetActiveScene().name == "MenuPrincipal";
+
+        if (!carregouMenu && esperarGameManagerCenaPronta && GameManager.Instance != null)
+        {
+            float timeout = 5f;
+            while (!GameManager.CenaPronta && timeout > 0f)
+            {
+                timeout -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+        }
+
+        if (esperaDepoisDaCenaPronta > 0f)
+            yield return new WaitForSecondsRealtime(esperaDepoisDaCenaPronta);
+
+        yield return new WaitForEndOfFrame();
+
+        if (fadeOutLoadingFinal > 0f)
+            yield return StartCoroutine(FadeOutPainelLoadingFinal());
+        else
+            LigarDesligarPainel(painelLoading, false);
+
+        loadingAtual = null;
+    }
+
+    private void PrepararPainelLoadingInicial()
+    {
+        if (painelLoading == null) return;
+
+        Canvas canvas = painelLoading.GetComponent<Canvas>();
+        if (canvas == null) canvas = painelLoading.AddComponent<Canvas>();
+
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 10000;
+
+        CanvasGroup cg = painelLoading.GetComponent<CanvasGroup>();
+        if (cg == null) cg = painelLoading.AddComponent<CanvasGroup>();
+
+        cg.alpha = 1f;
+        cg.interactable = true;
+        cg.blocksRaycasts = true;
+    }
+
+    IEnumerator FadeOutPainelLoadingFinal()
+    {
+        if (painelLoading == null)
+            yield break;
+
+        CanvasGroup cg = painelLoading.GetComponent<CanvasGroup>();
+        if (cg == null)
+        {
+            LigarDesligarPainel(painelLoading, false);
+            yield break;
+        }
+
+        cg.interactable = false;
+        cg.blocksRaycasts = true;
+
+        float t = 0f;
+        float alphaInicial = cg.alpha;
+
+        while (t < fadeOutLoadingFinal)
+        {
+            t += Time.unscaledDeltaTime;
+            cg.alpha = Mathf.Lerp(alphaInicial, 0f, t / fadeOutLoadingFinal);
+            yield return null;
+        }
+
+        cg.alpha = 0f;
+        cg.blocksRaycasts = false;
+
+        LigarDesligarPainel(painelLoading, false);
+
+        cg.alpha = 1f;
+        cg.interactable = true;
+        cg.blocksRaycasts = true;
     }
 
     IEnumerator SequenciaInicializacaoJogo()
@@ -657,7 +827,8 @@ public class InterfaceManager : MonoBehaviour
 
     private void OnDisable()
     {
-        ClearFreezeTexture();
+        if (!estaSaindoParaMenu && estadoAtual != EstadoInterface.Loading)
+            ClearFreezeTexture();
     }
 
     public void ClicarNoSlot(int slot)

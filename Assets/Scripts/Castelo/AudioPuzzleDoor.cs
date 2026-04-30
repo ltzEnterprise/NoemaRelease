@@ -64,12 +64,14 @@ public class AudioPuzzleDoor : MonoBehaviour
     private bool digitandoSenha = false;
     private string inputAtual = "";
     private Vector3 posicaoInicialInteracao; 
-    private bool ignorarProximoInputE = false; // Trava de proteção pro E
+    private bool ignorarProximoInputE = false;
+    private bool aguardandoSoltarE = false;
 
     // Controle de Áudio Global
     private AudioSource musicaGlobal;
     private Coroutine transicaoAudioAtual;
     private float volumeGlobalOriginal = 0.5f;
+    private bool inicializado = false;
 
     void Start()
     {
@@ -89,7 +91,16 @@ public class AudioPuzzleDoor : MonoBehaviour
             if (musicaGlobal != null) volumeGlobalOriginal = musicaGlobal.volume;
         }
 
+        StartCoroutine(CarregarEstadoSalvoSeguro());
+    }
+
+    IEnumerator CarregarEstadoSalvoSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
         CarregarEstadoSalvo();
+        inicializado = true;
     }
 
     void CarregarEstadoSalvo()
@@ -109,6 +120,7 @@ public class AudioPuzzleDoor : MonoBehaviour
 
     public void AoOlhar()
     {
+        if (!inicializado) return;
         if (portaResolvida || jogadorNaPorta) return;
         if (textoInteragir) textoInteragir.SetActive(true);
     }
@@ -120,14 +132,16 @@ public class AudioPuzzleDoor : MonoBehaviour
 
     public void Interagir()
     {
+        if (!inicializado) return;
         if (portaResolvida || jogadorNaPorta) return;
 
         if (FPS_Master.Instance != null)
             posicaoInicialInteracao = FPS_Master.Instance.transform.position;
 
         jogadorNaPorta = true;
+        aguardandoSoltarE = true;
         
-        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
+        TravarJogadorNoPuzzle();
         
         if (textoInteragir) textoInteragir.SetActive(false);
         
@@ -147,20 +161,27 @@ public class AudioPuzzleDoor : MonoBehaviour
     {
         if (!jogadorNaPorta || portaResolvida) return;
 
+        if (aguardandoSoltarE)
+        {
+            if (!Input.GetKey(KeyCode.E))
+                aguardandoSoltarE = false;
+
+            return;
+        }
+
         if (ignorarProximoInputE)
         {
             ignorarProximoInputE = false;
             return;
         }
 
-        // 🔥 Removido o Input.GetKeyDown(KeyCode.Escape) daqui
         if (Input.GetKeyDown(KeyCode.E)) 
         {
             SairDoPuzzle();
             return;
         }
 
-        if (painelSenha.activeSelf && textoDicaR.gameObject.activeSelf && Input.GetKeyDown(KeyCode.R))
+        if (painelSenha != null && painelSenha.activeSelf && textoDicaR != null && textoDicaR.gameObject.activeSelf && Input.GetKeyDown(KeyCode.R))
         {
             AbrirPainelSenha(false);
             StartCoroutine(SequenciaCutscene(false));
@@ -171,6 +192,18 @@ public class AudioPuzzleDoor : MonoBehaviour
         {
             CapturarTecladoNumerico();
         }
+    }
+
+    void TravarJogadorNoPuzzle()
+    {
+        if (FPS_Master.Instance != null)
+            FPS_Master.travadoInteracao = true;
+    }
+
+    void DestravarJogadorDoPuzzle()
+    {
+        if (FPS_Master.Instance != null)
+            FPS_Master.travadoInteracao = false;
     }
 
     void CapturarTecladoNumerico()
@@ -252,8 +285,8 @@ public class AudioPuzzleDoor : MonoBehaviour
         dialogoTerminou = false;
         jaFezCutsceneInicial = true; 
         
-        painelSenha.SetActive(false);
-        painelTelaPreta.SetActive(true);
+        if (painelSenha) painelSenha.SetActive(false);
+        if (painelTelaPreta) painelTelaPreta.SetActive(true);
 
         if (comBatida && audioSourceSFX && somBatida) 
         {
@@ -264,7 +297,7 @@ public class AudioPuzzleDoor : MonoBehaviour
         if (falasDaPorta != null) yield return StartCoroutine(TocarLista(falasDaPorta));
 
         if (textoDialogoCutscene) textoDialogoCutscene.text = ""; 
-        painelTelaPreta.SetActive(false);
+        if (painelTelaPreta) painelTelaPreta.SetActive(false);
 
         dialogoTerminou = true;
         AbrirPainelSenha(true); 
@@ -274,8 +307,11 @@ public class AudioPuzzleDoor : MonoBehaviour
     {
         inputAtual = "";
         AtualizarVisorSenha();
-        painelSenha.SetActive(true);
-        textoVisorSenha.color = Color.white;
+
+        if (painelSenha) painelSenha.SetActive(true);
+
+        if (textoVisorSenha)
+            textoVisorSenha.color = Color.white;
         
         if (textoDicaR)
         {
@@ -308,13 +344,21 @@ public class AudioPuzzleDoor : MonoBehaviour
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID)) 
             PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
 
-        if (SistemaGlobal.Instance != null)
-        {
-            EstadoGlobal.SalvarNoSlot(SistemaGlobal.Instance.slotAtual);
-            if (PersistenciaManager.Instance) PersistenciaManager.Instance.SalvarTudo();
-        }
+        SalvarProgressoSeguro();
 
         StartCoroutine(SairDoPuzzleDelay());
+    }
+
+    void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 
     IEnumerator SairDoPuzzleDelay()
@@ -327,16 +371,19 @@ public class AudioPuzzleDoor : MonoBehaviour
     {
         StopAllCoroutines(); 
         
-        painelTelaPreta.SetActive(false);
-        painelSenha.SetActive(false);
+        if (audioSourceVoz) audioSourceVoz.Stop();
+
+        if (painelTelaPreta) painelTelaPreta.SetActive(false);
+        if (painelSenha) painelSenha.SetActive(false);
         if (textoDialogoCutscene) textoDialogoCutscene.text = "";
         
         jogadorNaPorta = false;
         digitandoSenha = false;
+        aguardandoSoltarE = false;
         
         TrocarParaMusicaGlobal();
         
-        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
+        DestravarJogadorDoPuzzle();
         
         ignorarProximoInputE = true; 
         
@@ -397,7 +444,6 @@ public class AudioPuzzleDoor : MonoBehaviour
     {
         if(textoDialogoCutscene) textoDialogoCutscene.text = "";
         
-        // 🔥 CORREÇÃO: loop = true para tocar sem parar até a frase acabar
         if (audioSourceVoz && somDigitandoTexto) 
         { 
             audioSourceVoz.clip = somDigitandoTexto; 

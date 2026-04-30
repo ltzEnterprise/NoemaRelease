@@ -1,7 +1,7 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Events;
-using System.Linq;
 
 public enum PirateSymbol 
 { 
@@ -26,18 +26,25 @@ public class CaptainLeverPuzzle : MonoBehaviour
     
     [Tooltip("Objeto do mapa que vai aparecer quando resolver o puzzle principal")]
     public GameObject itemRecompensaAparecer; 
+
     [Tooltip("Objeto do mapa que vai SUMIR quando resolver o puzzle principal")]
     public GameObject itemEsconderNaRuna; 
     
     public UnityEvent onPuzzleSolved; 
 
+    [Header("--- COMBINAÇÃO PRINCIPAL ---")]
+    [Tooltip("Marque as caixas correspondentes às alavancas que devem estar ativadas para resolver o puzzle principal.")]
+    public List<bool> mainCombination; 
+
     [Header("Recompensa 2 - Segredo")]
     [Tooltip("Marque as caixas correspondentes às alavancas que devem ser ativadas.")]
     public List<bool> secretCombination; 
+
     public GameObject quadSegredo; 
     
     [Tooltip("Objeto do mapa que vai aparecer quando resolver o segredo")]
     public GameObject itemRecompensaAparecerSegredo;
+
     [Tooltip("Objeto do mapa que vai SUMIR quando resolver o segredo")]
     public GameObject itemEsconderNoSegredo;
     
@@ -47,48 +54,63 @@ public class CaptainLeverPuzzle : MonoBehaviour
     private bool isSolved = false;
     private bool isSecretSolved = false;
     private bool resetando = false;
+    private bool inicializado = false;
 
     void Start()
     {
+        StartCoroutine(InicializarSeguro());
+    }
+
+    IEnumerator InicializarSeguro()
+    {
         if (string.IsNullOrEmpty(uniqueID)) 
-            Debug.LogError($"[ERRO] Puzzle do Capitão '{gameObject.name}' sem Unique ID! O Save não vai funcionar.");
+            Debug.LogError($"[ERRO] Puzzle do Capitão '{gameObject.name}' sem Unique ID. O Save não vai funcionar.");
 
         audioSource = GetComponent<AudioSource>();
-        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
 
-        if (quadSegredo) quadSegredo.SetActive(false);
-        if (painelRecompensa) painelRecompensa.SetActive(false);
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+
+        if (quadSegredo)
+            quadSegredo.SetActive(false);
+
+        if (painelRecompensa)
+            painelRecompensa.SetActive(false);
         
-        // Garante que os itens comecem no estado padrão antes de ler o save
-        if (itemRecompensaAparecer) itemRecompensaAparecer.SetActive(false);
-        if (itemRecompensaAparecerSegredo) itemRecompensaAparecerSegredo.SetActive(false);
+        if (itemRecompensaAparecer)
+            itemRecompensaAparecer.SetActive(false);
+
+        if (itemRecompensaAparecerSegredo)
+            itemRecompensaAparecerSegredo.SetActive(false);
+
+        yield return new WaitUntil(() =>
+            PersistenciaManager.Instance != null &&
+            PersistenciaManager.Instance.DadosProntosParaUso
+        );
 
         CarregarSave();
+
+        inicializado = true;
     }
 
     void CarregarSave()
     {
-        if (PersistenciaManager.Instance == null || string.IsNullOrEmpty(uniqueID)) return;
+        if (PersistenciaManager.Instance == null || string.IsNullOrEmpty(uniqueID))
+            return;
 
         isSolved = PersistenciaManager.Instance.ObterEstado(uniqueID + "_resolvido");
         isSecretSolved = PersistenciaManager.Instance.ObterEstado(uniqueID + "_segredo");
 
         if (isSolved)
-        {
-            if (itemRecompensaAparecer) itemRecompensaAparecer.SetActive(true);
-            if (itemEsconderNaRuna) itemEsconderNaRuna.SetActive(false);
-        }
+            AplicarEstadoRecompensaPrincipal(false);
 
         if (isSecretSolved)
-        {
-            if (quadSegredo) quadSegredo.SetActive(true);
-            if (itemRecompensaAparecerSegredo) itemRecompensaAparecerSegredo.SetActive(true);
-            if (itemEsconderNoSegredo) itemEsconderNoSegredo.SetActive(false);
-        }
+            AplicarEstadoRecompensaSegredo(false);
     }
 
     public void CheckRules()
     {
+        if (!inicializado) return;
         if (resetando) return;
 
         if (!isSolved)
@@ -103,30 +125,13 @@ public class CaptainLeverPuzzle : MonoBehaviour
 
     void CheckMainPuzzleRules()
     {
-        if (leverList.Count != 6 || symbolOrder.Count != 6) return;
+        if (leverList == null || mainCombination == null) return;
+        if (mainCombination.Count != 6 || leverList.Count != 6) return;
 
-        if (leverList.Count(l => l.isOn) != 3) return;
-
-        int GetIndex(PirateSymbol s) => symbolOrder.IndexOf(s);
-        bool IsOn(PirateSymbol s) => leverList[GetIndex(s)].isOn;
-
-        int idxChest = GetIndex(PirateSymbol.Chest);
-        int idxKey = GetIndex(PirateSymbol.Key);
-        int idxRum = GetIndex(PirateSymbol.Rum);
-        int idxBoat = GetIndex(PirateSymbol.Boat);
-
-        bool chestNeighborActive = (idxChest > 0 && leverList[idxChest - 1].isOn) || (idxChest < 5 && leverList[idxChest + 1].isOn);
-        if (!chestNeighborActive) return;
-
-        if (IsOn(PirateSymbol.Key) && !IsOn(PirateSymbol.Chest)) return;
-
-        if (Mathf.Abs(idxRum - idxBoat) == 1 && IsOn(PirateSymbol.Rum)) return;
-
-        if (IsOn(PirateSymbol.Anchor) && IsOn(PirateSymbol.Compass)) return;
-        
-        if (Mathf.Abs(idxKey - idxRum) == 2)
+        for (int i = 0; i < 6; i++)
         {
-            if (leverList[(idxKey + idxRum) / 2].isOn) return;
+            if (leverList[i] == null) return;
+            if (leverList[i].isOn != mainCombination[i]) return;
         }
 
         SolvePuzzle();
@@ -134,36 +139,84 @@ public class CaptainLeverPuzzle : MonoBehaviour
 
     void CheckSecretRules()
     {
-        if (secretCombination.Count != 6) return;
+        if (leverList == null || secretCombination == null) return;
+        if (secretCombination.Count != 6 || leverList.Count != 6) return;
 
         for (int i = 0; i < 6; i++)
         {
+            if (leverList[i] == null) return;
             if (leverList[i].isOn != secretCombination[i]) return;
         }
 
         SolveSecret();
     }
 
+    void AplicarEstadoRecompensaPrincipal(bool mostrarPainelESom)
+    {
+        if (mostrarPainelESom)
+        {
+            if (painelRecompensa)
+                painelRecompensa.SetActive(true);
+
+            if (audioSource && somSegredo)
+                audioSource.PlayOneShot(somSegredo);
+        }
+
+        if (itemRecompensaAparecer)
+            itemRecompensaAparecer.SetActive(true);
+
+        if (itemEsconderNaRuna)
+            itemEsconderNaRuna.SetActive(false);
+    }
+
+    void AplicarEstadoRecompensaSegredo(bool mostrarPainelESom)
+    {
+        if (mostrarPainelESom)
+        {
+            if (quadSegredo)
+                quadSegredo.SetActive(true);
+
+            if (audioSource && somSegredo)
+                audioSource.PlayOneShot(somSegredo);
+        }
+        else
+        {
+            if (quadSegredo)
+                quadSegredo.SetActive(true);
+        }
+
+        if (itemRecompensaAparecerSegredo)
+            itemRecompensaAparecerSegredo.SetActive(true);
+
+        if (itemEsconderNoSegredo)
+            itemEsconderNoSegredo.SetActive(false);
+    }
+
     void SolvePuzzle()
     {
-        isSolved = true;
-        
-        if (painelRecompensa) painelRecompensa.SetActive(true);
-        if (InventarioRunas.Instance != null) InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
-        if (onPuzzleSolved != null) onPuzzleSolved.Invoke();
+        if (isSolved) return;
 
-        if (itemRecompensaAparecer) itemRecompensaAparecer.SetActive(true);
-        if (itemEsconderNaRuna) itemEsconderNaRuna.SetActive(false);
+        isSolved = true;
+
+        AplicarEstadoRecompensaPrincipal(true);
+
+        if (InventarioRunas.Instance != null)
+            InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
+
+        if (onPuzzleSolved != null)
+            onPuzzleSolved.Invoke();
 
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_resolvido", true);
+
+            if (itemRecompensaAparecer)
+                PersistenciaManager.Instance.RegistrarEstado(itemRecompensaAparecer.name, true);
+
+            if (itemEsconderNaRuna)
+                PersistenciaManager.Instance.RegistrarEstado(itemEsconderNaRuna.name, false);
             
-            // Grava o estado extra dos objetos, caso precisem ser lidos em outro lugar
-            if (itemRecompensaAparecer) PersistenciaManager.Instance.RegistrarEstado(itemRecompensaAparecer.name, true);
-            if (itemEsconderNaRuna) PersistenciaManager.Instance.RegistrarEstado(itemEsconderNaRuna.name, false);
-            
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgressoSeguro();
         }
 
         resetando = true;
@@ -172,38 +225,52 @@ public class CaptainLeverPuzzle : MonoBehaviour
 
     void ResetarAlavancas()
     {
-        foreach(var lever in leverList)
+        foreach (var lever in leverList)
         {
-            if (lever != null) lever.ForceReset(); 
+            if (lever != null)
+                lever.ForceReset(); 
         }
-        
-        if (audioSource && somSegredo) audioSource.PlayOneShot(somSegredo, 0.5f);
         
         resetando = false;
     }
 
     void SolveSecret()
     {
+        if (isSecretSolved) return;
+
         isSecretSolved = true;
 
-        if (somSegredo && audioSource) audioSource.PlayOneShot(somSegredo);
-        if (quadSegredo) quadSegredo.SetActive(true);
-
-        if (itemRecompensaAparecerSegredo) itemRecompensaAparecerSegredo.SetActive(true);
-        if (itemEsconderNoSegredo) itemEsconderNoSegredo.SetActive(false);
+        AplicarEstadoRecompensaSegredo(true);
 
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_segredo", true);
             
-            // Grava o estado extra dos objetos, caso precisem ser lidos em outro lugar
-            if (itemRecompensaAparecerSegredo) PersistenciaManager.Instance.RegistrarEstado(itemRecompensaAparecerSegredo.name, true);
-            if (itemEsconderNoSegredo) PersistenciaManager.Instance.RegistrarEstado(itemEsconderNoSegredo.name, false);
+            if (itemRecompensaAparecerSegredo)
+                PersistenciaManager.Instance.RegistrarEstado(itemRecompensaAparecerSegredo.name, true);
+
+            if (itemEsconderNoSegredo)
+                PersistenciaManager.Instance.RegistrarEstado(itemEsconderNoSegredo.name, false);
             
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgressoSeguro();
         }
     }
 
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
+    }
+
     [ContextMenu("Generate Unique ID")]
-    private void GenerateID() { uniqueID = System.Guid.NewGuid().ToString(); }
+    private void GenerateID()
+    {
+        uniqueID = System.Guid.NewGuid().ToString();
+    }
 }

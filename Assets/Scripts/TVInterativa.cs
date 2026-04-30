@@ -3,9 +3,7 @@ using System.Collections;
 
 public class TVInterativa : MonoBehaviour
 {
-    // --- VARIÁVEIS ---
     [Header("Sistema de Save")]
-    [Tooltip("Esse ID deve ser ÚNICO no jogo. Se copiar a TV, mude esse ID.")]
     public string idUnico = "TV_Sala_01"; 
 
     [Header("Configuração da Runa")]
@@ -14,8 +12,8 @@ public class TVInterativa : MonoBehaviour
     [Header("Visuais")]
     public GameObject imagemGlitch; 
     public GameObject imagemRunaNaTela; 
-    public GameObject textoInteragir;   // O Texto "Aperte E"
-    public GameObject painelFeedback;   // O Painel "Você pegou a Runa"
+    public GameObject textoInteragir;
+    public GameObject painelFeedback;
     
     [Header("Áudio")]
     public AudioClip somGlitch;     
@@ -25,42 +23,47 @@ public class TVInterativa : MonoBehaviour
     private bool tvLigada = false;
     private bool jaPegou = false;
     private bool animacaoRodando = false;
+    private bool inicializado = false;
 
     void Start()
     {
-        // Garante estado inicial visual limpo
         if (imagemGlitch) imagemGlitch.SetActive(false);
         if (imagemRunaNaTela) imagemRunaNaTela.SetActive(false);
         if (textoInteragir) textoInteragir.SetActive(false);
         if (painelFeedback) painelFeedback.SetActive(false);
 
-        // --- SISTEMA DE SAVE (CARREGAR) ---
+        StartCoroutine(VerificarSaveSeguro());
+    }
+
+    IEnumerator VerificarSaveSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
         VerificarSave();
+        inicializado = true;
     }
 
     void VerificarSave()
     {
-        if (Application.isEditor) return;
+        if (PersistenciaManager.Instance == null) return;
 
-        if (PersistenciaManager.Instance != null)
+        bool runaDisponivel = PersistenciaManager.Instance.CarregarEstadoObjeto(idUnico, true);
+
+        if (!runaDisponivel)
         {
-            // O padrão é TRUE (Runa Disponível).
-            // Se o save retornar FALSE, significa que já pegamos a runa antes.
-            bool runaDisponivel = PersistenciaManager.Instance.CarregarEstadoObjeto(idUnico, true);
-
-            if (!runaDisponivel)
-            {
-                jaPegou = true;
-                tvLigada = false;
-                
-                if (imagemRunaNaTela) imagemRunaNaTela.SetActive(false);
-                if (textoInteragir) textoInteragir.SetActive(false);
-            }
+            jaPegou = true;
+            tvLigada = false;
+            
+            if (imagemRunaNaTela) imagemRunaNaTela.SetActive(false);
+            if (textoInteragir) textoInteragir.SetActive(false);
         }
     }
 
     public void AoOlhar()
     {
+        if (!inicializado) return;
+
         if (tvLigada && !jaPegou && !animacaoRodando)
         {
             if (textoInteragir) textoInteragir.SetActive(true);
@@ -74,15 +77,17 @@ public class TVInterativa : MonoBehaviour
 
     public void Interagir()
     {
+        if (!inicializado) return;
+
         if (tvLigada && !jaPegou && !animacaoRodando)
-        {
             PegarRunaAgora();
-        }
     }
 
     public void ReceberSinalDoDisco()
     {
+        if (!inicializado) return;
         if (jaPegou || animacaoRodando) return;
+
         StartCoroutine(SequenciaLigarTV());
     }
 
@@ -101,24 +106,17 @@ public class TVInterativa : MonoBehaviour
         }
 
         if (InventarioRunas.Instance != null)
-        {
-            InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
-        }
+            InventarioRunas.Instance.ColetarRunaSemForcarSaveHD(nomeDaRuna);
 
-        // --- SISTEMA DE SAVE (SALVAR) ---
         SalvarQueJaPegou();
     }
 
     void SalvarQueJaPegou()
     {
-        if (Application.isEditor) return;
-
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado(idUnico, false);
-            
-            // 🔥 REMOVIDO o PlayerPrefs e colocado o nosso JSON oficial
-            PersistenciaManager.Instance.SalvarTudo(); 
+            SalvarProgressoSeguro();
         }
     }
 
@@ -142,6 +140,20 @@ public class TVInterativa : MonoBehaviour
     IEnumerator EsconderPainelDepois()
     {
         yield return new WaitForSeconds(3.0f);
-        if (painelFeedback) painelFeedback.SetActive(false);
+
+        if (painelFeedback)
+            painelFeedback.SetActive(false);
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }

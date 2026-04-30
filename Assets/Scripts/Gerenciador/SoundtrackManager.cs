@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Audio;
 
 [System.Serializable]
 public class ConfigMusica
@@ -11,10 +12,14 @@ public class ConfigMusica
     [Tooltip("Volume individual. 1 = Volume global. 0.5 = Metade.")]
     [Range(0f, 2f)] public float multiplicadorVolume = 1f;
 
+    [Header("--- TIPO DE TRANSIÇÃO ---")]
+    [Tooltip("ATIVADO: Mistura as músicas na troca.\nDESATIVADO: Desliga a atual, espera o Intervalo Sem Música, e liga a nova.")]
+    public bool usarCrossfade = true; 
+
     [Header("--- SAÍDA DA ÁREA (Transição) ---")]
     public float tempoContinuarTocando = 0f;
     public float fadeOutNormal = 2f;
-    [Tooltip("IGNORADO DURANTE A TROCA. Agora as músicas se emendam no Crossfade. Só usado se você for pro vazio.")]
+    [Tooltip("Tempo de silêncio antes da próxima começar (Só funciona se o Crossfade estiver DESATIVADO ou se for pro vazio).")]
     public float intervaloSemMusica = 1f;
 
     [Header("--- ENTRADA NA ÁREA ---")]
@@ -43,7 +48,6 @@ public class SoundtrackManager : MonoBehaviour
     [Header("O Maestro (Configure cada música aqui)")]
     public List<ConfigMusica> listaDeMusicas = new List<ConfigMusica>();
 
-    // As duas caixas de som que fazem a mágica do Crossfade
     private AudioSource audioSource1;
     private AudioSource audioSource2;
     private AudioSource sourcePrincipal;
@@ -59,7 +63,6 @@ public class SoundtrackManager : MonoBehaviour
 
     void Start()
     {
-        // Acha a sua caixa de som original
         audioSource1 = GetComponent<AudioSource>();
         if (audioSource1 == null)
         {
@@ -69,8 +72,10 @@ public class SoundtrackManager : MonoBehaviour
 
         if (audioSource1 != null)
         {
-            // CRIA A SEGUNDA CAIXA DE SOM SOZINHO (Invisível) PRA NÃO TE DAR TRABALHO
             audioSource2 = audioSource1.gameObject.AddComponent<AudioSource>();
+            
+            // 🔥 A CORREÇÃO ESTÁ AQUI: A caixa 2 agora copia o Mixer da caixa 1
+            audioSource2.outputAudioMixerGroup = audioSource1.outputAudioMixerGroup;
             
             audioSource1.loop = false;
             audioSource2.loop = false;
@@ -99,7 +104,6 @@ public class SoundtrackManager : MonoBehaviour
     {
         while (true)
         {
-            // 1. INÍCIO SECO OU VOLTA DO VAZIO
             if (musicaAtual == null && musicaAlvo != null)
             {
                 musicaAtual = musicaAlvo;
@@ -116,33 +120,47 @@ public class SoundtrackManager : MonoBehaviour
             {
                 while (true)
                 {
-                    // A) REGRA DE PRIORIDADE (Esmaga com Crossfade agressivo)
                     if (musicaAlvo != musicaAtual && musicaAlvo != null && musicaAlvo.ePrioridade)
                     {
-                        ExecutarCrossfade(musicaAtual, musicaAlvo, musicaAlvo.fadeOutForcadoPrioridade);
+                        if (musicaAtual.usarCrossfade)
+                        {
+                            ExecutarCrossfade(musicaAtual, musicaAlvo, musicaAlvo.fadeOutForcadoPrioridade);
+                        }
+                        else
+                        {
+                            yield return IniciarFade(sourcePrincipal, 0f, musicaAlvo.fadeOutForcadoPrioridade, true, musicaAtual);
+                            musicaAtual = null; 
+                        }
                         break;
                     }
 
                     bool esperaAtiva = musicaAtual.temQueTerminarAntesDeTrocar && ChecarAlternancia(musicaAtual.nomeArea);
 
-                    // B) TRANSIÇÃO DE ÁREAS (O Efeito Foda de Crossfade)
                     if (musicaAlvo != musicaAtual && musicaAlvo != null && !esperaAtiva)
                     {
                         yield return new WaitForSeconds(musicaAtual.tempoContinuarTocando);
-                        if (musicaAlvo == musicaAtual) continue; // Abortou
+                        if (musicaAlvo == musicaAtual) continue; 
 
                         if (musicaAtual.temQueTerminarAntesDeTrocar) InverterAlternancia(musicaAtual.nomeArea);
 
-                        // Manda descer uma e subir a outra simultaneamente! Efeito contínuo.
-                        ExecutarCrossfade(musicaAtual, musicaAlvo, musicaAtual.fadeOutNormal);
+                        if (musicaAtual.usarCrossfade)
+                        {
+                            ExecutarCrossfade(musicaAtual, musicaAlvo, musicaAtual.fadeOutNormal);
+                        }
+                        else
+                        {
+                            yield return IniciarFade(sourcePrincipal, 0f, musicaAtual.fadeOutNormal, true, musicaAtual);
+                            float tempoEspera = musicaAtual.intervaloSemMusica;
+                            musicaAtual = null; 
+                            yield return new WaitForSeconds(tempoEspera);
+                        }
                         break;
                     }
 
-                    // C) SE SAIU PRO VAZIO (Nenhuma música em volta)
                     if (musicaAlvo == null && !esperaAtiva)
                     {
                         yield return new WaitForSeconds(musicaAtual.tempoContinuarTocando);
-                        if (musicaAlvo != null) continue; // Desistiu e voltou
+                        if (musicaAlvo != null) continue; 
 
                         if (musicaAtual.temQueTerminarAntesDeTrocar) InverterAlternancia(musicaAtual.nomeArea);
 
@@ -154,7 +172,6 @@ public class SoundtrackManager : MonoBehaviour
                         break;
                     }
 
-                    // D) FIM NATURAL E LOOPING
                     if (sourcePrincipal.isPlaying && musicaAtual.audioClip != null)
                     {
                         float restante = musicaAtual.audioClip.length - sourcePrincipal.time;
@@ -170,7 +187,6 @@ public class SoundtrackManager : MonoBehaviour
                                 break;
                             }
 
-                            // O Silêncio só existe aqui no Loop agora!
                             float tempoSilencioFim = musicaAtual.silencioFimDeMusica;
                             musicaAtual = null;
                             yield return new WaitForSeconds(tempoSilencioFim);
@@ -186,12 +202,10 @@ public class SoundtrackManager : MonoBehaviour
         }
     }
 
-    // A mágica da troca dupla acontece aqui
     private void ExecutarCrossfade(ConfigMusica antiga, ConfigMusica nova, float tempoFadeOutAntiga)
     {
         AudioSource sourceAntigo = sourcePrincipal;
         
-        // Joga a chave. A fonte que tava de reserva vira a principal agora
         sourcePrincipal = (sourcePrincipal == audioSource1) ? audioSource2 : audioSource1;
 
         musicaAtual = nova;
@@ -201,20 +215,17 @@ public class SoundtrackManager : MonoBehaviour
 
         float targetVol = volumeGlobal * musicaAtual.multiplicadorVolume;
 
-        // Manda apagar a música antiga
         IniciarFade(sourceAntigo, 0f, tempoFadeOutAntiga, true, antiga);
 
-        // Enquanto ao mesmo tempo manda subir a música nova
         if (musicaAtual.jaTocouAPrimeiraVez) {
             sourcePrincipal.volume = 0f;
             IniciarFade(sourcePrincipal, targetVol, musicaAtual.fadeInTime, false, null);
         } else {
-            sourcePrincipal.volume = targetVol; // Se for a primeira vez, toca de sola
+            sourcePrincipal.volume = targetVol; 
             musicaAtual.jaTocouAPrimeiraVez = true;
         }
     }
 
-    // Gerencia o fade individual de cada caixa de som
     private Coroutine IniciarFade(AudioSource src, float target, float duration, bool stop, ConfigMusica config)
     {
         if (src == audioSource1) {

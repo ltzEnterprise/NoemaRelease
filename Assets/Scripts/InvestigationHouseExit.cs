@@ -1,4 +1,4 @@
-using UnityEngine;
+using UnityEngine; 
 using UnityEngine.SceneManagement;
 using System.Collections;
 
@@ -6,7 +6,6 @@ public class InvestigationHouseExit : MonoBehaviour
 {
     [Header("--- CONFIGURAÇÃO ---")]
     public string nomeDaCenaPrincipal = "DreamSceane";
-    public string nomeDaRunaNecessaria = "Runa_Investigacao"; 
 
     [Header("--- UI E FEEDBACK ---")]
     public GameObject textoPortaTrancada; 
@@ -18,29 +17,26 @@ public class InvestigationHouseExit : MonoBehaviour
 
     void Start()
     {
-        if(textoPortaTrancada) textoPortaTrancada.SetActive(false);
+        if (textoPortaTrancada)
+            textoPortaTrancada.SetActive(false);
     }
 
     public void Interagir()
     {
         if (jaEstaSaindo) return;
 
-        if (InventarioRunas.Instance != null && InventarioRunas.Instance.TemARunaPeloNome(nomeDaRunaNecessaria))
-        {
-            StartCoroutine(SairDaCasaComSom());
-        }
-        else
-        {
-            StopAllCoroutines();
-            StartCoroutine(AvisoTrancado());
-        }
+        StartCoroutine(SairDaCasaComSom());
     }
 
     IEnumerator SairDaCasaComSom()
     {
         jaEstaSaindo = true;
         
-        if (FPS_Master.Instance != null) FPS_Master.travadoInteracao = true;
+        if (textoPortaTrancada)
+            textoPortaTrancada.SetActive(false);
+
+        if (FPS_Master.Instance != null)
+            FPS_Master.travadoInteracao = true;
 
         if (somSairDaCasa && fonteAudio) 
         {
@@ -54,26 +50,37 @@ public class InvestigationHouseExit : MonoBehaviour
 
         if (SistemaGlobal.Instance != null)
         {
-            SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = true;
+            SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false;
         }
 
-        // 🔥 A TRAVA ANTICRASH AQUI 🔥
-        // Se a engine crashar durante o LoadScene, a RAM inteira vai pro ralo.
-        // A gente salva TUDO (incluindo as runas que estavam só na RAM) pro HD no milissegundo antes da transição.
-        if (PersistenciaManager.Instance != null)
-        {
-            PersistenciaManager.Instance.SalvarTudo();
-        }
+        SalvarSaidaDaCasa();
 
         SceneManager.LoadScene(nomeDaCenaPrincipal);
     }
 
+    private void SalvarSaidaDaCasa()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(true);
+    }
+
     IEnumerator AvisoTrancado()
     {
-        if (somTrancado && fonteAudio) fonteAudio.PlayOneShot(somTrancado);
+        if (somTrancado && fonteAudio)
+            fonteAudio.PlayOneShot(somTrancado);
         
-        if (textoPortaTrancada) textoPortaTrancada.SetActive(true);
+        if (textoPortaTrancada)
+            textoPortaTrancada.SetActive(true);
+
         yield return new WaitForSeconds(2.5f);
-        if (textoPortaTrancada) textoPortaTrancada.SetActive(false);
+
+        if (textoPortaTrancada)
+            textoPortaTrancada.SetActive(false);
     }
 }

@@ -453,7 +453,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 35.5, y: -19.71}
-  m_SizeDelta: {x: 160, y: 30}
+  m_SizeDelta: {x: 200, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &82726405
 MonoBehaviour:
@@ -1557,6 +1557,8 @@ GameObject:
   m_Component:
   - component: {fileID: 577803943}
   - component: {fileID: 577803944}
+  - component: {fileID: 577803945}
+  - component: {fileID: 577803946}
   m_Layer: 0
   m_Name: _SistemaGlobal
   m_TagString: Untagged
@@ -1591,10 +1593,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1489b284f943cab4eb6feda94b33c9b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SistemaGlobal
-  nomeCenaPadrao: 
-  slotAtual: 0
+  nomeCenaPadrao: InicioCasa
+  nomeCenaMenu: MenuPrincipal
+  slotAtual: -1
+  slotFoiDefinido: 0
+  sistemaPronto: 0
   deveCarregarPosicaoAoIniciar: 0
   acabouDeCarregar: 0
+--- !u!114 &577803945
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 577803941}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e926dd5227bd2404f9c79cf24423d19a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PersistenciaManager
+  desativarSaveNoEditor: 0
+--- !u!114 &577803946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 577803941}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2c8b9b9576304a46927562a3c8169c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  nomeCenaPadrao: InicioCasa
+  nomeCenaMenu: MenuPrincipal
+  autoSaveAoPegarRuna: 1
+  player: {fileID: 0}
 --- !u!1 &581279760
 GameObject:
   m_ObjectHideFlags: 0
@@ -3985,7 +4019,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 35.5, y: -19.71}
-  m_SizeDelta: {x: 160, y: 30}
+  m_SizeDelta: {x: 200, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1619636403
 MonoBehaviour:
@@ -5547,7 +5581,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 35.5, y: -19.71}
-  m_SizeDelta: {x: 160, y: 30}
+  m_SizeDelta: {x: 200, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2063987556
 MonoBehaviour:
@@ -11074,6 +11108,10 @@ MonoBehaviour:
   painelLoading: {fileID: 3930278749333166946}
   barraDeProgresso: {fileID: 6750779288288810525}
   nomeDaCenaDoJogo: InicioCasa
+  tempoExtraLoading: 2
+  esperaDepoisDaCenaPronta: 0.25
+  fadeOutLoadingFinal: 0.35
+  esperarGameManagerCenaPronta: 1
   textosDosSlots:
   - {fileID: 1816385628}
   - {fileID: 890921743}
@@ -20452,6 +20490,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SaveSlotManager
   uiManager: {fileID: 3219657136328132813}
+  reduzirFonteConfirmarApagar: 2
 --- !u!114 &8756586417900429325
 MonoBehaviour:
   m_ObjectHideFlags: 0

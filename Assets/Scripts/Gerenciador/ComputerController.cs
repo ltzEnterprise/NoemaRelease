@@ -60,7 +60,13 @@ public class ComputerController : MonoBehaviour
 
     void Start()
     {
-        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
+        StartCoroutine(InicializarSeguro());
+    }
+
+    private IEnumerator InicializarSeguro()
+    {
+        if (FPS_Master.Instance != null)
+            FPS_Master.Instance.AlterarEstadoJogador(true, false);
 
         if (textoInteragirPC) textoInteragirPC.SetActive(false);
         if (textoInteragirRuna) textoInteragirRuna.SetActive(false);
@@ -68,45 +74,62 @@ public class ComputerController : MonoBehaviour
         if (painelUpgradeCamera) painelUpgradeCamera.SetActive(false);
         if (telaAzulUITransicao) telaAzulUITransicao.SetActive(false);
 
-        // 🔥 SUBSTITUÍDO PARA O PERSISTENCIAMANAGER
-        if (PersistenciaManager.Instance != null)
+        yield return new WaitUntil(() =>
+            PersistenciaManager.Instance != null &&
+            PersistenciaManager.Instance.DadosProntosParaUso
+        );
+
+        CarregarEstadoInicial();
+    }
+
+    private void CarregarEstadoInicial()
+    {
+        if (PersistenciaManager.Instance == null) return;
+
+        if (PersistenciaManager.Instance.ObterEstado("World_Is_Pixelated"))
         {
-            if (PersistenciaManager.Instance.ObterEstado("World_Is_Pixelated"))
-            {
-                if (pixelURPFeature != null) pixelURPFeature.SetActive(true);
-            }
-            else
-            {
-                if (pixelURPFeature != null) pixelURPFeature.SetActive(false);
-            }
+            if (pixelURPFeature != null) pixelURPFeature.SetActive(true);
+        }
+        else
+        {
+            if (pixelURPFeature != null) pixelURPFeature.SetActive(false);
+        }
 
-            if (PersistenciaManager.Instance.ObterEstado("PC_" + idDoComputador + "_Queimado"))
-            {
-                pcQueimado = true;
-                DesligarTudo();
-                if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-                return;
-            }
+        if (PersistenciaManager.Instance.ObterEstado("PC_" + idDoComputador + "_Queimado"))
+        {
+            pcQueimado = true;
+            DesligarTudo();
 
-            if (PersistenciaManager.Instance.ObterEstado("PC_Crash_Event"))
-            {
-                AtivarModoPósCrash(false);
-            }
-            else if (PersistenciaManager.Instance.ObterEstado("FuseBox_Noite_Resolvida"))
-            {
-                AtivarModoBonusNoite(false);
-                if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-            }
-            else if (PersistenciaManager.Instance.ObterEstado("FuseBox_Dia_Resolvida"))
-            {
-                AtivarModoNormal(false);
-                if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-            }
-            else
-            {
-                DesligarTudo();
-                if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-            }
+            if (FPS_Master.Instance != null)
+                FPS_Master.Instance.AlterarEstadoJogador(false, false);
+
+            return;
+        }
+
+        if (PersistenciaManager.Instance.ObterEstado("PC_Crash_Event"))
+        {
+            AtivarModoPósCrash(false);
+        }
+        else if (PersistenciaManager.Instance.ObterEstado("FuseBox_Noite_Resolvida"))
+        {
+            AtivarModoBonusNoite(false);
+
+            if (FPS_Master.Instance != null)
+                FPS_Master.Instance.AlterarEstadoJogador(false, false);
+        }
+        else if (PersistenciaManager.Instance.ObterEstado("FuseBox_Dia_Resolvida"))
+        {
+            AtivarModoNormal(false);
+
+            if (FPS_Master.Instance != null)
+                FPS_Master.Instance.AlterarEstadoJogador(false, false);
+        }
+        else
+        {
+            DesligarTudo();
+
+            if (FPS_Master.Instance != null)
+                FPS_Master.Instance.AlterarEstadoJogador(false, false);
         }
     }
 
@@ -136,27 +159,47 @@ public class ComputerController : MonoBehaviour
     public void AoSair()
     {
         estaOlhando = false;
+
         if (textoInteragirPC) textoInteragirPC.SetActive(false);
         if (textoInteragirRuna) textoInteragirRuna.SetActive(false);
     }
 
-    void TocarSom() { if (audioSourcePC && somBootOuTroca) audioSourcePC.PlayOneShot(somBootOuTroca); }
+    void TocarSom()
+    {
+        if (audioSourcePC && somBootOuTroca)
+            audioSourcePC.PlayOneShot(somBootOuTroca);
+    }
 
-    public void LigarPCProMundo2D() { AtivarModoNormal(true); }
-    public void LigarPcSetaNoite() { AtivarModoBonusNoite(true); }
+    public void LigarPCProMundo2D()
+    {
+        AtivarModoNormal(true);
+    }
+
+    public void LigarPcSetaNoite()
+    {
+        AtivarModoBonusNoite(true);
+    }
 
     void AtivarModoNormal(bool tocarSom = true)
     {
         DesligarTudo();
-        if (telaDesktop) telaDesktop.SetActive(true);
-        if (tocarSom) TocarSom();
+
+        if (telaDesktop)
+            telaDesktop.SetActive(true);
+
+        if (tocarSom)
+            TocarSom();
     }
 
     void AtivarModoBonusNoite(bool tocarSom = true)
     {
         DesligarTudo();
-        if (telaBonusNoite) telaBonusNoite.SetActive(true);
-        if (tocarSom) TocarSom();
+
+        if (telaBonusNoite)
+            telaBonusNoite.SetActive(true);
+
+        if (tocarSom)
+            TocarSom();
     }
 
     private void AtivarModoPósCrash(bool tocarSom = true)
@@ -164,20 +207,25 @@ public class ComputerController : MonoBehaviour
         modoRunaAtivo = true;
         DesligarTudo();
         
-        if (telaBSOD_Runa) telaBSOD_Runa.SetActive(true); 
-        if (telaAzulUITransicao) telaAzulUITransicao.SetActive(true);
+        if (telaBSOD_Runa)
+            telaBSOD_Runa.SetActive(true); 
 
-        if (tocarSom) TocarSom();
+        if (telaAzulUITransicao)
+            telaAzulUITransicao.SetActive(true);
+
+        if (tocarSom)
+            TocarSom();
 
         if (PersistenciaManager.Instance != null)
-        {
             PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", true);
-            PersistenciaManager.Instance.SalvarTudo();
-        }
 
-        if (pixelURPFeature != null) pixelURPFeature.SetActive(true);
+        if (pixelURPFeature != null)
+            pixelURPFeature.SetActive(true);
 
-        if (PersistenciaManager.Instance != null && PersistenciaManager.Instance.ObterEstado("Player3D_HasSave") && player3D != null && FPS_Master.Instance != null)
+        if (PersistenciaManager.Instance != null &&
+            PersistenciaManager.Instance.ObterEstado("Player3D_HasSave") &&
+            player3D != null &&
+            FPS_Master.Instance != null)
         {
             float x = PersistenciaManager.Instance.ObterFloat("Player3D_PosX");
             float y = PersistenciaManager.Instance.ObterFloat("Player3D_PosY");
@@ -187,7 +235,7 @@ public class ComputerController : MonoBehaviour
             FPS_Master.Instance.Teleportar(new Vector3(x, y, z));
             player3D.rotation = Quaternion.Euler(0, rotY, 0);
 
-            if(FPS_Master.Instance.cameraJogador != null)
+            if (FPS_Master.Instance.cameraJogador != null)
                 FPS_Master.Instance.cameraJogador.transform.localRotation = Quaternion.identity;
 
             Physics.SyncTransforms(); 
@@ -197,13 +245,14 @@ public class ComputerController : MonoBehaviour
             FPS_Master.Instance.Teleportar(pontoDeSpawnPadrao.position);
             player3D.rotation = pontoDeSpawnPadrao.rotation;
 
-            if(FPS_Master.Instance.cameraJogador != null)
+            if (FPS_Master.Instance.cameraJogador != null)
                 FPS_Master.Instance.cameraJogador.transform.localRotation = Quaternion.identity;
 
             Physics.SyncTransforms();
         }
 
-        if (DayNightCycle.Instance != null) DayNightCycle.Instance.ChangeTo(DayNightCycle.TimeState.Night);
+        if (DayNightCycle.Instance != null)
+            DayNightCycle.Instance.ChangeTo(DayNightCycle.TimeState.Night);
 
         StartCoroutine(SequenciaDeAberturaDaCena());
     }
@@ -213,21 +262,27 @@ public class ComputerController : MonoBehaviour
         cutsceneRodando = true;
         AoSair(); 
 
-        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
+        if (FPS_Master.Instance != null)
+            FPS_Master.Instance.AlterarEstadoJogador(true, false);
 
         yield return new WaitForSecondsRealtime(tempoTelaAzul); 
-        if (telaAzulUITransicao) telaAzulUITransicao.SetActive(false);
+
+        if (telaAzulUITransicao)
+            telaAzulUITransicao.SetActive(false);
 
         if (painelUpgradeCamera != null)
         {
             Canvas canvasPai = painelUpgradeCamera.GetComponentInParent<Canvas>(true);
-            if (canvasPai != null) canvasPai.gameObject.SetActive(true);
+
+            if (canvasPai != null)
+                canvasPai.gameObject.SetActive(true);
 
             painelUpgradeCamera.SetActive(true);
             painelUpgradeCamera.transform.SetAsLastSibling(); 
         }
 
-        if (audioSourcePC != null && somUpgradeCamera != null) audioSourcePC.PlayOneShot(somUpgradeCamera);
+        if (audioSourcePC != null && somUpgradeCamera != null)
+            audioSourcePC.PlayOneShot(somUpgradeCamera);
 
         try
         {
@@ -236,6 +291,7 @@ public class ComputerController : MonoBehaviour
                 InventoryManager.Instance.ReceberItem(idDaCameraNoInventario);
                 InventoryManager.Instance.TentarEquipar(idDaCameraNoInventario);
             }
+
             if (RealityCamera.Instance != null)
             {
                 RealityCamera.Instance.ReceberUpgradeLanterna();
@@ -245,13 +301,18 @@ public class ComputerController : MonoBehaviour
 
         yield return new WaitForSecondsRealtime(tempoPainelUpgrade);
         
-        if (painelUpgradeCamera) painelUpgradeCamera.SetActive(false);
+        if (painelUpgradeCamera)
+            painelUpgradeCamera.SetActive(false);
 
         cutsceneRodando = false;
-        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
-        if (PersistenciaManager.Instance != null) PersistenciaManager.Instance.SalvarTudo();
 
-        if (estaOlhando) AoOlhar();
+        if (FPS_Master.Instance != null)
+            FPS_Master.Instance.AlterarEstadoJogador(false, false);
+
+        SalvarEstadoAtualDoJogo();
+
+        if (estaOlhando)
+            AoOlhar();
     }
 
     public void Interagir()
@@ -259,6 +320,7 @@ public class ComputerController : MonoBehaviour
         if (pcQueimado || cutsceneRodando) return; 
 
         if (Time.unscaledTime < tempoUltimoClique + 0.5f) return;
+
         tempoUltimoClique = Time.unscaledTime;
 
         if (modoRunaAtivo)
@@ -266,14 +328,16 @@ public class ComputerController : MonoBehaviour
             AoSair(); 
             StartCoroutine(SequenciaPegarRuna());
         }
-        else if (telaDesktop.activeSelf || telaBonusNoite.activeSelf)
+        else if ((telaDesktop != null && telaDesktop.activeSelf) || (telaBonusNoite != null && telaBonusNoite.activeSelf))
         {
             AoSair(); 
             StartCoroutine(SequenciaEntradaMatrix());
         }
         else
         {
-            if (audioSourcePC && somDesligarPC) audioSourcePC.PlayOneShot(somDesligarPC);
+            if (audioSourcePC && somDesligarPC)
+                audioSourcePC.PlayOneShot(somDesligarPC);
+
             Debug.Log("PC sem energia! Resolva a FuseBox primeiro.");
         }
     }
@@ -281,39 +345,57 @@ public class ComputerController : MonoBehaviour
     private IEnumerator SequenciaPegarRuna()
     {
         cutsceneRodando = true;
-        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
 
-        if (audioSourcePC && somPegarRuna) audioSourcePC.PlayOneShot(somPegarRuna);
-        if (InventarioRunas.Instance != null) InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
+        if (FPS_Master.Instance != null)
+            FPS_Master.Instance.AlterarEstadoJogador(true, false);
+
+        if (audioSourcePC && somPegarRuna)
+            audioSourcePC.PlayOneShot(somPegarRuna);
+
+        if (InventarioRunas.Instance != null)
+            InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
         
         KeySystem.AdicionarChave(idChaveDaCasa);
-        if (iconeChaveHUD) iconeChaveHUD.SetActive(true);
-        if (painelAvisoRuna) painelAvisoRuna.SetActive(true);
+
+        if (iconeChaveHUD)
+            iconeChaveHUD.SetActive(true);
+
+        if (painelAvisoRuna)
+            painelAvisoRuna.SetActive(true);
 
         yield return new WaitForSecondsRealtime(1.5f);
-        if (painelAvisoRuna) painelAvisoRuna.SetActive(false); 
 
-        if (audioSourcePC && somDesligarPC) audioSourcePC.PlayOneShot(somDesligarPC);
+        if (painelAvisoRuna)
+            painelAvisoRuna.SetActive(false); 
+
+        if (audioSourcePC && somDesligarPC)
+            audioSourcePC.PlayOneShot(somDesligarPC);
+
         DesligarTudo(); 
         
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado("PC_" + idDoComputador + "_Queimado", true);
             PersistenciaManager.Instance.RegistrarEstado("PC_Crash_Event", false); 
-            PersistenciaManager.Instance.SalvarTudo();
         }
         
         pcQueimado = true;
         modoRunaAtivo = false;
         
         cutsceneRodando = false;
-        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(false, false);
+
+        if (FPS_Master.Instance != null)
+            FPS_Master.Instance.AlterarEstadoJogador(false, false);
+
+        SalvarEstadoAtualDoJogo();
     }
 
     private IEnumerator SequenciaEntradaMatrix()
     {
         cutsceneRodando = true;
-        if (FPS_Master.Instance != null) FPS_Master.Instance.AlterarEstadoJogador(true, false);
+
+        if (FPS_Master.Instance != null)
+            FPS_Master.Instance.AlterarEstadoJogador(true, false);
 
         if (player3D != null && PersistenciaManager.Instance != null)
         {
@@ -322,11 +404,18 @@ public class ComputerController : MonoBehaviour
             PersistenciaManager.Instance.SalvarFloat("Player3D_PosZ", player3D.position.z);
             PersistenciaManager.Instance.SalvarFloat("Player3D_RotY", player3D.eulerAngles.y);
             PersistenciaManager.Instance.RegistrarEstado("Player3D_HasSave", true);
-            
-            PersistenciaManager.Instance.SalvarTudo();
         }
 
-        float tempo = 0;
+        SalvarEstadoAtualDoJogo();
+
+        float tempo = 0f;
+
+        if (Camera.main == null || pontoDeZoom == null)
+        {
+            CarregarCena2DComLoading();
+            yield break;
+        }
+
         Vector3 startPos = Camera.main.transform.position;
         Quaternion startRot = Camera.main.transform.rotation;
 
@@ -338,30 +427,109 @@ public class ComputerController : MonoBehaviour
             
             Camera.main.transform.position = Vector3.Lerp(startPos, pontoDeZoom.position, t);
             Camera.main.transform.rotation = Quaternion.Slerp(startRot, pontoDeZoom.rotation, t);
+
             yield return null;
         }
 
         if (faderUI)
         {
-            tempo = 0;
-            while(tempo < 1.0f) {
+            tempo = 0f;
+
+            while (tempo < 1.0f)
+            {
                 tempo += Time.deltaTime;
                 faderUI.alpha = tempo;
                 yield return null;
             }
         }
 
-        SceneManager.LoadScene(nomeDaCena2D);
+        CarregarCena2DComLoading();
+    }
+
+    private void CarregarCena2DComLoading()
+    {
+        if (InterfaceManagerDisponivel() != null)
+        {
+            InterfaceManagerDisponivel().IniciarLoadingParaCena(nomeDaCena2D);
+        }
+        else
+        {
+            SceneManager.LoadScene(nomeDaCena2D);
+        }
+    }
+
+    private InterfaceManager InterfaceManagerDisponivel()
+    {
+        InterfaceManager[] interfaces = Object.FindObjectsByType<InterfaceManager>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None
+        );
+
+        if (interfaces == null || interfaces.Length == 0)
+            return null;
+
+        foreach (InterfaceManager ui in interfaces)
+        {
+            if (ui != null && ui.gameObject.activeInHierarchy)
+                return ui;
+        }
+
+        return interfaces[0];
+    }
+
+    private void SalvarEstadoAtualDoJogo()
+    {
+        if (PersistenciaManager.Instance == null) return;
+
+        if (SistemaGlobal.Instance != null && SistemaGlobal.Instance.slotFoiDefinido)
+        {
+            Vector3 posicao = player3D != null ? player3D.position : Vector3.zero;
+            SistemaGlobal.Instance.SalvarJogo(posicao, SceneManager.GetActiveScene().name);
+        }
+        else
+        {
+            PersistenciaManager.Instance.SalvarTudo(false);
+        }
     }
 
     private void DesligarTudo() 
     { 
-        if (telaDesktop) telaDesktop.SetActive(false); 
-        if (telaBSOD_Runa) telaBSOD_Runa.SetActive(false); 
-        if (telaBonusNoite) telaBonusNoite.SetActive(false); 
+        if (telaDesktop)
+            telaDesktop.SetActive(false); 
+
+        if (telaBSOD_Runa)
+            telaBSOD_Runa.SetActive(false); 
+
+        if (telaBonusNoite)
+            telaBonusNoite.SetActive(false); 
     }
 
-    public void TurnOffPixelEffect() { /*...*/ }
-    void OnDisable() { /*...*/ }
-    void OnDestroy() { /*...*/ }
+    public void TurnOffPixelEffect()
+    {
+        if (pixelURPFeature != null)
+            pixelURPFeature.SetActive(false);
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", false);
+
+        SalvarEstadoAtualDoJogo();
+    }
+
+    void OnDisable()
+    {
+        if (textoInteragirPC)
+            textoInteragirPC.SetActive(false);
+
+        if (textoInteragirRuna)
+            textoInteragirRuna.SetActive(false);
+    }
+
+    void OnDestroy()
+    {
+        if (textoInteragirPC)
+            textoInteragirPC.SetActive(false);
+
+        if (textoInteragirRuna)
+            textoInteragirRuna.SetActive(false);
+    }
 }

@@ -22,8 +22,8 @@ public class SlidingPuzzleManager : MonoBehaviour
     public string uniqueID = "Puzzle_Final_Ultra_Fix_V9";
 
     [Header("--- RECOMPENSA IGUAL AO BAÚ ---")]
-    public GameObject finalQuadToPhotograph; // O que você tira foto
-    public GameObject permanentQuad; // O que fica pra sempre
+    public GameObject finalQuadToPhotograph;
+    public GameObject permanentQuad;
     public string nomeDaRunaNesteBau; 
     public bool darItemInventario = false;
     public int idDoItemInventario = 0;
@@ -39,7 +39,6 @@ public class SlidingPuzzleManager : MonoBehaviour
     public KeyCode teclaInteracao = KeyCode.E;
     public float distanciaInteracao = 4.0f;
 
-    // --- LÓGICA DE GRADE INTERNA ---
     private Vector3[] slotsPosicoes = new Vector3[9];
     private int[] ocupacaoGrade = new int[9]; 
     private int slotVazioAtual = 7; 
@@ -47,53 +46,106 @@ public class SlidingPuzzleManager : MonoBehaviour
     private bool isAnimating = false;
     private bool isSolved = false;
     private bool rewardGiven = false; 
+    private bool inicializado = false;
+
     private Camera mainCam;
 
     void Awake()
     {
         mainCam = Camera.main;
         
-        if (puzzlePieces.Count != 8 || emptySpaceMarker == null || posicoesVitoriaPecas.Count != 8) return;
+        if (puzzlePieces.Count != 8 || emptySpaceMarker == null || posicoesVitoriaPecas.Count != 8)
+        {
+            Debug.LogError("[SlidingPuzzleManager] Configuração inválida: precisa de 8 peças, 8 posições de vitória e emptySpaceMarker.");
+            return;
+        }
 
-        for (int i = 0; i < 7; i++) slotsPosicoes[i] = posicoesVitoriaPecas[i]; 
+        for (int i = 0; i < 7; i++)
+            slotsPosicoes[i] = posicoesVitoriaPecas[i]; 
+
         slotsPosicoes[7] = posicaoVitoriaVazio;                                
         slotsPosicoes[8] = posicoesVitoriaPecas[7];                           
 
         ConfigurarPuzzle();
     }
 
-    void ConfigurarPuzzle()
+    void Start()
     {
-        for (int i = 0; i < puzzlePieces.Count; i++)
-        {
-            int slotVitoria = (i < 7) ? i : 8;
-            puzzlePieces[i].localPosition = slotsPosicoes[slotVitoria];
-            ocupacaoGrade[slotVitoria] = i;
+        StartCoroutine(InicializarSeguro());
+    }
 
-            var script = puzzlePieces[i].GetComponent<SlidingPiece>() ?? puzzlePieces[i].gameObject.AddComponent<SlidingPiece>();
-            script.pieceID = i; 
-            
-            if (!puzzlePieces[i].GetComponent<Collider>()) puzzlePieces[i].gameObject.AddComponent<MeshCollider>();
+    IEnumerator InicializarSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+        {
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
         }
 
+        bool carregou = LoadSaveData();
+
+        if (!carregou)
+            AutoShuffle();
+
+        inicializado = true;
+    }
+
+    void ConfigurarPuzzle()
+    {
+        if (puzzlePieces == null || puzzlePieces.Count != 8 || emptySpaceMarker == null)
+            return;
+
+        for (int i = 0; i < ocupacaoGrade.Length; i++)
+            ocupacaoGrade[i] = -999;
+
+        for (int i = 0; i < puzzlePieces.Count; i++)
+        {
+            if (puzzlePieces[i] == null) continue;
+
+            int slotVitoria = (i < 7) ? i : 8;
+
+            puzzlePieces[i].gameObject.SetActive(true);
+            puzzlePieces[i].localPosition = slotsPosicoes[slotVitoria];
+
+            ocupacaoGrade[slotVitoria] = i;
+
+            var script = puzzlePieces[i].GetComponent<SlidingPiece>();
+
+            if (script == null)
+                script = puzzlePieces[i].gameObject.AddComponent<SlidingPiece>();
+
+            script.pieceID = i; 
+            
+            if (!puzzlePieces[i].GetComponent<Collider>())
+                puzzlePieces[i].gameObject.AddComponent<MeshCollider>();
+        }
+
+        emptySpaceMarker.gameObject.SetActive(true);
         emptySpaceMarker.localPosition = slotsPosicoes[7];
+
         ocupacaoGrade[7] = -1; 
         slotVazioAtual = 7;
         
-        var vScript = emptySpaceMarker.GetComponent<SlidingPiece>() ?? emptySpaceMarker.gameObject.AddComponent<SlidingPiece>();
+        var vScript = emptySpaceMarker.GetComponent<SlidingPiece>();
+
+        if (vScript == null)
+            vScript = emptySpaceMarker.gameObject.AddComponent<SlidingPiece>();
+
         vScript.pieceID = -1; 
 
         if (finalQuadToPhotograph) finalQuadToPhotograph.SetActive(false);
         if (permanentQuad) permanentQuad.SetActive(false);
         if (painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
         if (painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
-    }
 
-    void Start() { if (!LoadSaveData()) AutoShuffle(); }
+        isAnimating = false;
+        isSolved = false;
+        rewardGiven = false;
+    }
 
     void Update()
     {
-        // GATILHO DA RECOMPENSA: Espera o puzzle ser resolvido e o quad da foto sumir
+        if (!inicializado) return;
+
         if (isSolved && !rewardGiven && finalQuadToPhotograph != null && !finalQuadToPhotograph.activeInHierarchy)
         {
             StartCoroutine(SequenciaRecompensa());
@@ -101,31 +153,44 @@ public class SlidingPuzzleManager : MonoBehaviour
 
         if (isSolved || isAnimating) return;
 
-        if (Input.GetKeyDown(teclaInteracao)) Interagir();
+        if (Input.GetKeyDown(teclaInteracao))
+            Interagir();
     }
 
     void Interagir()
     {
+        if (mainCam == null)
+            mainCam = Camera.main;
+
+        if (mainCam == null) return;
+
         Ray ray = mainCam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit, distanciaInteracao, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
         {
             SlidingPiece hitPiece = hit.transform.GetComponent<SlidingPiece>();
-            if (hitPiece != null) {
-                if (hitPiece.pieceID == -1) TentarMoverVizinhoParaVazio();
-                else TentarMoverPeca(hitPiece.pieceID);
+
+            if (hitPiece != null)
+            {
+                if (hitPiece.pieceID == -1)
+                    TentarMoverVizinhoParaVazio();
+                else
+                    TentarMoverPeca(hitPiece.pieceID);
             }
         }
     }
 
     void TentarMoverVizinhoParaVazio()
     {
-        if (isAnimating || isSolved) return; // Trava extra
+        if (isAnimating || isSolved) return;
 
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 9; i++)
+        {
             int pID = ocupacaoGrade[i];
-            if (pID != -1 && SaoVizinhos(i, slotVazioAtual)) {
+
+            if (pID != -1 && pID >= 0 && SaoVizinhos(i, slotVazioAtual))
+            {
                 TentarMoverPeca(pID);
                 return;
             }
@@ -134,35 +199,54 @@ public class SlidingPuzzleManager : MonoBehaviour
 
     public void TentarMoverPeca(int pecaID)
     {
-        // 🔥 A TRAVA BLINDADA QUE MATA O BUG: Se já tá animando ou resolvido, ignora a ordem! 🔥
-        if (isAnimating || isSolved) return; 
+        if (isAnimating || isSolved) return;
+        if (pecaID < 0 || pecaID >= puzzlePieces.Count) return;
 
         int slotDaPeca = -1;
-        for (int i = 0; i < 9; i++) if (ocupacaoGrade[i] == pecaID) { slotDaPeca = i; break; }
 
-        if (SaoVizinhos(slotDaPeca, slotVazioAtual)) {
-            isAnimating = true; // Tranca na mesma hora antes do coroutine iniciar!
+        for (int i = 0; i < 9; i++)
+        {
+            if (ocupacaoGrade[i] == pecaID)
+            {
+                slotDaPeca = i;
+                break;
+            }
+        }
+
+        if (slotDaPeca < 0) return;
+
+        if (SaoVizinhos(slotDaPeca, slotVazioAtual))
+        {
+            isAnimating = true;
             StartCoroutine(AnimarTroca(pecaID, slotDaPeca, slotVazioAtual));
         }
     }
 
     bool SaoVizinhos(int a, int b)
     {
-        int rowA = a / 3; int colA = a % 3;
-        int rowB = b / 3; int colB = b % 3;
+        int rowA = a / 3;
+        int colA = a % 3;
+
+        int rowB = b / 3;
+        int colB = b % 3;
+
         return (Mathf.Abs(rowA - rowB) + Mathf.Abs(colA - colB)) == 1;
     }
 
     IEnumerator AnimarTroca(int pecaID, int de, int para)
     {
         Transform tPeca = puzzlePieces[pecaID];
+
         Vector3 destino = slotsPosicoes[para];
         Vector3 origem = slotsPosicoes[de];
 
-        if (audioSource && pieceSlideSound) audioSource.PlayOneShot(pieceSlideSound);
+        if (audioSource && pieceSlideSound)
+            audioSource.PlayOneShot(pieceSlideSound);
 
-        float tempo = 0;
-        while (tempo < 1f) {
+        float tempo = 0f;
+
+        while (tempo < 1f)
+        {
             tempo += Time.unscaledDeltaTime * 15f;
             tPeca.localPosition = Vector3.Lerp(origem, destino, tempo);
             yield return null;
@@ -175,15 +259,22 @@ public class SlidingPuzzleManager : MonoBehaviour
         ocupacaoGrade[de] = -1;
         slotVazioAtual = de;
 
-        isAnimating = false; // Destranca pra próxima peça
+        isAnimating = false;
+
         CheckWinCondition();
-        SaveGame();
+        SaveGame(false);
     }
 
     void CheckWinCondition()
     {
-        for (int i = 0; i < 7; i++) if (ocupacaoGrade[i] != i) return;
-        if (ocupacaoGrade[8] != 7) return;
+        for (int i = 0; i < 7; i++)
+        {
+            if (ocupacaoGrade[i] != i)
+                return;
+        }
+
+        if (ocupacaoGrade[8] != 7)
+            return;
 
         Vencer();
     }
@@ -192,70 +283,89 @@ public class SlidingPuzzleManager : MonoBehaviour
     {
         isSolved = true;
         
-        foreach (var p in puzzlePieces) p.gameObject.SetActive(false);
-        if (emptySpaceMarker) emptySpaceMarker.gameObject.SetActive(false);
+        foreach (var p in puzzlePieces)
+        {
+            if (p != null)
+                p.gameObject.SetActive(false);
+        }
+
+        if (emptySpaceMarker)
+            emptySpaceMarker.gameObject.SetActive(false);
         
-        if (finalQuadToPhotograph) finalQuadToPhotograph.SetActive(true);
+        if (finalQuadToPhotograph)
+            finalQuadToPhotograph.SetActive(true);
         
-        if (PersistenciaManager.Instance != null) 
+        if (PersistenciaManager.Instance != null)
+        {
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Solved", true);
+            SaveGame(false);
+        }
     }
 
-    // --- SEQUÊNCIA DE RECOMPENSA IDÊNTICA AO TREASURE CHEST ---
     IEnumerator SequenciaRecompensa()
     {
         rewardGiven = true;
+
         if (PersistenciaManager.Instance != null)
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_RewardGiven", true);
 
-        // 1. ENTREGA A RUNA
         if (InventarioRunas.Instance != null && !string.IsNullOrEmpty(nomeDaRunaNesteBau))
-        {
             InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRunaNesteBau);
-        }
 
-        // 2. ENTREGA O ITEM NO INVENTÁRIO (Se houver)
         if (darItemInventario && InventoryManager.Instance != null)
-        {
             InventoryManager.Instance.ReceberItem(idDoItemInventario);
-        }
 
-        // 3. SALVA O JOGO (Idêntico ao Baú)
-        if (!Application.isEditor && PersistenciaManager.Instance != null)
-        {
-            PersistenciaManager.Instance.SalvarTudo();
-        }
+        SalvarProgressoSeguro();
 
-        // 4. LIGA A UI
-        if(painelPretoRecompensa) painelPretoRecompensa.SetActive(true);
-        if(textoRecompensa && !string.IsNullOrEmpty(nomeDaRunaNesteBau)) 
+        if (painelPretoRecompensa)
+            painelPretoRecompensa.SetActive(true);
+
+        if (textoRecompensa && !string.IsNullOrEmpty(nomeDaRunaNesteBau))
             textoRecompensa.text = "Você pegou a " + nomeDaRunaNesteBau + "!";
-        if(painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(true);
+
+        if (painelCustomizadoDaRecompensa)
+            painelCustomizadoDaRecompensa.SetActive(true);
 
         yield return new WaitForSecondsRealtime(3f);
 
-        // 5. DESLIGA A UI
-        if(painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
-        if(painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
+        if (painelPretoRecompensa)
+            painelPretoRecompensa.SetActive(false);
+
+        if (painelCustomizadoDaRecompensa)
+            painelCustomizadoDaRecompensa.SetActive(false);
         
-        // 6. ATIVA O QUAD PERMANENTE
-        if (permanentQuad) permanentQuad.SetActive(true);
+        if (permanentQuad)
+            permanentQuad.SetActive(true);
+
+        SalvarProgressoSeguro();
     }
 
     void AutoShuffle()
     {
         int movimentos = 30;
-        if (dificuldade == Dificuldade.Facil) movimentos = 10;
-        else if (dificuldade == Dificuldade.Medio) movimentos = 30;
-        else movimentos = 80;
+
+        if (dificuldade == Dificuldade.Facil)
+            movimentos = 10;
+        else if (dificuldade == Dificuldade.Medio)
+            movimentos = 30;
+        else
+            movimentos = 80;
 
         for (int i = 0; i < movimentos; i++)
         {
             List<int> vizinhos = new List<int>();
-            for (int j = 0; j < 9; j++) if (SaoVizinhos(slotVazioAtual, j)) vizinhos.Add(j);
+
+            for (int j = 0; j < 9; j++)
+            {
+                if (SaoVizinhos(slotVazioAtual, j))
+                    vizinhos.Add(j);
+            }
+
             int escolhido = vizinhos[Random.Range(0, vizinhos.Count)];
             int pID = ocupacaoGrade[escolhido];
-            if (pID != -1) {
+
+            if (pID != -1 && pID >= 0)
+            {
                 puzzlePieces[pID].localPosition = slotsPosicoes[slotVazioAtual];
                 emptySpaceMarker.localPosition = slotsPosicoes[escolhido];
                 
@@ -264,15 +374,22 @@ public class SlidingPuzzleManager : MonoBehaviour
                 slotVazioAtual = escolhido;
             }
         }
-        SaveGame();
+
+        SaveGame(false);
     }
 
-    void SaveGame()
+    void SaveGame(bool salvarDiscoAgora)
     {
         if (PersistenciaManager.Instance == null) return;
+
         PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_HasSave", true);
         PersistenciaManager.Instance.SalvarInt(uniqueID + "_Vazio", slotVazioAtual);
-        for (int i = 0; i < 9; i++) PersistenciaManager.Instance.SalvarInt(uniqueID + "_Slot_" + i, ocupacaoGrade[i]);
+
+        for (int i = 0; i < 9; i++)
+            PersistenciaManager.Instance.SalvarInt(uniqueID + "_Slot_" + i, ocupacaoGrade[i]);
+
+        if (salvarDiscoAgora)
+            SalvarProgressoSeguro();
     }
 
     bool LoadSaveData()
@@ -280,29 +397,51 @@ public class SlidingPuzzleManager : MonoBehaviour
         if (PersistenciaManager.Instance == null) return false;
         
         rewardGiven = PersistenciaManager.Instance.ObterEstado(uniqueID + "_RewardGiven");
+
         if (rewardGiven)
         {
             isSolved = true;
-            foreach (var p in puzzlePieces) p.gameObject.SetActive(false);
-            if (emptySpaceMarker) emptySpaceMarker.gameObject.SetActive(false);
-            if (finalQuadToPhotograph) finalQuadToPhotograph.SetActive(false);
-            if (permanentQuad) permanentQuad.SetActive(true);
+
+            foreach (var p in puzzlePieces)
+            {
+                if (p != null)
+                    p.gameObject.SetActive(false);
+            }
+
+            if (emptySpaceMarker)
+                emptySpaceMarker.gameObject.SetActive(false);
+
+            if (finalQuadToPhotograph)
+                finalQuadToPhotograph.SetActive(false);
+
+            if (permanentQuad)
+                permanentQuad.SetActive(true);
+
             return true;
         }
 
-        if (PersistenciaManager.Instance.ObterEstado(uniqueID + "_Solved")) {
+        if (PersistenciaManager.Instance.ObterEstado(uniqueID + "_Solved"))
+        {
             Vencer();
             return true;
         }
 
-        if (!PersistenciaManager.Instance.ObterEstado(uniqueID + "_HasSave")) return false;
-        slotVazioAtual = PersistenciaManager.Instance.ObterInt(uniqueID + "_Vazio");
-        for (int i = 0; i < 9; i++) {
-            int pID = PersistenciaManager.Instance.ObterInt(uniqueID + "_Slot_" + i);
+        if (!PersistenciaManager.Instance.ObterEstado(uniqueID + "_HasSave"))
+            return false;
+
+        slotVazioAtual = PersistenciaManager.Instance.ObterInt(uniqueID + "_Vazio", 7);
+
+        for (int i = 0; i < 9; i++)
+        {
+            int pID = PersistenciaManager.Instance.ObterInt(uniqueID + "_Slot_" + i, -999);
             ocupacaoGrade[i] = pID;
-            if (pID != -1) puzzlePieces[pID].localPosition = slotsPosicoes[i];
-            else emptySpaceMarker.localPosition = slotsPosicoes[i];
+
+            if (pID != -1 && pID >= 0 && pID < puzzlePieces.Count)
+                puzzlePieces[pID].localPosition = slotsPosicoes[i];
+            else if (pID == -1 && emptySpaceMarker != null)
+                emptySpaceMarker.localPosition = slotsPosicoes[i];
         }
+
         return true;
     }
 
@@ -312,6 +451,18 @@ public class SlidingPuzzleManager : MonoBehaviour
         
         ConfigurarPuzzle(); 
         AutoShuffle(); 
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }
 

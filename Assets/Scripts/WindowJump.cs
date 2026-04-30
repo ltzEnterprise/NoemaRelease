@@ -4,6 +4,10 @@ using System.Collections;
 
 public class WindowJump : MonoBehaviour
 {
+    [Header("--- SAVE SYSTEM (OPCIONAL) ---")]
+    [Tooltip("Preencha se oneTimeOnly precisar continuar usado depois de recarregar o save.")]
+    public string uniqueID;
+
     [Header("Configurações de Pulo")]
     public Transform landingSpot;     
     public bool oneTimeOnly = true;   
@@ -21,7 +25,8 @@ public class WindowJump : MonoBehaviour
 
     private bool isActing = false;
     private bool hasUsed = false;
-    
+    private bool inicializado = false;
+
     // 🔥 A TRAVA BLINDADA 🔥
     private bool estaOlhando = false;
 
@@ -35,6 +40,21 @@ public class WindowJump : MonoBehaviour
             blackScreenPanel.gameObject.SetActive(false);
             blackScreenPanel.color = new Color(0, 0, 0, 0);
         }
+
+        StartCoroutine(CarregarEstadoSeguro());
+    }
+
+    IEnumerator CarregarEstadoSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
+        if (oneTimeOnly && !string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
+        {
+            hasUsed = PersistenciaManager.Instance.ObterEstado(uniqueID + "_used", false);
+        }
+
+        inicializado = true;
     }
 
     void Update()
@@ -44,7 +64,7 @@ public class WindowJump : MonoBehaviour
         {
             // A regra: Só aparece se estiver olhando, NÃO estiver pulando E não tiver esgotado o uso
             bool deveAparecer = estaOlhando && !isActing && !(hasUsed && oneTimeOnly);
-            
+
             if (interactText.activeSelf != deveAparecer)
             {
                 interactText.SetActive(deveAparecer);
@@ -55,6 +75,7 @@ public class WindowJump : MonoBehaviour
     // --- MÉTODOS DO RAYCAST ---
     public void AoOlhar()
     {
+        if (!inicializado) return;
         estaOlhando = true; 
     }
 
@@ -67,6 +88,7 @@ public class WindowJump : MonoBehaviour
     // Chamado pelo Raycast do FPS_Master via SendMessageUpwards("Interagir")
     public void Interagir()
     {
+        if (!inicializado) return;
         if (isActing || (hasUsed && oneTimeOnly)) return;
 
         StartCoroutine(JumpSequence());
@@ -128,8 +150,34 @@ public class WindowJump : MonoBehaviour
         }
 
         isActing = false;
-        if (oneTimeOnly) hasUsed = true;
-        
+        if (oneTimeOnly) 
+        {
+            hasUsed = true;
+            SalvarUso();
+        }
+
         estaOlhando = false; // Garante que a mira desliga quando você chega do outro lado
+    }
+
+    private void SalvarUso()
+    {
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+        {
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_used", true);
+        }
+
+        SalvarProgressoSeguro();
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }

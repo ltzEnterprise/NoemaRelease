@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 [System.Serializable]
@@ -12,70 +13,131 @@ public class KeyHUDConfig
 public class KeyManager : MonoBehaviour
 {
     public static KeyManager Instance;
+
     public List<KeyHUDConfig> keyDatabase = new List<KeyHUDConfig>();
     private List<string> chavesNoBolso = new List<string>();
 
+    private bool saveCarregado = false;
+
     void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
     }
 
     void Start()
     {
+        StartCoroutine(SincronizarChavesComSaveSeguro());
+    }
+
+    IEnumerator SincronizarChavesComSaveSeguro()
+    {
+        yield return new WaitUntil(() => PersistenciaManager.Instance != null);
+        yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
         SincronizarChavesComSave();
+
+        saveCarregado = true;
     }
 
     public void SincronizarChavesComSave()
     {
         chavesNoBolso.Clear();
-        if (PersistenciaManager.Instance == null) return;
+
+        if (PersistenciaManager.Instance == null)
+            return;
 
         foreach (var key in keyDatabase)
         {
+            if (key == null || string.IsNullOrEmpty(key.keyID))
+                continue;
+
             bool temNoSave = PersistenciaManager.Instance.ObterEstado("Key_" + key.keyID);
+
             if (temNoSave)
             {
-                chavesNoBolso.Add(key.keyID);
-                if (key.hudIcon != null) key.hudIcon.SetActive(true);
+                if (!chavesNoBolso.Contains(key.keyID))
+                    chavesNoBolso.Add(key.keyID);
+
+                if (key.hudIcon != null)
+                    key.hudIcon.SetActive(true);
             }
             else
             {
-                if (key.hudIcon != null) key.hudIcon.SetActive(false);
+                if (key.hudIcon != null)
+                    key.hudIcon.SetActive(false);
             }
         }
     }
 
     public bool CheckIfHasKey(string searchedID)
     {
+        if (string.IsNullOrEmpty(searchedID))
+            return false;
+
         return chavesNoBolso.Contains(searchedID);
     }
 
     public void TurnOnKeyIcon(string searchedID)
     {
-        if (!chavesNoBolso.Contains(searchedID)) chavesNoBolso.Add(searchedID);
+        if (string.IsNullOrEmpty(searchedID))
+            return;
+
+        if (!chavesNoBolso.Contains(searchedID))
+            chavesNoBolso.Add(searchedID);
         
         foreach (var key in keyDatabase)
-            if (key.keyID == searchedID && key.hudIcon != null) key.hudIcon.SetActive(true);
+        {
+            if (key == null) continue;
+
+            if (key.keyID == searchedID && key.hudIcon != null)
+                key.hudIcon.SetActive(true);
+        }
 
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado("Key_" + searchedID, true);
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgressoSeguro();
         }
     }
 
     public void TurnOffKeyIcon(string searchedID)
     {
-        if (chavesNoBolso.Contains(searchedID)) chavesNoBolso.Remove(searchedID);
+        if (string.IsNullOrEmpty(searchedID))
+            return;
+
+        if (chavesNoBolso.Contains(searchedID))
+            chavesNoBolso.Remove(searchedID);
 
         foreach (var key in keyDatabase)
-            if (key.keyID == searchedID && key.hudIcon != null) key.hudIcon.SetActive(false);
+        {
+            if (key == null) continue;
+
+            if (key.keyID == searchedID && key.hudIcon != null)
+                key.hudIcon.SetActive(false);
+        }
 
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado("Key_" + searchedID, false);
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgressoSeguro();
         }
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (!saveCarregado)
+            return;
+
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }

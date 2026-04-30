@@ -8,25 +8,25 @@ public class GameManager : MonoBehaviour
 
     [Header("Configurações de Save")]
     public string nomeCenaPadrao = "DreamSceane";
+    public string nomeCenaMenu = "MenuPrincipal";
     public bool autoSaveAoPegarRuna = true;
 
     public GameObject player;
     public static bool CenaPronta = false;
-    
+
     private Coroutine rotinaAtual;
 
     private void Awake()
     {
         if (Instance != null && Instance != this)
         {
+            Debug.LogWarning("[GameManager] Cópia local/duplicada destruída. Mantendo a instância global.");
             Destroy(gameObject);
             return;
         }
 
         Instance = this;
-
-        if (transform.parent == null)
-            DontDestroyOnLoad(gameObject);
+        DontDestroyOnLoad(gameObject);
     }
 
     void OnEnable()
@@ -52,16 +52,16 @@ public class GameManager : MonoBehaviour
             rotinaAtual = null;
         }
 
-        if (scene.name == "MenuPrincipal")
+        if (scene.name == nomeCenaMenu)
         {
             player = null;
             return;
         }
 
-        rotinaAtual = StartCoroutine(EsperarHD_E_Salvar());
+        rotinaAtual = StartCoroutine(PrepararCenaERegistrarSave(scene.name));
     }
 
-    IEnumerator EsperarHD_E_Salvar()
+    IEnumerator PrepararCenaERegistrarSave(string nomeCena)
     {
         yield return new WaitUntil(() =>
             PersistenciaManager.Instance != null &&
@@ -91,15 +91,23 @@ public class GameManager : MonoBehaviour
             SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false;
         }
 
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSeconds(0.35f);
 
         CenaPronta = true;
 
         if (SistemaGlobal.Instance != null)
         {
             SistemaGlobal.Instance.sistemaPronto = true;
-            SistemaGlobal.Instance.acabouDeCarregar = false;
+
+            if (SistemaGlobal.Instance.acabouDeCarregar)
+            {
+                SistemaGlobal.Instance.acabouDeCarregar = false;
+                rotinaAtual = null;
+                yield break;
+            }
         }
+
+        SalvarProgresso();
 
         rotinaAtual = null;
     }
@@ -108,13 +116,15 @@ public class GameManager : MonoBehaviour
     {
         if (!CenaPronta) return;
 
+        if (SistemaGlobal.Instance == null) return;
+        if (!SistemaGlobal.Instance.slotFoiDefinido || SistemaGlobal.Instance.slotAtual <= 0) return;
+
         if (player == null)
             player = GameObject.FindGameObjectWithTag("Player");
-        
+
         string cenaAtual = SceneManager.GetActiveScene().name;
         Vector3 posSegura = player != null ? player.transform.position : Vector3.zero;
 
-        if (SistemaGlobal.Instance != null)
-            SistemaGlobal.Instance.SalvarJogo(posSegura, cenaAtual);
+        SistemaGlobal.Instance.SalvarJogo(posSegura, cenaAtual);
     }
 }

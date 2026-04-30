@@ -20,7 +20,7 @@ public class RealityCamera : MonoBehaviour
     public GameObject luzNormalObj;    
     public GameObject luzUVObj;        
     public AudioSource audioSource;
-    
+
     [Header("--- UI DE AJUDA ---")]
     public GameObject textoAjudaEntrar; 
     public GameObject textoAjudaLuz;    
@@ -39,7 +39,7 @@ public class RealityCamera : MonoBehaviour
     public KeyCode teclaEntrarSair = KeyCode.G; 
     public KeyCode teclaLuz = KeyCode.F;        
     public KeyCode teclaFoto = KeyCode.Mouse0;
-    
+
     public KeyCode teclaZoomIn = KeyCode.RightBracket; 
     public KeyCode teclaZoomOut = KeyCode.LeftBracket; 
 
@@ -59,12 +59,12 @@ public class RealityCamera : MonoBehaviour
 
     public bool temUpgradeLanterna = false; 
     public bool modoAtivo { get; private set; } = false; 
-    
+
     private float fovOriginal;
     private Renderer[] renderersVisuais;
-    
-    // 🔥 Referência para podermos resetar o flash se o cara spammar clique
+
     private Coroutine flashCoroutine;
+    private bool saveCarregado = false;
 
     void Awake()
     {
@@ -80,19 +80,31 @@ public class RealityCamera : MonoBehaviour
             flashBranco.gameObject.SetActive(false);
             flashBranco.raycastTarget = false; 
         }
-        
+
         if (modeloCameraMao) renderersVisuais = modeloCameraMao.GetComponentsInChildren<Renderer>();
     }
 
     void Start()
     {
+        StartCoroutine(CarregarUpgradeSeguro());
+    }
+
+    IEnumerator CarregarUpgradeSeguro()
+    {
         if (PersistenciaManager.Instance != null)
         {
-            if (PersistenciaManager.Instance.ObterEstado("Camera_TemUpgradeLanterna"))
+            yield return new WaitUntil(() =>
+                PersistenciaManager.Instance.DadosProntosParaUso &&
+                !PersistenciaManager.Instance.EstaCarregando
+            );
+
+            if (PersistenciaManager.Instance.ObterEstado("Camera_TemUpgradeLanterna", false))
             {
                 temUpgradeLanterna = true;
             }
         }
+
+        saveCarregado = true;
     }
 
     public void ReceberUpgradeLanterna()
@@ -100,11 +112,11 @@ public class RealityCamera : MonoBehaviour
         if (temUpgradeLanterna) return; 
 
         temUpgradeLanterna = true;
-        
+
         if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado("Camera_TemUpgradeLanterna", true);
-            PersistenciaManager.Instance.SalvarTudo();
+            SalvarProgressoSeguro();
         }
 
         if (audioSource && somUpgradeRecebido) audioSource.PlayOneShot(somUpgradeRecebido);
@@ -118,16 +130,16 @@ public class RealityCamera : MonoBehaviour
         AtualizarLuzes(); 
         EsconderAmbosOsTextos(); 
     }
-    
+
     void OnDisable() 
     { 
         modoAtivo = false;
         if (hudCamera) hudCamera.SetActive(false); 
         if (luzNormalObj) luzNormalObj.SetActive(false); 
         if (luzUVObj) luzUVObj.SetActive(false); 
-        
+
         if (cameraPlayer != null && fovOriginal > 0) cameraPlayer.fieldOfView = fovOriginal;
-        
+
         EsconderAmbosOsTextos(); 
     }
 
@@ -152,7 +164,7 @@ public class RealityCamera : MonoBehaviour
         }
 
         bool temCameraNaMao = (InventoryManager.Instance && InventoryManager.Instance.itemSelecionado == idCamera);
-        
+
         if (Input.GetKeyDown(teclaEntrarSair) && (temCameraNaMao || modoAtivo))
         {
             modoAtivo = !modoAtivo;
@@ -164,11 +176,11 @@ public class RealityCamera : MonoBehaviour
                     fovOriginal = cameraPlayer.fieldOfView;
                     maxFOV = fovOriginal; 
                 }
-                
+
                 if (hudCamera) hudCamera.SetActive(true);
                 ToggleRenderers(false); 
                 AtualizarLuzes();
-                
+
                 if (textoAjudaEntrar) textoAjudaEntrar.SetActive(false);
                 if (textoAjudaLuz && temUpgradeLanterna) textoAjudaLuz.SetActive(true);
             }
@@ -177,9 +189,9 @@ public class RealityCamera : MonoBehaviour
                 if (hudCamera) hudCamera.SetActive(false);
                 ToggleRenderers(true); 
                 DesligarLuzesTotais();
-                
+
                 if (textoAjudaLuz) textoAjudaLuz.SetActive(false);
-                
+
                 if (cameraPlayer != null) cameraPlayer.fieldOfView = fovOriginal;
 
                 if (InventoryManager.Instance != null)
@@ -201,7 +213,7 @@ public class RealityCamera : MonoBehaviour
             {
                 if (textoAjudaEntrar && textoAjudaEntrar.activeSelf) textoAjudaEntrar.SetActive(false);
             }
-            
+
             if (temCameraNaMao && renderersVisuais != null && renderersVisuais.Length > 0 && !renderersVisuais[0].enabled)
             {
                 ToggleRenderers(true);
@@ -224,7 +236,7 @@ public class RealityCamera : MonoBehaviour
             {
                 if (Input.GetKey(teclaZoomIn)) cameraPlayer.fieldOfView -= zoomSpeed * Time.deltaTime;
                 if (Input.GetKey(teclaZoomOut)) cameraPlayer.fieldOfView += zoomSpeed * Time.deltaTime;
-                
+
                 cameraPlayer.fieldOfView = Mathf.Clamp(cameraPlayer.fieldOfView, minFOV, maxFOV);
             }
         }
@@ -276,7 +288,6 @@ public class RealityCamera : MonoBehaviour
     {
         if (audioSource && somFotoSucesso) audioSource.PlayOneShot(somFotoSucesso);
 
-        // 🔥 A MÁGICA ACONTECE AQUI. MANDA O SISTEMA GLOBAL RODAR O FLASH.
         if (flashBranco) 
         { 
             if (SistemaGlobal.Instance != null)
@@ -286,7 +297,6 @@ public class RealityCamera : MonoBehaviour
             }
             else 
             {
-                // Fallback de segurança se o SistemaGlobal não existir (ex: testando cena isolada)
                 if (flashCoroutine != null) StopCoroutine(flashCoroutine);
                 flashCoroutine = StartCoroutine(RotinaFlashBlindada(flashBranco));
             }
@@ -297,10 +307,10 @@ public class RealityCamera : MonoBehaviour
             case AmbientSkyObject.TipoFoto.ChaveFinal:
                 KeySystem keyScript = alvo.GetComponent<KeySystem>();
                 if (keyScript == null) keyScript = alvo.GetComponentInParent<KeySystem>();
-                
+
                 if (keyScript != null) keyScript.Pickup(); 
                 break;
-                
+
             case AmbientSkyObject.TipoFoto.LinkPilar:
                 PilarReceptor pilar = PilarReceptor.BuscarPilarPorID(alvo.idLinkPilar);
                 if (pilar != null) pilar.AtivarObjeto();
@@ -309,7 +319,6 @@ public class RealityCamera : MonoBehaviour
         alvo.Sumir(); 
     }
 
-    // 🔥 NOVA ROTINA DE FLASH INDEPENDENTE E BLINDADA
     private IEnumerator RotinaFlashBlindada(Image flash)
     {
         if (flash == null) yield break;
@@ -317,7 +326,7 @@ public class RealityCamera : MonoBehaviour
         flash.transform.SetAsLastSibling();
         flash.gameObject.SetActive(true);
         flash.color = Color.white;
-        
+
         CanvasRenderer cr = flash.GetComponent<CanvasRenderer>();
         if (cr != null) cr.SetAlpha(1f); 
 
@@ -333,7 +342,7 @@ public class RealityCamera : MonoBehaviour
             }
             yield return null;
         }
-        
+
         if (flash != null) flash.gameObject.SetActive(false);
     }
 
@@ -347,7 +356,7 @@ public class RealityCamera : MonoBehaviour
     {
         if (luzNormalObj) luzNormalObj.SetActive(false);
         if (luzUVObj) luzUVObj.SetActive(false);
-        
+
         if (!modoAtivo) return;
 
         if (modoLuzAtual == ModoLanterna.Normal && luzNormalObj) luzNormalObj.SetActive(true);
@@ -372,5 +381,20 @@ public class RealityCamera : MonoBehaviour
     {
         if (renderersVisuais != null)
             foreach (Renderer r in renderersVisuais) if (r) r.enabled = estado;
+    }
+
+    private void SalvarProgressoSeguro()
+    {
+        if (!saveCarregado)
+            return;
+
+        if (GameManager.Instance != null && GameManager.CenaPronta)
+        {
+            GameManager.Instance.SalvarProgresso();
+            return;
+        }
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }

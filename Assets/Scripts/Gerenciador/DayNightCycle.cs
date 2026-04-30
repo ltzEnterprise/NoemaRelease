@@ -64,8 +64,10 @@ public class DayNightCycle : MonoBehaviour
     [Header("--- GAMEPLAY ---")]
     public bool isNight = false; 
     
-    // 🔥 Deixei público para as fotos mágicas poderem ler o horário atual
     public TimeState currentState;
+
+    private bool inicializado = false;
+    public bool Inicializado { get { return inicializado; } }
 
     void Awake() 
     { 
@@ -81,15 +83,24 @@ public class DayNightCycle : MonoBehaviour
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
 
-        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        StartCoroutine(InicializarSeguro());
+    }
+
+    private System.Collections.IEnumerator InicializarSeguro()
+    {
+        if (PersistenciaManager.Instance != null)
         {
-            if (PersistenciaManager.Instance.ObterInt("Global_TimeState") != 0 || PersistenciaManager.Instance.TemEstadoSalvo("Global_TimeState_Saved")) 
+            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+
+            if (PersistenciaManager.Instance.ObterInt("Global_TimeState") != 0 ||
+                PersistenciaManager.Instance.TemEstadoSalvo("Global_TimeState_Saved"))
             {
                 startWith = (TimeState)PersistenciaManager.Instance.ObterInt("Global_TimeState");
             }
         }
 
-        ChangeTo(startWith);
+        ChangeToSemSalvar(startWith);
+        inicializado = true;
     }
 
     public void ChangeTo(TimeState newState)
@@ -97,12 +108,33 @@ public class DayNightCycle : MonoBehaviour
         currentState = newState;
         ApplyProfile(newState);
 
-        if (!Application.isEditor && PersistenciaManager.Instance != null)
+        if (!inicializado) return;
+
+        if (PersistenciaManager.Instance != null)
         {
             PersistenciaManager.Instance.RegistrarEstado("Global_TimeState_Saved", true); 
             PersistenciaManager.Instance.SalvarInt("Global_TimeState", (int)newState);
-            PersistenciaManager.Instance.SalvarTudo();
+
+            if (SistemaGlobal.Instance != null &&
+                SistemaGlobal.Instance.slotFoiDefinido &&
+                SistemaGlobal.Instance.sistemaPronto &&
+                GameManager.CenaPronta)
+            {
+                GameManager gm = GameManager.Instance;
+                if (gm != null) gm.SalvarProgresso();
+                else PersistenciaManager.Instance.SalvarTudo(false);
+            }
+            else
+            {
+                PersistenciaManager.Instance.SalvarTudo(true);
+            }
         }
+    }
+
+    private void ChangeToSemSalvar(TimeState newState)
+    {
+        currentState = newState;
+        ApplyProfile(newState);
     }
 
     void Update()
@@ -152,6 +184,7 @@ public class DayNightCycle : MonoBehaviour
         if (mainLight != null)
         {
             mainLight.shadows = LightShadows.Soft;
+
             if (flareComponent != null) 
             {
                 if (state == TimeState.InitialDay) flareComponent.lensFlareData = flareInitial;
@@ -165,6 +198,7 @@ public class DayNightCycle : MonoBehaviour
         
         RenderSettings.fogColor = p.fogColor;
         RenderSettings.fogDensity = p.fogDensity;
+
         if (mainLight) 
         {
             mainLight.color = p.lightColor;
@@ -180,6 +214,7 @@ public class DayNightCycle : MonoBehaviour
         if (grassMaterials != null && grassMaterials.Length > 0)
         {
             float normalValue = p.enableGrassNormal ? 1f : 0f;
+
             foreach (Material mat in grassMaterials)
             {
                 if (mat != null)
@@ -198,6 +233,7 @@ public class DayNightCycle : MonoBehaviour
     void ApplyColorsRealtime()
     {
         LightingProfile p = null;
+
         switch (currentState)
         {
             case TimeState.InitialDay: p = initialDayProfile; break;
@@ -209,6 +245,7 @@ public class DayNightCycle : MonoBehaviour
         {
             RenderSettings.fogColor = p.fogColor;
             RenderSettings.fogDensity = p.fogDensity;
+
             if (mainLight) 
             {
                 mainLight.color = p.lightColor;
@@ -224,6 +261,7 @@ public class DayNightCycle : MonoBehaviour
             if (grassMaterials != null && grassMaterials.Length > 0)
             {
                 float normalValue = p.enableGrassNormal ? 1f : 0f;
+
                 foreach (Material mat in grassMaterials)
                 {
                     if (mat != null)
@@ -246,6 +284,6 @@ public class DayNightCycle : MonoBehaviour
     }
 
     [ContextMenu("Apply Initial Day")] public void TestInitial() => ChangeTo(TimeState.InitialDay);
-    [ContextMenu("Apply Dramatic Day")] public void TestDramatic() => ChangeTo(TimeState.DramaticDay);
+    [ContextMenu("Apply Dramatic")] public void TestDramatic() => ChangeTo(TimeState.DramaticDay);
     [ContextMenu("Apply Night")] public void TestNight() => ChangeTo(TimeState.Night);
 }

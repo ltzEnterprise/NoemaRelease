@@ -5514,6 +5514,8 @@ MonoBehaviour:
   audioSource: {fileID: 7798980361708390390}
   revealSound: {fileID: 0}
   erroHorarioSound: {fileID: 0}
+  consumirFotoAoUsar: 1
+  idDaFotoNoInventario: 0
   textoDicaMagica: {fileID: 0}
 --- !u!82 &7798980361708390390
 AudioSource:
@@ -11317,6 +11319,8 @@ MonoBehaviour:
   audioSource: {fileID: 7154299257364446690}
   revealSound: {fileID: 0}
   erroHorarioSound: {fileID: 0}
+  consumirFotoAoUsar: 1
+  idDaFotoNoInventario: 0
   textoDicaMagica: {fileID: 0}
 --- !u!82 &7154299257364446690
 AudioSource:
@@ -11978,6 +11982,8 @@ MonoBehaviour:
   audioSource: {fileID: 4735797574381387181}
   revealSound: {fileID: 0}
   erroHorarioSound: {fileID: 0}
+  consumirFotoAoUsar: 1
+  idDaFotoNoInventario: 0
   textoDicaMagica: {fileID: 0}
 --- !u!82 &4735797574381387181
 AudioSource:
@@ -17447,6 +17453,8 @@ MonoBehaviour:
   audioSource: {fileID: 4889946019185504072}
   revealSound: {fileID: 0}
   erroHorarioSound: {fileID: 0}
+  consumirFotoAoUsar: 1
+  idDaFotoNoInventario: 0
   textoDicaMagica: {fileID: 0}
 --- !u!82 &4889946019185504072
 AudioSource:
