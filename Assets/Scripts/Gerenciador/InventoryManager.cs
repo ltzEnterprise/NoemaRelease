@@ -23,6 +23,8 @@ public class InventoryManager : MonoBehaviour
     private float tempoParaProximaTroca = 0f;
     private Vector3[] posicoesOriginais;
     private Coroutine[] corrotinasSaque; 
+    private Coroutine rotinaTrocaInventario;
+    private int itemVisualAtual = -1;
 
     void Awake()
     {
@@ -228,46 +230,108 @@ public class InventoryManager : MonoBehaviour
         if (posicoesOriginais == null || posicoesOriginais.Length != itensRegistrados.Count) return;
         if (corrotinasSaque == null || corrotinasSaque.Length != itensRegistrados.Count) return;
 
+        if (!animar)
+        {
+            AplicarVisualInstantaneo();
+            return;
+        }
+
+        if (rotinaTrocaInventario != null)
+            StopCoroutine(rotinaTrocaInventario);
+
+        rotinaTrocaInventario = StartCoroutine(RotinaTrocaVisual(itemVisualAtual, itemSelecionado));
+
         string nomeParaHUD = "";
+
+        if (itemSelecionado >= 0 && itemSelecionado < itensRegistrados.Count && itensRegistrados[itemSelecionado] != null)
+        {
+            var idScript = itensRegistrados[itemSelecionado].GetComponent<ItemIdentificador>(); 
+            nomeParaHUD = idScript ? idScript.nomeDoItem : itensRegistrados[itemSelecionado].name;
+        }
+
+        if (HUDItemNome.Instance != null)
+            HUDItemNome.Instance.MostrarNome(itemSelecionado == -1 ? "" : nomeParaHUD);
+    }
+
+    private void AplicarVisualInstantaneo()
+    {
         bool cameraEstaNoRosto = RealityCamera.Instance != null && RealityCamera.Instance.modoAtivo;
 
         for (int i = 0; i < itensRegistrados.Count; i++)
         {
             if (itensRegistrados[i] == null) continue;
 
-            if (i != itemSelecionado && i != idDaCamera) 
+            if (corrotinasSaque[i] != null)
             {
-                if (corrotinasSaque[i] != null) 
-                {
-                    StopCoroutine(corrotinasSaque[i]);
-                    corrotinasSaque[i] = null;
-                }
-
-                itensRegistrados[i].transform.localPosition = posicoesOriginais[i];
+                StopCoroutine(corrotinasSaque[i]);
+                corrotinasSaque[i] = null;
             }
+
+            itensRegistrados[i].transform.localPosition = posicoesOriginais[i];
 
             bool ativar = (i == itemSelecionado) || (i == idDaCamera && cameraEstaNoRosto);
             itensRegistrados[i].SetActive(ativar);
+        }
 
-            if (i == itemSelecionado) 
+        itemVisualAtual = itemSelecionado;
+    }
+
+    IEnumerator RotinaTrocaVisual(int itemAnterior, int itemNovo)
+    {
+        bool cameraEstaNoRosto = RealityCamera.Instance != null && RealityCamera.Instance.modoAtivo;
+
+        for (int i = 0; i < itensRegistrados.Count; i++)
+        {
+            if (itensRegistrados[i] == null) continue;
+
+            if (corrotinasSaque[i] != null)
             {
-                var idScript = itensRegistrados[i].GetComponent<ItemIdentificador>(); 
-                nomeParaHUD = idScript ? idScript.nomeDoItem : itensRegistrados[i].name;
+                StopCoroutine(corrotinasSaque[i]);
+                corrotinasSaque[i] = null;
+            }
 
-                if (animar) 
-                {
-                    if (corrotinasSaque[i] != null) StopCoroutine(corrotinasSaque[i]);
-                    corrotinasSaque[i] = StartCoroutine(RotinaDeSaque(i));
-                }
-                else
-                {
-                    itensRegistrados[i].transform.localPosition = posicoesOriginais[i];
-                }
+            if (i != itemAnterior && i != itemNovo && !(i == idDaCamera && cameraEstaNoRosto))
+            {
+                itensRegistrados[i].transform.localPosition = posicoesOriginais[i];
+                itensRegistrados[i].SetActive(false);
             }
         }
 
-        if (HUDItemNome.Instance != null && animar)
-            HUDItemNome.Instance.MostrarNome(itemSelecionado == -1 ? "" : nomeParaHUD);
+        if (itemAnterior >= 0 &&
+            itemAnterior < itensRegistrados.Count &&
+            itensRegistrados[itemAnterior] != null &&
+            itemAnterior != itemNovo)
+        {
+            bool manterCameraAtiva = itemAnterior == idDaCamera && cameraEstaNoRosto;
+
+            itensRegistrados[itemAnterior].SetActive(true);
+            yield return StartCoroutine(RotinaDeGuardar(itemAnterior));
+
+            if (!manterCameraAtiva)
+                itensRegistrados[itemAnterior].SetActive(false);
+        }
+
+        if (itemNovo >= 0 &&
+            itemNovo < itensRegistrados.Count &&
+            itensRegistrados[itemNovo] != null)
+        {
+            itensRegistrados[itemNovo].SetActive(true);
+            yield return StartCoroutine(RotinaDeSaque(itemNovo));
+        }
+
+        for (int i = 0; i < itensRegistrados.Count; i++)
+        {
+            if (itensRegistrados[i] == null) continue;
+
+            bool ativar = (i == itemNovo) || (i == idDaCamera && cameraEstaNoRosto);
+            itensRegistrados[i].SetActive(ativar);
+
+            if (!ativar)
+                itensRegistrados[i].transform.localPosition = posicoesOriginais[i];
+        }
+
+        itemVisualAtual = itemNovo;
+        rotinaTrocaInventario = null;
     }
 
     IEnumerator RotinaDeSaque(int index)
@@ -292,6 +356,29 @@ public class InventoryManager : MonoBehaviour
         }
 
         itemTransform.localPosition = posFinal;
+    }
+
+    IEnumerator RotinaDeGuardar(int index)
+    {
+        if (index < 0 || index >= itensRegistrados.Count) yield break;
+        if (itensRegistrados[index] == null) yield break;
+
+        Transform itemTransform = itensRegistrados[index].transform;
+
+        Vector3 posInicial = itemTransform.localPosition;
+        Vector3 posFinal = posicoesOriginais[index] + new Vector3(0, -forcaDropSaque, 0);
+
+        float tempoPercorrido = 0f;
+        float tempoTotal = 1f / Mathf.Max(0.1f, velocidadeSaque); 
+
+        while (tempoPercorrido < tempoTotal)
+        {
+            tempoPercorrido += Time.deltaTime;
+            itemTransform.localPosition = Vector3.Lerp(posInicial, posFinal, tempoPercorrido / tempoTotal);
+            yield return null;
+        }
+
+        itemTransform.localPosition = posicoesOriginais[index];
     }
 
     bool ItemEstaDesbloqueado(int id) 

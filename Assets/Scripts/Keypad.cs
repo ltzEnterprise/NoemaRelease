@@ -11,10 +11,6 @@ public class Keypad : MonoBehaviour
     public string senhaCorreta = "1487";
     public int limiteDigitos = 4;
 
-    [Header("--- SAVE SYSTEM (TRAVA) ---")]
-    [Tooltip("Se ativado, salva o jogo no HD assim que pegar a runa. DEIXE DESMARCADO dentro de cenas instanciadas para evitar softlock!")]
-    public bool forcarSaveNoHD = false;
-
     [Header("--- SENHA EXTRA (Opcional) ---")]
     public string senhaExtra = ""; 
     public GameObject quadPainelExtra; 
@@ -48,6 +44,7 @@ public class Keypad : MonoBehaviour
     private float cooldownClique = 0.2f; 
 
     private Coroutine rotinaReset;
+    private Coroutine rotinaPainelRuna;
     private bool aguardandoLimpeza = false;
     private bool estaOlhando = false; 
     private bool inicializado = false;
@@ -60,16 +57,16 @@ public class Keypad : MonoBehaviour
 
     void Start() 
     { 
-        if(cameraFixaKeypad) 
+        if (cameraFixaKeypad) 
         {
             cameraFixaKeypad.gameObject.SetActive(false);
             var listener = cameraFixaKeypad.GetComponent<AudioListener>();
-            if(listener) listener.enabled = false;
+            if (listener) listener.enabled = false;
         }
 
-        if(textoInteragirProprio) textoInteragirProprio.SetActive(false);
-        if(painelAvisoRuna) painelAvisoRuna.SetActive(false);
-        if(quadPainelExtra) quadPainelExtra.SetActive(false);
+        if (textoInteragirProprio) textoInteragirProprio.SetActive(false);
+        if (painelAvisoRuna) painelAvisoRuna.SetActive(false);
+        if (quadPainelExtra) quadPainelExtra.SetActive(false);
 
         StartCoroutine(InicializarSeguro());
     }
@@ -181,21 +178,21 @@ public class Keypad : MonoBehaviour
         {
             FPS_Master.Instance.FicarInvisivelMasFisico(true);
 
-            if(FPS_Master.Instance.cameraJogador) 
+            if (FPS_Master.Instance.cameraJogador) 
             {
                 FPS_Master.Instance.cameraJogador.enabled = false;
                 var listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
-                if(listener) listener.enabled = false;
+                if (listener) listener.enabled = false;
             }
 
             FPS_Master.Instance.AlterarEstadoJogador(true, true);
         }
 
-        if(cameraFixaKeypad) 
+        if (cameraFixaKeypad) 
         {
             cameraFixaKeypad.gameObject.SetActive(true);
             var listener = cameraFixaKeypad.GetComponent<AudioListener>();
-            if(listener) listener.enabled = true;
+            if (listener) listener.enabled = true;
         }
     }
 
@@ -204,22 +201,22 @@ public class Keypad : MonoBehaviour
         jogadorUsando = false;
         aguardandoSoltarE = false;
         
-        if(cameraFixaKeypad) 
+        if (cameraFixaKeypad) 
         {
             cameraFixaKeypad.gameObject.SetActive(false);
             var listener = cameraFixaKeypad.GetComponent<AudioListener>();
-            if(listener) listener.enabled = false;
+            if (listener) listener.enabled = false;
         }
 
         if (FPS_Master.Instance != null)
         {
             FPS_Master.Instance.FicarInvisivelMasFisico(false);
             
-            if(FPS_Master.Instance.cameraJogador) 
+            if (FPS_Master.Instance.cameraJogador) 
             {
                 FPS_Master.Instance.cameraJogador.enabled = true;
                 var listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
-                if(listener) listener.enabled = true;
+                if (listener) listener.enabled = true;
             }
 
             FPS_Master.Instance.AlterarEstadoJogador(false, false);
@@ -231,12 +228,22 @@ public class Keypad : MonoBehaviour
 
     public void AddInput(string numero)
     {
-        if (numero.ToLower() == "enter") { VerificarSenha(); return; }
+        if (string.IsNullOrEmpty(numero)) return;
+
+        if (numero.ToLower() == "enter")
+        {
+            VerificarSenha();
+            return;
+        }
+
         if (numero.ToLower() == "clear") 
         { 
             inputAtual = ""; 
             aguardandoLimpeza = false;
-            if (rotinaReset != null) StopCoroutine(rotinaReset);
+
+            if (rotinaReset != null)
+                StopCoroutine(rotinaReset);
+
             AtualizarDisplay(); 
             return; 
         }
@@ -245,13 +252,18 @@ public class Keypad : MonoBehaviour
         {
             aguardandoLimpeza = false;
             inputAtual = "";
-            if (rotinaReset != null) StopCoroutine(rotinaReset);
+
+            if (rotinaReset != null)
+                StopCoroutine(rotinaReset);
         }
 
         if (inputAtual.Length < limiteDigitos)
         {
             inputAtual += numero;
-            if(audioSource && somBip) audioSource.PlayOneShot(somBip);
+
+            if (audioSource && somBip)
+                audioSource.PlayOneShot(somBip);
+
             AtualizarDisplay();
         }
     }
@@ -276,8 +288,14 @@ public class Keypad : MonoBehaviour
 
     void Sucesso()
     {
-        if(audioSource && somSucesso) audioSource.PlayOneShot(somSucesso);
-        if(displayTexto) { displayTexto.text = "OK"; displayTexto.color = Color.green; }
+        if (audioSource && somSucesso)
+            audioSource.PlayOneShot(somSucesso);
+
+        if (displayTexto)
+        {
+            displayTexto.text = "OK";
+            displayTexto.color = Color.green;
+        }
 
         if (!jaResolveuPrincipal)
         {
@@ -289,14 +307,17 @@ public class Keypad : MonoBehaviour
                 portaParaAbrir.SendMessage("Interagir", SendMessageOptions.DontRequireReceiver);
             }
 
-            if (darRunaAoAcertar && InventarioRunas.Instance != null)
+            if (darRunaAoAcertar)
             {
-                if (forcarSaveNoHD)
-                    InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
-                else
-                    InventarioRunas.Instance.ColetarRunaSemForcarSaveHD(nomeDaRuna);
-                
-                if (painelAvisoRuna) StartCoroutine(MostrarAvisoRuna());
+                EntregarRunaComSeguranca();
+
+                if (painelAvisoRuna)
+                {
+                    if (rotinaPainelRuna != null)
+                        StopCoroutine(rotinaPainelRuna);
+
+                    rotinaPainelRuna = StartCoroutine(MostrarAvisoRuna());
+                }
             }
 
             if (darManivelaAoAcertar)
@@ -318,19 +339,61 @@ public class Keypad : MonoBehaviour
         StartCoroutine(DelaySaida());
     }
 
+    void EntregarRunaComSeguranca()
+    {
+        InventarioRunas inventario = InventarioRunas.Instance;
+
+        if (inventario == null)
+        {
+            inventario = Object.FindFirstObjectByType<InventarioRunas>();
+
+            if (inventario != null)
+                InventarioRunas.Instance = inventario;
+        }
+
+        if (inventario != null)
+        {
+            inventario.ColetarRunaPeloNome(nomeDaRuna);
+            inventario.RecarregarDoSave();
+            return;
+        }
+
+        Debug.LogWarning("[Keypad] InventarioRunas não encontrado. Salvando a runa direto no PersistenciaManager: " + nomeDaRuna);
+
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(nomeDaRuna))
+        {
+            PersistenciaManager.Instance.RegistrarEstado("Runa_" + nomeDaRuna, true);
+            PersistenciaManager.Instance.SalvarTudo(true);
+        }
+    }
+
     void SucessoExtra()
     {
-        if(audioSource && somSucesso) audioSource.PlayOneShot(somSucesso);
-        if(displayTexto) { displayTexto.text = "EXTRA"; displayTexto.color = Color.cyan; }
-        if (quadPainelExtra) quadPainelExtra.SetActive(true);
+        if (audioSource && somSucesso)
+            audioSource.PlayOneShot(somSucesso);
+
+        if (displayTexto)
+        {
+            displayTexto.text = "EXTRA";
+            displayTexto.color = Color.cyan;
+        }
+
+        if (quadPainelExtra)
+            quadPainelExtra.SetActive(true);
 
         PrepararResetDisplay();
     }
 
     void Erro()
     {
-        if(audioSource && somErro) audioSource.PlayOneShot(somErro);
-        if(displayTexto) { displayTexto.text = "ERRO"; displayTexto.color = Color.red; }
+        if (audioSource && somErro)
+            audioSource.PlayOneShot(somErro);
+
+        if (displayTexto)
+        {
+            displayTexto.text = "ERRO";
+            displayTexto.color = Color.red;
+        }
         
         PrepararResetDisplay();
     }
@@ -340,20 +403,10 @@ public class Keypad : MonoBehaviour
         aguardandoLimpeza = true;
         inputAtual = "";
         
-        if (rotinaReset != null) StopCoroutine(rotinaReset);
+        if (rotinaReset != null)
+            StopCoroutine(rotinaReset);
+
         rotinaReset = StartCoroutine(ResetDisplayDelay());
-    }
-
-    void SalvarProgressoSeguro()
-    {
-        if (GameManager.Instance != null && GameManager.CenaPronta)
-        {
-            GameManager.Instance.SalvarProgresso();
-            return;
-        }
-
-        if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.SalvarTudo(false);
     }
 
     IEnumerator DelaySaida() 
@@ -364,14 +417,24 @@ public class Keypad : MonoBehaviour
     
     IEnumerator MostrarAvisoRuna() 
     { 
-        painelAvisoRuna.SetActive(true); 
+        if (painelAvisoRuna)
+            painelAvisoRuna.SetActive(true); 
+
         yield return new WaitForSeconds(3f); 
-        painelAvisoRuna.SetActive(false); 
+
+        if (painelAvisoRuna)
+            painelAvisoRuna.SetActive(false);
+
+        rotinaPainelRuna = null;
     }
     
     void AtualizarDisplay() 
     { 
-        if (displayTexto != null) { displayTexto.text = inputAtual; displayTexto.color = Color.white; } 
+        if (displayTexto != null)
+        {
+            displayTexto.text = inputAtual;
+            displayTexto.color = Color.white;
+        } 
     }
     
     IEnumerator ResetDisplayDelay() 

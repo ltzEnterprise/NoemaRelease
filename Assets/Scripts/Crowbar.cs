@@ -26,6 +26,15 @@ public class Crowbar : MonoBehaviour
         posicaoOriginal = transform.localPosition;
         rotacaoOriginal = transform.localRotation;
         rotacaoExtra = Quaternion.identity;
+
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
+
+        if (audioSource != null)
+        {
+            audioSource.playOnAwake = false;
+            audioSource.Stop();
+        }
     }
 
     void OnEnable()
@@ -33,20 +42,20 @@ public class Crowbar : MonoBehaviour
         transform.localPosition = posicaoOriginal;
         transform.localRotation = rotacaoOriginal;
         rotacaoExtra = Quaternion.identity;
+
+        if (audioSource != null)
+            audioSource.Stop();
     }
 
     void Update()
     {
-        // Trava se estiver em menu
         if (FPS_Master.travadoInteracao) return;
 
-        // Animação de retorno
         rotacaoExtra = Quaternion.Lerp(rotacaoExtra, Quaternion.identity, Time.deltaTime * velocidadeRetorno);
         
         transform.localPosition = posicaoOriginal;
         transform.localRotation = rotacaoOriginal * rotacaoExtra;
 
-        // Ataque (Botão Esquerdo)
         if (Input.GetButtonDown("Fire1") && Time.time >= proximoAtaque)
         {
             Atacar();
@@ -58,21 +67,28 @@ public class Crowbar : MonoBehaviour
         proximoAtaque = Time.time + taxaDeAtaque;
         rotacaoExtra = Quaternion.Euler(forcaDoGolpe, 0, 0);
 
-        if (audioSource && somVento) audioSource.PlayOneShot(somVento);
+        if (audioSource != null && somVento != null)
+            audioSource.PlayOneShot(somVento);
+
+        if (cameraFPS == null)
+            cameraFPS = Camera.main;
+
+        if (cameraFPS == null)
+            return;
 
         RaycastHit hit;
-        if (Physics.Raycast(cameraFPS.transform.position, cameraFPS.transform.forward, out hit, alcance))
+
+        if (Physics.Raycast(cameraFPS.transform.position, cameraFPS.transform.forward, out hit, alcance, ~0, QueryTriggerInteraction.Ignore))
         {
-            // Verifica se acertou uma Barricada (Novo nome: WoodenBarricade)
             WoodenBarricade barricada = hit.transform.GetComponentInParent<WoodenBarricade>();
             
-            // Opcional: Se quiser que o clique também quebre a barricada (além do E)
             if (barricada != null)
             {
-                barricada.Interagir(); // Chama a função de quebrar
+                barricada.Interagir();
+
+                if (audioSource != null && somImpacto != null)
+                    audioSource.PlayOneShot(somImpacto);
             }
-            
-            if (audioSource && somImpacto) audioSource.PlayOneShot(somImpacto);
         }
     }
 }

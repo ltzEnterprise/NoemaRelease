@@ -32,12 +32,18 @@ public class InvestigationHouseDoor : MonoBehaviour
     private bool interagindo = false;
     private bool estaDestrancadaPraSempre = false; 
     private bool inicializado = false;
+    private Coroutine rotinaMensagemSemChave;
 
     void Start()
     {
-        if (textoSemChaveUI) textoSemChaveUI.SetActive(false);
-        if (textoInteragirUI) textoInteragirUI.SetActive(false);
-        if (!audioSource) audioSource = gameObject.AddComponent<AudioSource>();
+        if (textoSemChaveUI)
+            textoSemChaveUI.SetActive(false);
+
+        if (textoInteragirUI)
+            textoInteragirUI.SetActive(false);
+
+        if (!audioSource)
+            audioSource = gameObject.AddComponent<AudioSource>();
 
         StartCoroutine(CarregarEstadoSeguro());
     }
@@ -82,7 +88,8 @@ public class InvestigationHouseDoor : MonoBehaviour
     public void Interagir()
     {
         if (!inicializado) return;
-        if (interagindo || TemMadeiraBloqueando()) return; 
+        if (interagindo) return;
+        if (TemMadeiraBloqueando()) return; 
 
         if (estaDestrancadaPraSempre)
         {
@@ -96,13 +103,17 @@ public class InvestigationHouseDoor : MonoBehaviour
         }
         else
         {
-            StartCoroutine(MostrarMensagemSemChave());
+            if (rotinaMensagemSemChave != null)
+                StopCoroutine(rotinaMensagemSemChave);
+
+            rotinaMensagemSemChave = StartCoroutine(MostrarMensagemSemChave());
         }
     }
 
     bool TemMadeiraBloqueando()
     {
-        if (madeirasBloqueio == null) return false;
+        if (madeirasBloqueio == null)
+            return false;
 
         foreach (GameObject m in madeirasBloqueio)
         {
@@ -142,9 +153,9 @@ public class InvestigationHouseDoor : MonoBehaviour
 
             if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
                 PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
-
-            SalvarEntradaDaCasa();
         }
+
+        SalvarAntesDeTrocarCena();
 
         if (audioSource && somAbrirPorta)
             audioSource.PlayOneShot(somAbrirPorta);
@@ -154,7 +165,7 @@ public class InvestigationHouseDoor : MonoBehaviour
         SceneManager.LoadScene(nomeDaCenaParaCarregar);
     }
 
-    private void SalvarEntradaDaCasa()
+    private void SalvarAntesDeTrocarCena()
     {
         if (SistemaGlobal.Instance != null)
         {
@@ -183,7 +194,9 @@ public class InvestigationHouseDoor : MonoBehaviour
         if (textoSemChaveUI)
             textoSemChaveUI.SetActive(false);
 
-        if (!interagindo && textoInteragirUI)
+        if (!interagindo && !TemMadeiraBloqueando() && textoInteragirUI)
             textoInteragirUI.SetActive(true);
+
+        rotinaMensagemSemChave = null;
     }
 }

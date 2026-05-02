@@ -36,15 +36,11 @@ public class InventarioRunas : MonoBehaviour
     private Coroutine rotinaCarregar;
     private Coroutine rotinaRedesenhar;
     private Coroutine rotinaVerificarClima;
+    private bool registradoNoSceneLoaded = false;
+    private bool cenaPermitidaAtual = false;
 
     private void Awake() 
     {
-        if (!CenaAtualEstaPermitida())
-        {
-            Destroy(gameObject);
-            return;
-        }
-
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -52,9 +48,17 @@ public class InventarioRunas : MonoBehaviour
         }
 
         Instance = this;
+
+        if (transform.parent != null)
+            transform.SetParent(null, true);
+
         DontDestroyOnLoad(gameObject);
 
+        SceneManager.sceneLoaded -= AoCarregarCena;
         SceneManager.sceneLoaded += AoCarregarCena;
+        registradoNoSceneLoaded = true;
+
+        cenaPermitidaAtual = CenaAtualEstaPermitida();
     }
 
     private void Start()
@@ -66,7 +70,8 @@ public class InventarioRunas : MonoBehaviour
 
     private void OnDestroy()
     {
-        SceneManager.sceneLoaded -= AoCarregarCena;
+        if (registradoNoSceneLoaded)
+            SceneManager.sceneLoaded -= AoCarregarCena;
 
         if (Instance == this)
             Instance = null;
@@ -76,11 +81,7 @@ public class InventarioRunas : MonoBehaviour
     {
         if (Instance != this) return;
 
-        if (!CenaPermitida(scene.name))
-        {
-            Destroy(gameObject);
-            return;
-        }
+        cenaPermitidaAtual = CenaPermitida(scene.name);
 
         if (rotinaRedesenhar != null)
             StopCoroutine(rotinaRedesenhar);
@@ -119,9 +120,6 @@ public class InventarioRunas : MonoBehaviour
 
     IEnumerator RedesenharRunasNaTelaSeguro()
     {
-        if (!CenaAtualEstaPermitida())
-            yield break;
-
         yield return null;
 
         float timeout = 2f;
@@ -134,6 +132,12 @@ public class InventarioRunas : MonoBehaviour
 
         if (AreaDasRunas.Instance != null)
             AreaDasRunas.Instance.LimparTodasAsRunasDaTela();
+
+        if (!cenaPermitidaAtual)
+        {
+            rotinaRedesenhar = null;
+            yield break;
+        }
 
         foreach (var runa in runasNaMao)
         {
@@ -205,11 +209,11 @@ public class InventarioRunas : MonoBehaviour
         ColetarRunaInterno(nome, false);
     }
 
-    private void ColetarRunaInterno(string nome, bool salvarNoHD)
+    private void ColetarRunaInterno(string nome, bool salvarNoDisco)
     {
         if (string.IsNullOrEmpty(nome)) return;
 
-        if (!CenaAtualEstaPermitida())
+        if (!cenaPermitidaAtual)
         {
             Debug.LogWarning("[InventarioRunas] Tentativa de coletar runa em cena não permitida: " + SceneManager.GetActiveScene().name);
             return;
@@ -238,7 +242,7 @@ public class InventarioRunas : MonoBehaviour
             {
                 PersistenciaManager.Instance.RegistrarEstado("Runa_" + nome, true);
 
-                if (salvarNoHD)
+                if (salvarNoDisco)
                     SalvarProgressoSeguro();
             }
         }
@@ -354,7 +358,7 @@ public class InventarioRunas : MonoBehaviour
 
     private void AtualizarUI(Sprite icone)
     {
-        if (!CenaAtualEstaPermitida()) return;
+        if (!cenaPermitidaAtual) return;
 
         if (AreaDasRunas.Instance != null)
             AreaDasRunas.Instance.AdicionarRunaNaTela(icone);

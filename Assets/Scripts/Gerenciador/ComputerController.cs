@@ -23,6 +23,16 @@ public class ComputerController : MonoBehaviour
     [Header("--- TRANSIÇÃO 2D PARA 3D ---")]
     public GameObject telaAzulUITransicao; 
 
+    [Header("--- LOADING LOCAL OPCIONAL ---")]
+    [Tooltip("Se preencher, o PC usa este painel para carregar a cena 2D, ignorando o loading do InterfaceManager.")]
+    public GameObject painelLoadingLocal;
+
+    [Tooltip("Força o painel de loading local a ocupar a tela inteira e ficar centralizado.")]
+    public bool forcarPainelLoadingFullscreen = true;
+
+    [Tooltip("Tempo mínimo que o painel de loading fica visível antes de ativar a cena.")]
+    public float tempoMinimoLoadingLocal = 0.5f;
+
     [Header("--- TEMPOS DA CUTSCENE PÓS-CRASH ---")]
     public float tempoTelaAzul = 1.0f;
     public float tempoPainelUpgrade = 3.0f;
@@ -73,6 +83,7 @@ public class ComputerController : MonoBehaviour
         if (painelAvisoRuna) painelAvisoRuna.SetActive(false);
         if (painelUpgradeCamera) painelUpgradeCamera.SetActive(false);
         if (telaAzulUITransicao) telaAzulUITransicao.SetActive(false);
+        if (painelLoadingLocal) painelLoadingLocal.SetActive(false);
 
         yield return new WaitUntil(() =>
             PersistenciaManager.Instance != null &&
@@ -448,13 +459,75 @@ public class ComputerController : MonoBehaviour
 
     private void CarregarCena2DComLoading()
     {
-        if (InterfaceManagerDisponivel() != null)
+        if (painelLoadingLocal != null)
         {
-            InterfaceManagerDisponivel().IniciarLoadingParaCena(nomeDaCena2D);
+            StartCoroutine(CarregarCena2DComPainelLocal());
+            return;
+        }
+
+        InterfaceManager interfaceManager = InterfaceManagerDisponivel();
+
+        if (interfaceManager != null)
+        {
+            interfaceManager.IniciarLoadingParaCena(nomeDaCena2D);
         }
         else
         {
             SceneManager.LoadScene(nomeDaCena2D);
+        }
+    }
+
+    private IEnumerator CarregarCena2DComPainelLocal()
+    {
+        AtivarPainelLoadingLocal();
+
+        yield return null;
+
+        AsyncOperation operacao = SceneManager.LoadSceneAsync(nomeDaCena2D);
+        operacao.allowSceneActivation = false;
+
+        float tempo = 0f;
+
+        while (operacao.progress < 0.9f || tempo < tempoMinimoLoadingLocal)
+        {
+            tempo += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        operacao.allowSceneActivation = true;
+    }
+
+    private void AtivarPainelLoadingLocal()
+    {
+        if (painelLoadingLocal == null) return;
+
+        Canvas canvas = painelLoadingLocal.GetComponentInParent<Canvas>(true);
+
+        if (canvas != null)
+        {
+            canvas.gameObject.SetActive(true);
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 30000;
+        }
+
+        painelLoadingLocal.SetActive(true);
+        painelLoadingLocal.transform.SetAsLastSibling();
+
+        if (forcarPainelLoadingFullscreen)
+        {
+            RectTransform rt = painelLoadingLocal.GetComponent<RectTransform>();
+
+            if (rt != null)
+            {
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = Vector2.zero;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+                rt.localScale = Vector3.one;
+                rt.localRotation = Quaternion.identity;
+            }
         }
     }
 

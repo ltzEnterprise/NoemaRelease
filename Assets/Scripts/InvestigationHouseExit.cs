@@ -38,6 +38,11 @@ public class InvestigationHouseExit : MonoBehaviour
         if (FPS_Master.Instance != null)
             FPS_Master.travadoInteracao = true;
 
+        if (SistemaGlobal.Instance != null)
+            SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false;
+
+        SalvarAntesDeTrocarCena();
+
         if (somSairDaCasa && fonteAudio) 
         {
             fonteAudio.PlayOneShot(somSairDaCasa);
@@ -48,24 +53,11 @@ public class InvestigationHouseExit : MonoBehaviour
             yield return new WaitForSeconds(0.5f);
         }
 
-        if (SistemaGlobal.Instance != null)
-        {
-            SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false;
-        }
-
-        SalvarSaidaDaCasa();
-
         SceneManager.LoadScene(nomeDaCenaPrincipal);
     }
 
-    private void SalvarSaidaDaCasa()
+    private void SalvarAntesDeTrocarCena()
     {
-        if (GameManager.Instance != null && GameManager.CenaPronta)
-        {
-            GameManager.Instance.SalvarProgresso();
-            return;
-        }
-
         if (PersistenciaManager.Instance != null)
             PersistenciaManager.Instance.SalvarTudo(true);
     }

@@ -49,12 +49,18 @@ public class CaptainLeverPuzzle : MonoBehaviour
     public GameObject itemEsconderNoSegredo;
     
     public AudioClip somSegredo;
+
+    [Header("--- TEMPO DOS PAINÉIS ---")]
+    public float tempoPainelRecompensa = 2f;
     
     private AudioSource audioSource;
     private bool isSolved = false;
     private bool isSecretSolved = false;
     private bool resetando = false;
     private bool inicializado = false;
+
+    private Coroutine rotinaPainelPrincipal;
+    private Coroutine rotinaPainelSegredo;
 
     void Start()
     {
@@ -156,10 +162,20 @@ public class CaptainLeverPuzzle : MonoBehaviour
         if (mostrarPainelESom)
         {
             if (painelRecompensa)
-                painelRecompensa.SetActive(true);
+            {
+                if (rotinaPainelPrincipal != null)
+                    StopCoroutine(rotinaPainelPrincipal);
+
+                rotinaPainelPrincipal = StartCoroutine(MostrarPainelTemporario(painelRecompensa, true));
+            }
 
             if (audioSource && somSegredo)
                 audioSource.PlayOneShot(somSegredo);
+        }
+        else
+        {
+            if (painelRecompensa)
+                painelRecompensa.SetActive(false);
         }
 
         if (itemRecompensaAparecer)
@@ -174,7 +190,12 @@ public class CaptainLeverPuzzle : MonoBehaviour
         if (mostrarPainelESom)
         {
             if (quadSegredo)
-                quadSegredo.SetActive(true);
+            {
+                if (rotinaPainelSegredo != null)
+                    StopCoroutine(rotinaPainelSegredo);
+
+                rotinaPainelSegredo = StartCoroutine(MostrarPainelTemporario(quadSegredo, false));
+            }
 
             if (audioSource && somSegredo)
                 audioSource.PlayOneShot(somSegredo);
@@ -182,7 +203,7 @@ public class CaptainLeverPuzzle : MonoBehaviour
         else
         {
             if (quadSegredo)
-                quadSegredo.SetActive(true);
+                quadSegredo.SetActive(false);
         }
 
         if (itemRecompensaAparecerSegredo)
@@ -190,6 +211,24 @@ public class CaptainLeverPuzzle : MonoBehaviour
 
         if (itemEsconderNoSegredo)
             itemEsconderNoSegredo.SetActive(false);
+    }
+
+    IEnumerator MostrarPainelTemporario(GameObject painel, bool principal)
+    {
+        if (painel == null)
+            yield break;
+
+        painel.SetActive(true);
+
+        yield return new WaitForSeconds(tempoPainelRecompensa);
+
+        if (painel != null)
+            painel.SetActive(false);
+
+        if (principal)
+            rotinaPainelPrincipal = null;
+        else
+            rotinaPainelSegredo = null;
     }
 
     void SolvePuzzle()
