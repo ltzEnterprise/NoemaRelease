@@ -155,7 +155,7 @@ public class InvestigationHouseDoor : MonoBehaviour
                 PersistenciaManager.Instance.RegistrarEstado(uniqueID, true);
         }
 
-        SalvarAntesDeTrocarCena();
+        SalvarPosicaoDaCenaPrincipalAntesDeEntrar();
 
         if (audioSource && somAbrirPorta)
             audioSource.PlayOneShot(somAbrirPorta);
@@ -165,12 +165,20 @@ public class InvestigationHouseDoor : MonoBehaviour
         SceneManager.LoadScene(nomeDaCenaParaCarregar);
     }
 
-    private void SalvarAntesDeTrocarCena()
+    private void SalvarPosicaoDaCenaPrincipalAntesDeEntrar()
     {
         if (SistemaGlobal.Instance != null)
         {
-            Vector3 posDeSeguranca = pontoDeRetorno != null ? pontoDeRetorno.position : transform.position;
-            SistemaGlobal.Instance.SalvarJogo(posDeSeguranca, SceneManager.GetActiveScene().name);
+            Vector3 posicaoParaVoltar = transform.position;
+
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+
+            if (player != null)
+                posicaoParaVoltar = player.transform.position;
+            else if (pontoDeRetorno != null)
+                posicaoParaVoltar = pontoDeRetorno.position;
+
+            SistemaGlobal.Instance.SalvarJogo(posicaoParaVoltar, SceneManager.GetActiveScene().name);
             return;
         }
 

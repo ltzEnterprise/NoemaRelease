@@ -93,12 +93,24 @@ public class AltarActivationCutscene : MonoBehaviour
             return;
         }
 
+        SalvarCutsceneIniciada();
         StartCoroutine(CutsceneSequence());
+    }
+
+    private void SalvarCutsceneIniciada()
+    {
+        if (PersistenciaManager.Instance == null) return;
+
+        if (!string.IsNullOrEmpty(uniqueID))
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Iniciada", true);
+
+        PersistenciaManager.Instance.SalvarTudo(true);
     }
 
     IEnumerator CutsceneSequence()
     {
         emCutscene = true;
+
         EsconderReticula();
 
         if (cutsceneMusicSource) 
@@ -113,27 +125,36 @@ public class AltarActivationCutscene : MonoBehaviour
             FPS_Master.Instance.FicarInvisivelMasFisico(true); 
         }
 
-        if (playerMainCamera) playerMainCamera.gameObject.SetActive(false);
+        if (playerMainCamera)
+            playerMainCamera.gameObject.SetActive(false);
 
         if (altarScript != null && altarScript.visualWeapon != null)
             altarScript.visualWeapon.SetActive(true);
 
         originalSkybox = RenderSettings.skybox;
+
         if (originalSkybox != null)
         {
             instancedSkybox = new Material(originalSkybox);
             RenderSettings.skybox = instancedSkybox;
-            initialExposure = (instancedSkybox.HasProperty("_Exposure")) ? instancedSkybox.GetFloat("_Exposure") : 1f;
+            initialExposure = instancedSkybox.HasProperty("_Exposure") ? instancedSkybox.GetFloat("_Exposure") : 1f;
         }
 
-        if (cam1Recoil) cam1Recoil.gameObject.SetActive(true);
+        if (cam1Recoil)
+            cam1Recoil.gameObject.SetActive(true);
+
         isCam1Recoiling = true;
         yield return new WaitForSeconds(shot1Duration);
         isCam1Recoiling = false;
-        if (cam1Recoil) cam1Recoil.gameObject.SetActive(false);
 
-        if (cam2Sky) cam2Sky.gameObject.SetActive(true);
-        if (sfxSkySource) sfxSkySource.Play(); 
+        if (cam1Recoil)
+            cam1Recoil.gameObject.SetActive(false);
+
+        if (cam2Sky)
+            cam2Sky.gameObject.SetActive(true);
+
+        if (sfxSkySource)
+            sfxSkySource.Play(); 
 
         float skyTimer = 0f;
 
@@ -156,18 +177,24 @@ public class AltarActivationCutscene : MonoBehaviour
         if (instancedSkybox && instancedSkybox.HasProperty("_Exposure")) 
             instancedSkybox.SetFloat("_Exposure", targetExposure);
 
-        if (cam2Sky) cam2Sky.gameObject.SetActive(false);
+        if (cam2Sky)
+            cam2Sky.gameObject.SetActive(false);
 
-        if (cam3CloseAltar) cam3CloseAltar.gameObject.SetActive(true);
-        if (sfxCloseWeaponSource) sfxCloseWeaponSource.Play(); 
+        if (cam3CloseAltar)
+            cam3CloseAltar.gameObject.SetActive(true);
+
+        if (sfxCloseWeaponSource)
+            sfxCloseWeaponSource.Play(); 
 
         StartCoroutine(MusicFadeOut());
 
         yield return new WaitForSeconds(shot3Duration);
 
-        if (cam3CloseAltar) cam3CloseAltar.gameObject.SetActive(false);
+        if (cam3CloseAltar)
+            cam3CloseAltar.gameObject.SetActive(false);
 
-        if (playerMainCamera) playerMainCamera.gameObject.SetActive(true);
+        if (playerMainCamera)
+            playerMainCamera.gameObject.SetActive(true);
 
         if (FPS_Master.Instance != null) 
         {
@@ -175,9 +202,10 @@ public class AltarActivationCutscene : MonoBehaviour
             FPS_Master.Instance.AlterarEstadoJogador(false, false);
         }
 
+        RestaurarReticula();
+
         SalvarCutsceneVista();
 
-        RestaurarReticula();
         emCutscene = false;
 
         if (altarScript != null)
@@ -186,7 +214,8 @@ public class AltarActivationCutscene : MonoBehaviour
 
     IEnumerator MusicFadeOut()
     {
-        if (cutsceneMusicSource == null) yield break;
+        if (cutsceneMusicSource == null)
+            yield break;
 
         float timeElapsed = 0f;
         float startVol = cutsceneMusicSource.volume;
@@ -206,6 +235,7 @@ public class AltarActivationCutscene : MonoBehaviour
     private void EsconderReticula()
     {
         if (reticula == null) return;
+
         reticulaEstadoAnterior = reticula.activeSelf;
         reticula.SetActive(false);
     }
@@ -213,6 +243,7 @@ public class AltarActivationCutscene : MonoBehaviour
     private void RestaurarReticula()
     {
         if (reticula == null) return;
+
         reticula.SetActive(reticulaEstadoAnterior);
     }
 
@@ -222,12 +253,9 @@ public class AltarActivationCutscene : MonoBehaviour
 
         if (!string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
         {
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Iniciada", true);
             PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Visto", true);
-
-            if (GameManager.Instance != null && GameManager.CenaPronta)
-                GameManager.Instance.SalvarProgresso();
-            else
-                PersistenciaManager.Instance.SalvarTudo(true);
+            PersistenciaManager.Instance.SalvarTudo(true);
         }
     }
 
@@ -243,6 +271,26 @@ public class AltarActivationCutscene : MonoBehaviour
             Destroy(instancedSkybox);
 
         if (emCutscene)
+        {
+            if (cam1Recoil)
+                cam1Recoil.gameObject.SetActive(false);
+
+            if (cam2Sky)
+                cam2Sky.gameObject.SetActive(false);
+
+            if (cam3CloseAltar)
+                cam3CloseAltar.gameObject.SetActive(false);
+
+            if (playerMainCamera)
+                playerMainCamera.gameObject.SetActive(true);
+
+            if (FPS_Master.Instance != null) 
+            {
+                FPS_Master.Instance.FicarInvisivelMasFisico(false); 
+                FPS_Master.Instance.AlterarEstadoJogador(false, false);
+            }
+
             RestaurarReticula();
+        }
     }
 }

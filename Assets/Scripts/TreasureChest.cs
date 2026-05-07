@@ -22,6 +22,16 @@ public class TreasureChest : MonoBehaviour
     public bool requerChave = false;  
     public string idChaveNecessaria; 
 
+    [Header("--- TRAVA POR TELEPORTE ---")]
+    [Tooltip("Se ativado, o baú só funciona depois que o jogador usar o teleporte indicado abaixo.")]
+    public bool bloquearAteUsarTeleport = false;
+
+    [Tooltip("Precisa ser igual ao uniqueID do TeleportArea necessário.")]
+    public string idTeleportNecessario = "TP_Castelo_01";
+
+    [Tooltip("Mensagem opcional quando tentar usar o baú antes de passar pelo teleporte.")]
+    public GameObject textoPrecisaTeleport;
+
     [Header("--- DEMO MODE ---")]
     public bool finalizaDemo = false;
     public GameObject painelFimDemo; 
@@ -46,11 +56,13 @@ public class TreasureChest : MonoBehaviour
     private bool inicializado = false; 
 
     private Coroutine rotinaAvisoChave;
+    private Coroutine rotinaAvisoTeleport;
 
     void Start()
     {
         if (textoInteragir) textoInteragir.SetActive(false);
         if (textoPrecisaChave) textoPrecisaChave.SetActive(false);
+        if (textoPrecisaTeleport) textoPrecisaTeleport.SetActive(false);
         if (painelFimDemo) painelFimDemo.SetActive(false); 
         if (painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
         if (painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
@@ -75,6 +87,16 @@ public class TreasureChest : MonoBehaviour
                 if (painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
                 if (painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
             }
+        }
+
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(idTeleportNecessario))
+        {
+            bool tpUsado =
+                PersistenciaManager.Instance.ObterEstado(idTeleportNecessario + "_Usado", false) ||
+                PersistenciaManager.Instance.ObterEstado(idTeleportNecessario, false);
+
+            if (tpUsado)
+                TeleportArea.RegistrarTeleportUsadoExternamente(idTeleportNecessario);
         }
 
         inicializado = true;
@@ -104,6 +126,20 @@ public class TreasureChest : MonoBehaviour
         if (!inicializado) return;
         if (jaAbriu || mostrandoErro) return;
 
+        if (!TeleportNecessarioFoiUsado())
+        {
+            Debug.LogWarning("[TreasureChest] Baú bloqueado. Teleporte necessário ainda não foi usado: " + idTeleportNecessario);
+
+            if (audioSource && somTrancado)
+                audioSource.PlayOneShot(somTrancado);
+
+            if (rotinaAvisoTeleport != null)
+                StopCoroutine(rotinaAvisoTeleport);
+
+            rotinaAvisoTeleport = StartCoroutine(AvisoTeleportFaltando());
+            return;
+        }
+
         if (!requerChave)
         {
             AbrirBau();
@@ -127,6 +163,30 @@ public class TreasureChest : MonoBehaviour
         }
     }
 
+    private bool TeleportNecessarioFoiUsado()
+    {
+        if (!bloquearAteUsarTeleport)
+            return true;
+
+        if (string.IsNullOrEmpty(idTeleportNecessario))
+            return true;
+
+        if (TeleportArea.TeleportFoiUsadoNestaSessao(idTeleportNecessario))
+            return true;
+
+        if (PersistenciaManager.Instance == null)
+            return false;
+
+        bool usado =
+            PersistenciaManager.Instance.ObterEstado(idTeleportNecessario + "_Usado", false) ||
+            PersistenciaManager.Instance.ObterEstado(idTeleportNecessario, false);
+
+        if (usado)
+            TeleportArea.RegistrarTeleportUsadoExternamente(idTeleportNecessario);
+
+        return usado;
+    }
+
     public void ForcarEsconderMensagens()
     {
         if (rotinaAvisoChave != null)
@@ -135,10 +195,19 @@ public class TreasureChest : MonoBehaviour
             rotinaAvisoChave = null;
         }
 
+        if (rotinaAvisoTeleport != null)
+        {
+            StopCoroutine(rotinaAvisoTeleport);
+            rotinaAvisoTeleport = null;
+        }
+
         mostrandoErro = false;
 
         if (textoPrecisaChave)
             textoPrecisaChave.SetActive(false);
+
+        if (textoPrecisaTeleport)
+            textoPrecisaTeleport.SetActive(false);
 
         if (textoInteragir)
             textoInteragir.SetActive(false);
@@ -153,6 +222,9 @@ public class TreasureChest : MonoBehaviour
 
         if (textoPrecisaChave)
             textoPrecisaChave.SetActive(false);
+
+        if (textoPrecisaTeleport)
+            textoPrecisaTeleport.SetActive(false);
 
         mostrandoErro = false;
 
@@ -224,6 +296,37 @@ public class TreasureChest : MonoBehaviour
             textoInteragir.SetActive(true);
     }
 
+    IEnumerator AvisoTeleportFaltando()
+    {
+        mostrandoErro = true;
+
+        if (textoInteragir)
+            textoInteragir.SetActive(false);
+        
+        if (textoPrecisaTeleport)
+        {
+            textoPrecisaTeleport.SetActive(true);
+            yield return new WaitForSeconds(2f);
+            textoPrecisaTeleport.SetActive(false);
+        }
+        else if (textoPrecisaChave)
+        {
+            textoPrecisaChave.SetActive(true);
+            yield return new WaitForSeconds(2f);
+            textoPrecisaChave.SetActive(false);
+        }
+        else
+        {
+            yield return new WaitForSeconds(2f);
+        }
+        
+        mostrandoErro = false;
+        rotinaAvisoTeleport = null;
+
+        if (!jaAbriu && estaOlhando && textoInteragir) 
+            textoInteragir.SetActive(true);
+    }
+
     IEnumerator SequenciaRecompensa()
     {
         if (painelPretoRecompensa)
@@ -263,13 +366,7 @@ public class TreasureChest : MonoBehaviour
 
     private void SalvarProgressoSeguro()
     {
-        if (GameManager.Instance != null && GameManager.CenaPronta)
-        {
-            GameManager.Instance.SalvarProgresso();
-            return;
-        }
-
         if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.SalvarTudo(false);
+            PersistenciaManager.Instance.SalvarTudo(true);
     }
 }

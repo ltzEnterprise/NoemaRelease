@@ -33,6 +33,7 @@ public class PillarManager : MonoBehaviour
     private List<int> inputsDoJogador = new List<int>();
     private bool puzzleConcluido = false;
     private bool saveCarregado = false;
+    private bool completando = false;
 
     [Header("Recompensas (Plasma Branco)")]
     public GameObject pastaDePlasmas;
@@ -50,6 +51,8 @@ public class PillarManager : MonoBehaviour
 
     void Awake()
     {
+        todosOsPuzzles.RemoveAll(p => p == null);
+
         if (!todosOsPuzzles.Contains(this))
             todosOsPuzzles.Add(this);
     }
@@ -72,6 +75,12 @@ public class PillarManager : MonoBehaviour
             painelPretoUI.gameObject.SetActive(false);
         }
 
+        if (textoProgresso != null)
+            textoProgresso.gameObject.SetActive(false);
+
+        if (canvasGroupDoTexto != null)
+            canvasGroupDoTexto.alpha = 0f;
+
         yield return new WaitUntil(() =>
             PersistenciaManager.Instance != null &&
             PersistenciaManager.Instance.DadosProntosParaUso &&
@@ -88,7 +97,10 @@ public class PillarManager : MonoBehaviour
         CarregarSave();
         saveCarregado = true;
 
-        yield return StartCoroutine(SetupInicialDoTexto());
+        yield return new WaitForEndOfFrame();
+
+        RecalcularPuzzleAtualNaTela();
+        AtualizarTextoDeTodosOsPuzzles();
     }
 
     private void CarregarSave()
@@ -99,12 +111,16 @@ public class PillarManager : MonoBehaviour
 
         if (puzzleConcluido)
         {
+            inputsDoJogador.Clear();
+
             if (pastaDePlasmas != null)
                 pastaDePlasmas.SetActive(false);
 
-            if (desativaMundoPixelado && efeitoGlitchURP != null)
+            if (desativaMundoPixelado)
             {
-                efeitoGlitchURP.SetActive(false);
+                if (efeitoGlitchURP != null)
+                    efeitoGlitchURP.SetActive(false);
+
                 PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", false);
             }
         }
@@ -129,43 +145,66 @@ public class PillarManager : MonoBehaviour
         return ordem != null && ordem.Count > 0 ? ordem.Count : totalDePilares;
     }
 
-    private IEnumerator SetupInicialDoTexto()
+    private static void RecalcularPuzzleAtualNaTela()
     {
-        yield return new WaitForEndOfFrame();
+        todosOsPuzzles.RemoveAll(p => p == null);
 
-        int menorOrdemIncompleta = 999;
+        int menorOrdemIncompleta = int.MaxValue;
 
-        foreach (var p in todosOsPuzzles) 
+        foreach (var p in todosOsPuzzles)
         {
-            if (p != null && !p.puzzleConcluido && p.ordemDoPuzzle < menorOrdemIncompleta) 
-            {
+            if (p == null) continue;
+            if (!p.saveCarregado) continue;
+            if (p.puzzleConcluido) continue;
+
+            if (p.ordemDoPuzzle < menorOrdemIncompleta)
                 menorOrdemIncompleta = p.ordemDoPuzzle;
-            }
         }
 
-        puzzleAtualNaTela = menorOrdemIncompleta;
+        puzzleAtualNaTela = menorOrdemIncompleta == int.MaxValue ? -1 : menorOrdemIncompleta;
+    }
 
-        if (ordemDoPuzzle == puzzleAtualNaTela && !puzzleConcluido)
+    private static void AtualizarTextoDeTodosOsPuzzles()
+    {
+        todosOsPuzzles.RemoveAll(p => p == null);
+
+        foreach (var p in todosOsPuzzles)
         {
-            IniciarTextoDessePuzzle();
+            if (p == null) continue;
+
+            if (p.saveCarregado && !p.puzzleConcluido && p.ordemDoPuzzle == puzzleAtualNaTela)
+                p.MostrarTextoProgresso();
+            else
+                p.EsconderTextoProgresso();
         }
     }
 
-    public void IniciarTextoDessePuzzle()
+    private void MostrarTextoProgresso()
     {
         if (textoProgresso != null)
         {
             textoProgresso.gameObject.SetActive(true);
-            textoProgresso.text = $"0/{ObterTotalSequencia()}";
-
-            if (canvasGroupDoTexto != null)
-                canvasGroupDoTexto.alpha = 1f;
+            textoProgresso.text = $"{inputsDoJogador.Count}/{ObterTotalSequencia()}";
         }
+
+        if (canvasGroupDoTexto != null)
+            canvasGroupDoTexto.alpha = 1f;
+    }
+
+    private void EsconderTextoProgresso()
+    {
+        if (textoProgresso != null)
+            textoProgresso.gameObject.SetActive(false);
+
+        if (canvasGroupDoTexto != null)
+            canvasGroupDoTexto.alpha = 0f;
     }
 
     void Update()
     {
-        if (!puzzleConcluido && pastaDePlasmas != null && DayNightCycle.Instance != null)
+        if (puzzleConcluido) return;
+
+        if (pastaDePlasmas != null && DayNightCycle.Instance != null)
         {
             if (DayNightCycle.Instance.isNight && !pastaDePlasmas.activeSelf)
             {
@@ -182,6 +221,7 @@ public class PillarManager : MonoBehaviour
     {
         if (!saveCarregado) return;
         if (puzzleConcluido) return; 
+        if (completando) return;
 
         List<int> ordem = ObterOrdemCorreta();
 
@@ -212,55 +252,31 @@ public class PillarManager : MonoBehaviour
 
         if (ordemDoPuzzle == puzzleAtualNaTela && textoProgresso != null)
         {
+            textoProgresso.gameObject.SetActive(true);
             textoProgresso.text = $"{inputsDoJogador.Count}/{ordem.Count}";
+
+            if (canvasGroupDoTexto != null)
+                canvasGroupDoTexto.alpha = 1f;
         }
 
         if (inputsDoJogador.Count == ordem.Count)
         {
-            if (ordemDoPuzzle == puzzleAtualNaTela)
-            {
-                StartCoroutine(FadeOutTextoEChamarProximo());
-            }
-
             StartCoroutine(SequenciaCompletada());
-        }
-    }
-
-    private IEnumerator FadeOutTextoEChamarProximo()
-    {
-        yield return new WaitForSeconds(3f);
-
-        if (canvasGroupDoTexto != null)
-        {
-            float t = 0f;
-
-            while (t < 1f) 
-            {
-                t += Time.deltaTime;
-                canvasGroupDoTexto.alpha = Mathf.Lerp(1f, 0f, t);
-                yield return null;
-            }
-
-            canvasGroupDoTexto.alpha = 0f;
-        }
-
-        yield return new WaitForSeconds(2f);
-
-        puzzleAtualNaTela++;
-
-        foreach (var p in todosOsPuzzles)
-        {
-            if (p != null && p.ordemDoPuzzle == puzzleAtualNaTela && !p.puzzleConcluido)
-            {
-                p.IniciarTextoDessePuzzle();
-                break;
-            }
         }
     }
 
     private IEnumerator SequenciaCompletada()
     {
+        if (completando) yield break;
+
+        completando = true;
         puzzleConcluido = true;
+        inputsDoJogador.Clear();
+
+        SalvarEstadoConcluidoImediatamente();
+
+        RecalcularPuzzleAtualNaTela();
+        AtualizarTextoDeTodosOsPuzzles();
 
         if (desativaMundoPixelado)
         {
@@ -286,9 +302,6 @@ public class PillarManager : MonoBehaviour
 
             if (efeitoGlitchURP != null)
                 efeitoGlitchURP.SetActive(false);
-
-            if (PersistenciaManager.Instance != null)
-                PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", false);
 
             yield return new WaitForSeconds(0.5f);
 
@@ -323,10 +336,10 @@ public class PillarManager : MonoBehaviour
                 pastaDePlasmas.SetActive(false); 
         }
 
-        SalvarProgressoEPlayer();
+        completando = false;
     }
 
-    private void SalvarProgressoEPlayer()
+    private void SalvarEstadoConcluidoImediatamente()
     {
         if (PersistenciaManager.Instance != null)
         {
@@ -334,38 +347,20 @@ public class PillarManager : MonoBehaviour
 
             if (desativaMundoPixelado)
                 PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", false);
-        }
 
-        if (playerTransform == null)
-        {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
-                playerTransform = player.transform;
-        }
-
-        if (SistemaGlobal.Instance != null && playerTransform != null)
-        {
-            SistemaGlobal.Instance.SalvarJogo(playerTransform.position, SceneManager.GetActiveScene().name);
-        }
-        else if (GameManager.Instance != null && GameManager.CenaPronta)
-        {
-            GameManager.Instance.SalvarProgresso();
-        }
-        else if (PersistenciaManager.Instance != null)
-        {
-            PersistenciaManager.Instance.SalvarTudo(false);
+            PersistenciaManager.Instance.SalvarTudo(true);
         }
     }
 
     void OnDisable()
     {
-        if (efeitoGlitchURP != null)
+        if (efeitoGlitchURP != null && desativaMundoPixelado)
             efeitoGlitchURP.SetActive(false);
     }
 
     void OnDestroy()
     {
-        if (efeitoGlitchURP != null)
+        if (efeitoGlitchURP != null && desativaMundoPixelado)
             efeitoGlitchURP.SetActive(false);
 
         if (todosOsPuzzles.Contains(this))

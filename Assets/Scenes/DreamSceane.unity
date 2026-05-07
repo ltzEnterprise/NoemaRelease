@@ -10732,6 +10732,9 @@ MonoBehaviour:
   painelCustomizadoDaRecompensa: {fileID: 0}
   requerChave: 1
   idChaveNecessaria: KeyPurity
+  bloquearAteUsarTeleport: 0
+  idTeleportNecessario: TP_Castelo_01
+  textoPrecisaTeleport: {fileID: 0}
   finalizaDemo: 0
   painelFimDemo: {fileID: 0}
   nomeCenaMenu: 
@@ -10925,7 +10928,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: -9.06, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1076.8, y: 417.69763}
+  m_AnchoredPosition: {x: 1055.8, y: 417.69763}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &115219256
@@ -25940,6 +25943,9 @@ MonoBehaviour:
   painelCustomizadoDaRecompensa: {fileID: 0}
   requerChave: 1
   idChaveNecessaria: KeyRuneCap
+  bloquearAteUsarTeleport: 0
+  idTeleportNecessario: TP_Castelo_01
+  textoPrecisaTeleport: {fileID: 0}
   finalizaDemo: 0
   painelFimDemo: {fileID: 0}
   nomeCenaMenu: 
@@ -30249,15 +30255,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91ab6a19954a7f94c8615738b6bf848a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntradaCastelo
-  uniqueID: 
+  uniqueID: castle1save
   pontoDestino: {fileID: 741115599}
+  offsetVerticalTeleporte: 0.15
   grupoTabuas: {fileID: 758336562}
   somQuebrarTabua: {fileID: 0}
-  verificarCasasCompletas: 1
+  verificarCasasCompletas: 0
   painelPreto: {fileID: 1241418518}
   velocidadeFade: 2
   textoBloqueado: {fileID: 857573735}
-  textoInteragir: {fileID: 1568057665}
+  textoInteragir: {fileID: 0}
   audioSource: {fileID: 324270981}
   somTeleporte: {fileID: 8300000, guid: f767873a68e8f7a43992479695d19839, type: 3}
   somTrancado: {fileID: 8300000, guid: 260bd2d7be1d486409f61e2e1f972232, type: 3}
@@ -31727,7 +31734,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableDocument
   uniqueID: 
-  uiInteractionPrompt: {fileID: 1559629857}
+  uiInteractionPrompt: {fileID: 0}
   uiContentPanel: {fileID: 301972808}
   soundEffect: {fileID: 0}
   comecaBloqueado: 0
@@ -33602,7 +33609,7 @@ Transform:
   m_GameObject: {fileID: 373238196}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
-  m_LocalPosition: {x: 0.0452, y: -0.2837, z: -0.4585}
+  m_LocalPosition: {x: 0.0452, y: -0.235, z: -0.4585}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -34037,6 +34044,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 382692599}
   m_CullTransparentMesh: 1
+--- !u!1 &383022600
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 383022601}
+  m_Layer: 0
+  m_Name: tp
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &383022601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 383022600}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -0.239}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1688972143}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &383154788
 GameObject:
   m_ObjectHideFlags: 0
@@ -43645,7 +43683,7 @@ MonoBehaviour:
 
 
     A melody can be transcribed into numerical
-    values if they are correctly
+    values if they are
 
 
     Each intonation reveals'
@@ -48056,6 +48094,10 @@ MonoBehaviour:
     fadeOutForcadoPrioridade: 0
     tempoSalvoNoMinuto: 0
     jaTocouAPrimeiraVez: 0
+  usarModoSequencialPorFimDaMusica: 1
+  evitarMusicaIgualEmSequencia: 1
+  primeiraMusicaSequencialComFade: 0
+  multiplicadorVolumeQuandoAbafado: 0
 --- !u!4 &530453923
 Transform:
   m_ObjectHideFlags: 0
@@ -51106,6 +51148,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fac44a905afebb041ac944f478356dbe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AreaDasRunas
+  tamanhoIcone: {x: 100, y: 100}
+  usarLayoutDoPai: 1
 --- !u!4 &554481854 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5155919925506244918, guid: b273de0d6e5818a4cb3195ce4f376ccb, type: 3}
@@ -54256,6 +54300,9 @@ MonoBehaviour:
   painelCustomizadoDaRecompensa: {fileID: 0}
   requerChave: 1
   idChaveNecessaria: KeyLucky
+  bloquearAteUsarTeleport: 0
+  idTeleportNecessario: TP_Castelo_01
+  textoPrecisaTeleport: {fileID: 0}
   finalizaDemo: 0
   painelFimDemo: {fileID: 0}
   nomeCenaMenu: 
@@ -60733,6 +60780,9 @@ MonoBehaviour:
   painelCustomizadoDaRecompensa: {fileID: 1663760222}
   requerChave: 0
   idChaveNecessaria: 
+  bloquearAteUsarTeleport: 0
+  idTeleportNecessario: TP_Castelo_01
+  textoPrecisaTeleport: {fileID: 0}
   finalizaDemo: 0
   painelFimDemo: {fileID: 2084000021}
   nomeCenaMenu: 
@@ -62125,7 +62175,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa1044a131930504da1d9a60408a029d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PortaGreenHouse
-  uniqueID: 
+  uniqueID: UniqueIDInvestigationHouseDoor
   nomeDaCenaParaCarregar: "CenaCasaAmaldi\xE7oada"
   pontoDeRetorno: {fileID: 216658864}
   idChaveNecessaria: KeyHouse
@@ -67312,7 +67362,7 @@ Transform:
   m_GameObject: {fileID: 741115598}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
-  m_LocalPosition: {x: 0, y: -0.301, z: -0.28}
+  m_LocalPosition: {x: 0, y: -0.217, z: -0.28}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -68698,7 +68748,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 749927377}
-  - component: {fileID: 749927378}
   m_Layer: 0
   m_Name: RunaEnigmaStructure
   m_TagString: Untagged
@@ -68727,19 +68776,6 @@ Transform:
   - {fileID: 1688972143}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &749927378
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 749927376}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a3d8de5d466d8be438c238441cce739a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SaveableItem
-  uniqueID: f8b9f9e3-4870-45f5-aa06-2c763e7082f3
 --- !u!1001 &751066084
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -69181,7 +69217,7 @@ MonoBehaviour:
   audioSource: {fileID: 758336566}
   somQuebrarMadeira: {fileID: 8300000, guid: e1cca36e26432634faa1d1e9df55d3e1, type: 3}
   textoSemFerramenta: {fileID: 563677397}
-  textoInteragir: {fileID: 498188055}
+  textoInteragir: {fileID: 0}
   portaBloqueada: {fileID: 324270978}
 --- !u!65 &758336568
 BoxCollider:
@@ -98049,7 +98085,8 @@ Transform:
   m_LocalPosition: {x: -7.695, y: 0.807, z: -1.706}
   m_LocalScale: {x: 1.4, y: 1.4, z: 1.4}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1062230834}
   m_Father: {fileID: 749927377}
   m_LocalEulerAnglesHint: {x: 90, y: -90, z: 0}
 --- !u!114 &1060479795
@@ -98064,8 +98101,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ad611e871ebb0447ba0dafc869a85c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TeleportArea
-  destinationPoint: {fileID: 1688972143}
+  uniqueID: TP_Castelo_01
+  destinationPoint: {fileID: 383022601}
   teleportKey: 116
+  offsetVerticalTeleporte: 0.15
+  usarRotacaoDoDestino: 0
   interactionTextUI: {fileID: 0}
   audioSource: {fileID: 1060479801}
   teleportSound: {fileID: 0}
@@ -98700,6 +98740,37 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1061613732}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1062230833
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1062230834}
+  m_Layer: 0
+  m_Name: tp
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1062230834
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1062230833}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -0.3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1060479794}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1065682752 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400006, guid: 5e76989194570e246acc05a8d2697af2, type: 3}
@@ -111397,14 +111468,17 @@ MonoBehaviour:
   painelCustomizadoDaRecompensa: {fileID: 0}
   requerChave: 0
   idChaveNecessaria: 
+  bloquearAteUsarTeleport: 1
+  idTeleportNecessario: TP_Castelo_01
+  textoPrecisaTeleport: {fileID: 0}
   finalizaDemo: 0
   painelFimDemo: {fileID: 0}
   nomeCenaMenu: 
   tempoParaVoltarMenu: 0
-  textoInteragir: {fileID: 518559029}
+  textoInteragir: {fileID: 0}
   textoPrecisaChave: {fileID: 1689283667}
-  painelPretoRecompensa: {fileID: 0}
-  textoRecompensa: {fileID: 0}
+  painelPretoRecompensa: {fileID: 1004495187}
+  textoRecompensa: {fileID: 921007482}
   iconeChaveParaEsconder: {fileID: 0}
   audioSource: {fileID: 1216955646}
   somAbrir: {fileID: 8300000, guid: 27cf8f9734650024cbd32e9c5e2ac444, type: 3}
@@ -123621,6 +123695,8 @@ MonoBehaviour:
   interactText: {fileID: 0}
   noDiskText: {fileID: 1865467246}
   sfxSource: {fileID: 9130637862802428612}
+  soundtrackManager: {fileID: 530453922}
+  tempoFadeSoundtrackPorDisco: 1.5
 --- !u!4 &1360770095 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: c7068782d88ce434ba35d8cf4f84f657, type: 3}
@@ -146006,15 +146082,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91ab6a19954a7f94c8615738b6bf848a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntradaCastelo
-  uniqueID: 
+  uniqueID: castle234
   pontoDestino: {fileID: 373238197}
+  offsetVerticalTeleporte: 0.15
   grupoTabuas: {fileID: 0}
   somQuebrarTabua: {fileID: 0}
   verificarCasasCompletas: 0
   painelPreto: {fileID: 1241418518}
   velocidadeFade: 2
   textoBloqueado: {fileID: 857573735}
-  textoInteragir: {fileID: 1306333613}
+  textoInteragir: {fileID: 0}
   audioSource: {fileID: 1620338655}
   somTeleporte: {fileID: 8300000, guid: f767873a68e8f7a43992479695d19839, type: 3}
   somTrancado: {fileID: 8300000, guid: 260bd2d7be1d486409f61e2e1f972232, type: 3}
@@ -152894,10 +152971,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e4ca04b88000f3a4eb61ed54199bdfc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SecretCodeReveal
+  uniqueID: Segredo_Codigo_Setas
+  ativarApenasUmaVez: 1
   sequenciaSecreta: 110100001401000011010000130100001201000013010000
   objetoParaAparecer: {fileID: 749927376}
-  somSucesso: {fileID: 0}
-  volumeSom: 0.67
+  somSucesso: {fileID: 8300000, guid: 485d3f145423c384d910de77c201deee, type: 3}
+  volumeSom: 1
+  usarRelampagoNoCeu: 1
+  exposicaoRelampago: 1
+  tempoSubidaRelampago: 0.04
+  tempoPicoRelampago: 0.05
+  tempoRetornoRelampago: 0.18
+  quantidadePiscadas: 2
+  intervaloEntrePiscadas: 0.08
+  aoRevelarSegredo:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &1686979828
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -153087,7 +153176,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: -9.06, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1016.7, y: 469.9}
+  m_AnchoredPosition: {x: 1014, y: 469.9}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1687984546
@@ -153413,10 +153502,11 @@ Transform:
   m_GameObject: {fileID: 1688972142}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: -0.5, z: 0.5, w: 0.5}
-  m_LocalPosition: {x: -2.53, y: 2.773, z: 2.314}
+  m_LocalPosition: {x: -2.53, y: 2.816, z: 2.314}
   m_LocalScale: {x: 1.4, y: 1.4, z: 1.4}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 383022601}
   m_Father: {fileID: 749927377}
   m_LocalEulerAnglesHint: {x: 90, y: -90, z: 0}
 --- !u!114 &1688972144
@@ -153431,8 +153521,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ad611e871ebb0447ba0dafc869a85c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TeleportArea
-  destinationPoint: {fileID: 1060479794}
+  uniqueID: TP_Castelo_02
+  destinationPoint: {fileID: 1062230834}
   teleportKey: 116
+  offsetVerticalTeleporte: 0.15
+  usarRotacaoDoDestino: 0
   interactionTextUI: {fileID: 0}
   audioSource: {fileID: 1688972150}
   teleportSound: {fileID: 0}
@@ -176362,8 +176455,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.3, y: 0.48000002, z: 0.4}
-  m_Center: {x: 0.030002005, y: -0.13, z: 0.15999998}
+  m_Size: {x: 0.36566243, y: 0.48000002, z: 0.39999998}
+  m_Center: {x: 0.06283404, y: -0.13000001, z: 0.15999931}
 --- !u!1001 &1938059706
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -178706,6 +178799,9 @@ MonoBehaviour:
   painelCustomizadoDaRecompensa: {fileID: 0}
   requerChave: 1
   idChaveNecessaria: KeyLucky
+  bloquearAteUsarTeleport: 0
+  idTeleportNecessario: TP_Castelo_01
+  textoPrecisaTeleport: {fileID: 0}
   finalizaDemo: 0
   painelFimDemo: {fileID: 0}
   nomeCenaMenu: 
@@ -185782,7 +185878,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: -9.06, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1169.2, y: 417.69763}
+  m_AnchoredPosition: {x: 1154.8, y: 417.69763}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2044757344
@@ -204726,31 +204822,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!205 &2025895273131239487
-LODGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6355599390077845903}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: 0.03322175, y: 0.63496816, z: 0.6377577}
-  m_Size: 2.3412473
-  m_FadeMode: 0
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.14950661
-    fadeTransitionWidth: 0
-    renderers:
-    - renderer: {fileID: 6355599390077845897}
-    - renderer: {fileID: 6959176567993442313}
-    - renderer: {fileID: 6959176568391864914}
-  - screenRelativeHeight: 0.008760488
-    fadeTransitionWidth: 0
-    renderers:
-    - renderer: {fileID: 6355599390077845897}
-  m_Enabled: 1
 --- !u!222 &2030730460980268509
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -215574,8 +215645,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.3399239, y: 1.32, z: 1.457406}
-  m_Center: {x: 0.00001525986, y: 0.13000838, z: 0.7245952}
+  m_Size: {x: 1.3399239, y: 1.1997585, z: 1.457406}
+  m_Center: {x: 0.000015265477, y: 0.1901293, z: 0.7245952}
 --- !u!33 &4289285092193784521
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -223161,6 +223232,10 @@ PrefabInstance:
       propertyPath: quadPainelExtra
       value: 
       objectReference: {fileID: 841365373}
+    - target: {fileID: 4206605987560419784, guid: 445438879f3c8b44ba0dc0dd67c8d69e, type: 3}
+      propertyPath: textoInteragirProprio
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 6700611711499890095, guid: 445438879f3c8b44ba0dc0dd67c8d69e, type: 3}
       propertyPath: m_RendererIndex
       value: 0
@@ -223569,7 +223644,6 @@ GameObject:
   - component: {fileID: 6355599390077845899}
   - component: {fileID: 6355599390077845896}
   - component: {fileID: 6355599390077845897}
-  - component: {fileID: 2025895273131239487}
   - component: {fileID: 693149362}
   - component: {fileID: 693149363}
   - component: {fileID: 693149369}
@@ -232609,7 +232683,7 @@ PrefabInstance:
       objectReference: {fileID: 1028264213}
     - target: {fileID: 6677624972235882159, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
       propertyPath: comecarComTodosOsItens
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7039684783472384744, guid: 13fac2bb4aad9644bbf9a82f082ce971, type: 3}
       propertyPath: m_Name
@@ -234969,7 +235043,7 @@ MonoBehaviour:
   darManivelaAoAcertar: 1
   idDaManivela: 4
   manivelaFlutuante: {fileID: 696471496}
-  textoInteragirProprio: {fileID: 4006542351335604070}
+  textoInteragirProprio: {fileID: 0}
   displayTexto: {fileID: 6707871002636258461}
   audioSource: {fileID: 9002563510699424823}
   somBip: {fileID: 8300000, guid: 89d62380470be9e47ba7cf3f97105142, type: 3}
@@ -235381,7 +235455,7 @@ AudioSource:
   m_GameObject: {fileID: 7250518614305947899}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: -542698998699468651, guid: 448edc84d07664f488c6eb09aa21127e, type: 2}
+  OutputAudioMixerGroup: {fileID: 24300002, guid: 448edc84d07664f488c6eb09aa21127e, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 0

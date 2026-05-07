@@ -9,31 +9,33 @@ public class CastleDoor : MonoBehaviour
     public string uniqueID;
 
     [Header("Configuração de Teleporte")]
-    public Transform pontoDestino; // Onde o player vai sair
+    public Transform pontoDestino;
+
+    [Tooltip("Altura extra aplicada no destino para evitar nascer dentro/debaixo do chão.")]
+    public float offsetVerticalTeleporte = 0.15f;
     
     [Header("Barricada / Tábuas")]
-    public GameObject grupoTabuas; // Se tiver tábuas na frente, arraste aqui
+    public GameObject grupoTabuas;
     public AudioClip somQuebrarTabua; 
 
     [Header("Lógica do Jogo")]
-    public bool verificarCasasCompletas = true; // True na entrada, False na saída
+    public bool verificarCasasCompletas = true;
 
     [Header("Fade (Visual)")]
     public Image painelPreto; 
     public float velocidadeFade = 2f;
 
     [Header("UI & Mensagens")]
-    public GameObject textoBloqueado; // "Trancado..."
-    public GameObject textoInteragir; // "Entrar" ou "Sair"
+    public GameObject textoBloqueado;
+    public GameObject textoInteragir;
 
     [Header("Sons")]
     public AudioSource audioSource;
     public AudioClip somTeleporte; 
     public AudioClip somTrancado;
 
-    // Controle interno
     private bool emProcesso = false;
-    private bool estaOlhando = false; // <--- Variável adicionada pra não bugar o texto
+    private bool estaOlhando = false;
 
     void Start()
     {
@@ -57,18 +59,17 @@ public class CastleDoor : MonoBehaviour
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
             bool barricadaQuebrada = PersistenciaManager.Instance.ObterEstado(uniqueID + "_barricadaQuebrada", false);
+
             if (barricadaQuebrada && grupoTabuas != null)
                 grupoTabuas.SetActive(false);
         }
     }
 
-    // --- MÉTODOS RAYCAST ---
     public void AoOlhar()
     {
         if (emProcesso) return;
         estaOlhando = true;
 
-        // Se o aviso de trancado tiver na tela, não sobrepõe ele com o "Entrar"
         if (textoBloqueado && textoBloqueado.activeSelf) return;
 
         if (textoInteragir) textoInteragir.SetActive(true);
@@ -78,7 +79,6 @@ public class CastleDoor : MonoBehaviour
     {
         estaOlhando = false;
         
-        // Desliga tudo imediatamente quando virar as costas
         if (textoInteragir) textoInteragir.SetActive(false);
         if (textoBloqueado) textoBloqueado.SetActive(false);
     }
@@ -87,32 +87,37 @@ public class CastleDoor : MonoBehaviour
     {
         if (emProcesso) return;
 
-        // 1. Verifica Barricada (se existir)
         if (grupoTabuas != null && grupoTabuas.activeSelf)
         {
             QuebrarBarricada();
             return;
         }
 
-        // 2. Tenta Entrar
         TentarAtravessar();
     }
-    // -----------------------
 
     void QuebrarBarricada()
     {
-        if (audioSource && somQuebrarTabua) audioSource.PlayOneShot(somQuebrarTabua);
-        if (grupoTabuas) grupoTabuas.SetActive(false);
+        if (audioSource && somQuebrarTabua)
+            audioSource.PlayOneShot(somQuebrarTabua);
+
+        if (grupoTabuas)
+            grupoTabuas.SetActive(false);
+
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+        {
+            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_barricadaQuebrada", true);
+            PersistenciaManager.Instance.SalvarTudo(true);
+        }
         
-        // Atualiza visual instantaneamente se o jogador ainda estiver olhando
-        if (textoInteragir) textoInteragir.SetActive(true);
+        if (textoInteragir)
+            textoInteragir.SetActive(true);
     }
 
     void TentarAtravessar()
     {
         if (verificarCasasCompletas)
         {
-            // Checa as 3 casas no EstadoGlobal
             bool c1 = EstadoGlobal.casasResolvidas != null && EstadoGlobal.casasResolvidas.Length > 0 && EstadoGlobal.casasResolvidas[0];
             bool c2 = EstadoGlobal.casasResolvidas != null && EstadoGlobal.casasResolvidas.Length > 1 && EstadoGlobal.casasResolvidas[1];
             bool c3 = EstadoGlobal.casasResolvidas != null && EstadoGlobal.casasResolvidas.Length > 2 && EstadoGlobal.casasResolvidas[2];
@@ -123,14 +128,15 @@ public class CastleDoor : MonoBehaviour
             }
             else
             {
-                if (audioSource && somTrancado) audioSource.PlayOneShot(somTrancado);
+                if (audioSource && somTrancado)
+                    audioSource.PlayOneShot(somTrancado);
+
                 StopCoroutine("MostrarAvisoBloqueado");
                 StartCoroutine("MostrarAvisoBloqueado");
             }
         }
         else
         {
-            // Porta de saída (sem tranca)
             StartCoroutine(RotinaTeleporte());
         }
     }
@@ -138,20 +144,22 @@ public class CastleDoor : MonoBehaviour
     IEnumerator RotinaTeleporte()
     {
         emProcesso = true;
+
         if (textoInteragir) textoInteragir.SetActive(false);
         if (textoBloqueado) textoBloqueado.SetActive(false);
 
-        // Trava o jogador (WASD 0, Gravidade ON)
         if (FPS_Master.Instance != null)
             FPS_Master.Instance.AlterarEstadoJogador(true, false);
         
-        if (audioSource && somTeleporte) audioSource.PlayOneShot(somTeleporte);
+        if (audioSource && somTeleporte)
+            audioSource.PlayOneShot(somTeleporte);
 
-        // FADE OUT
         if (painelPreto)
         {
             painelPreto.gameObject.SetActive(true);
+
             float alpha = 0;
+
             while (alpha < 1)
             {
                 alpha += Time.deltaTime * velocidadeFade;
@@ -162,32 +170,34 @@ public class CastleDoor : MonoBehaviour
 
         yield return new WaitForSeconds(0.5f);
 
-        // TELEPORTE SEGURO
         if (FPS_Master.Instance != null && pontoDestino)
         {
-            FPS_Master.Instance.Teleportar(pontoDestino.position);
-            
-            // Ajustamos a rotação
+            Vector3 destinoSeguro = pontoDestino.position + Vector3.up * offsetVerticalTeleporte;
+
+            FPS_Master.Instance.Teleportar(destinoSeguro);
             FPS_Master.Instance.transform.rotation = pontoDestino.rotation;
+
             Physics.SyncTransforms();
         }
 
+        SalvarProgressoSeguro();
+
         yield return new WaitForSeconds(0.5f);
 
-        // FADE IN
         if (painelPreto)
         {
             float alpha = 1;
+
             while (alpha > 0)
             {
                 alpha -= Time.deltaTime * velocidadeFade;
                 painelPreto.color = new Color(0, 0, 0, alpha);
                 yield return null;
             }
+
             painelPreto.gameObject.SetActive(false);
         }
 
-        // Destrava
         if (FPS_Master.Instance != null)
             FPS_Master.Instance.AlterarEstadoJogador(false, false);
             
@@ -203,7 +213,7 @@ public class CastleDoor : MonoBehaviour
         }
 
         if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.SalvarTudo(false);
+            PersistenciaManager.Instance.SalvarTudo(true);
     }
 
     IEnumerator MostrarAvisoBloqueado()
@@ -215,7 +225,7 @@ public class CastleDoor : MonoBehaviour
         
         if (textoBloqueado) textoBloqueado.SetActive(false);
         
-        // Só volta o texto original se o jogador ainda estiver com a mira na porta
-        if (!emProcesso && estaOlhando && textoInteragir) textoInteragir.SetActive(true);
+        if (!emProcesso && estaOlhando && textoInteragir)
+            textoInteragir.SetActive(true);
     }
 }

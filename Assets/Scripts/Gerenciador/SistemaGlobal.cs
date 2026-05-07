@@ -148,10 +148,14 @@ public class SistemaGlobal : MonoBehaviour
         string caminho = Path.Combine(pasta, $"Save_Slot_{slot}.json");
         string backup = caminho + ".bak";
         string temp = caminho + ".tmp";
+        string pending = caminho + ".bak.pending";
+        string count = caminho + ".bak.count";
 
         if (File.Exists(caminho)) File.Delete(caminho);
         if (File.Exists(backup)) File.Delete(backup);
         if (File.Exists(temp)) File.Delete(temp);
+        if (File.Exists(pending)) File.Delete(pending);
+        if (File.Exists(count)) File.Delete(count);
 
         EstadoGlobal.ResetarTudo();
 

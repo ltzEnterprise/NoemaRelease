@@ -51,6 +51,13 @@ public class TurntableSystem : MonoBehaviour
     public GameObject noDiskText;    
     public AudioSource sfxSource; 
 
+    [Header("--- INTEGRAÇÃO COM SOUNDTRACK ---")]
+    [Tooltip("Arraste o SoundtrackManager aqui. Se deixar vazio, ele tenta encontrar sozinho na cena.")]
+    public SoundtrackManager soundtrackManager;
+
+    [Tooltip("Tempo de fade para abafar/voltar a trilha quando o disco entra/sai do alcance audível.")]
+    public float tempoFadeSoundtrackPorDisco = 1.5f;
+
     private AudioSource audioSource;
     private int currentDiskID = 0; 
     private bool isPlaying = false;
@@ -60,11 +67,7 @@ public class TurntableSystem : MonoBehaviour
     private bool mostrandoErro = false;
     private Coroutine rotinaErro;
 
-    private AudioSource globalSoundtrack;
-    private float globalOriginalVolume = 0.5f;
-    private bool playerIsInsideRadius = false;
-    private Coroutine fadeRoutine;
-
+    private bool soundtrackAbafadoPeloDisco = false;
     private bool inicializado = false;
 
     void Start()
@@ -87,15 +90,8 @@ public class TurntableSystem : MonoBehaviour
             quadroParaCair.localRotation = Quaternion.Euler(quadroRotacaoPreso);
         }
 
-        GameObject stObj = GameObject.Find("Soundtrack");
-
-        if (stObj != null)
-        {
-            globalSoundtrack = stObj.GetComponent<AudioSource>();
-
-            if (globalSoundtrack != null)
-                globalOriginalVolume = globalSoundtrack.volume;
-        }
+        if (soundtrackManager == null)
+            soundtrackManager = Object.FindFirstObjectByType<SoundtrackManager>();
 
         if (visualShovelRecord) visualShovelRecord.SetActive(false);
         if (visualRuneRecord) visualRuneRecord.SetActive(false);
@@ -171,52 +167,42 @@ public class TurntableSystem : MonoBehaviour
                 visualManivela.transform.Rotate(Vector3.right * 100 * Time.deltaTime); 
         }
 
-        GerenciarRaioDeAudio();
+        GerenciarSoundtrackPeloAudioDoDisco();
     }
 
-    void GerenciarRaioDeAudio()
+    void GerenciarSoundtrackPeloAudioDoDisco()
     {
-        if (globalSoundtrack == null || FPS_Master.Instance == null || audioSource == null) return;
+        if (soundtrackManager == null)
+            soundtrackManager = Object.FindFirstObjectByType<SoundtrackManager>();
 
-        float dist = Vector3.Distance(transform.position, FPS_Master.Instance.transform.position);
-        bool shouldMuteGlobal = isPlaying && dist <= audioSource.maxDistance;
+        if (soundtrackManager == null || FPS_Master.Instance == null || audioSource == null)
+            return;
 
-        if (shouldMuteGlobal && !playerIsInsideRadius)
+        bool discoAudivel = DiscoEstaAudivelParaOJogador();
+
+        if (discoAudivel && !soundtrackAbafadoPeloDisco)
         {
-            playerIsInsideRadius = true;
-
-            if (fadeRoutine != null)
-                StopCoroutine(fadeRoutine);
-
-            fadeRoutine = StartCoroutine(FadeGlobalSoundtrack(0f)); 
+            soundtrackAbafadoPeloDisco = true;
+            soundtrackManager.SetSoundtrackAbafadoPorDisco(true, tempoFadeSoundtrackPorDisco);
         }
-        else if (!shouldMuteGlobal && playerIsInsideRadius)
+        else if (!discoAudivel && soundtrackAbafadoPeloDisco)
         {
-            playerIsInsideRadius = false;
-
-            if (fadeRoutine != null)
-                StopCoroutine(fadeRoutine);
-
-            fadeRoutine = StartCoroutine(FadeGlobalSoundtrack(globalOriginalVolume)); 
+            soundtrackAbafadoPeloDisco = false;
+            soundtrackManager.SetSoundtrackAbafadoPorDisco(false, tempoFadeSoundtrackPorDisco);
         }
     }
 
-    IEnumerator FadeGlobalSoundtrack(float targetVolume)
+    private bool DiscoEstaAudivelParaOJogador()
     {
-        if (globalSoundtrack == null) yield break;
+        if (!isPlaying) return false;
+        if (currentDiskID == 0) return false;
+        if (audioSource == null) return false;
+        if (!audioSource.isPlaying) return false;
+        if (audioSource.clip == null) return false;
+        if (FPS_Master.Instance == null) return false;
 
-        float currentVol = globalSoundtrack.volume;
-        float time = 0;
-        float duration = 1.5f;
-
-        while (time < duration)
-        {
-            globalSoundtrack.volume = Mathf.Lerp(currentVol, targetVolume, time / duration);
-            time += Time.deltaTime;
-            yield return null;
-        }
-
-        globalSoundtrack.volume = targetVolume;
+        float distancia = Vector3.Distance(transform.position, FPS_Master.Instance.transform.position);
+        return distancia <= audioSource.maxDistance;
     }
 
     public void AoOlhar() 
@@ -337,6 +323,8 @@ public class TurntableSystem : MonoBehaviour
         if (audioSource.clip != null)
             audioSource.Play(); 
 
+        GerenciarSoundtrackPeloAudioDoDisco();
+
         if (id == shovelRecordID)
         {
             if (!isSafeOpen && !isLoadingSave)
@@ -445,6 +433,8 @@ public class TurntableSystem : MonoBehaviour
         int diskToReturn = currentDiskID;
         currentDiskID = 0;
 
+        LiberarSoundtrackSeNecessario();
+
         SalvarEstadoDisco(false, false);
         
         if (InventoryManager.Instance != null)
@@ -485,6 +475,30 @@ public class TurntableSystem : MonoBehaviour
 
         if (estaOlhando && interactText)
             interactText.SetActive(true);
+    }
+
+    private void LiberarSoundtrackSeNecessario()
+    {
+        if (!soundtrackAbafadoPeloDisco)
+            return;
+
+        soundtrackAbafadoPeloDisco = false;
+
+        if (soundtrackManager == null)
+            soundtrackManager = Object.FindFirstObjectByType<SoundtrackManager>();
+
+        if (soundtrackManager != null)
+            soundtrackManager.SetSoundtrackAbafadoPorDisco(false, tempoFadeSoundtrackPorDisco);
+    }
+
+    private void OnDisable()
+    {
+        LiberarSoundtrackSeNecessario();
+    }
+
+    private void OnDestroy()
+    {
+        LiberarSoundtrackSeNecessario();
     }
 
     private void SalvarProgressoSeguro()

@@ -20,11 +20,9 @@ public class InventarioRunas : MonoBehaviour
     public List<SlotConfigRuna> configuracaoRunas = new List<SlotConfigRuna>();
 
     [Header("--- CENAS PERMITIDAS ---")]
-    [Tooltip("Coloque aqui EXATAMENTE os nomes das cenas onde o inventário de runas pode existir e aparecer.")]
     public List<string> cenasPermitidasParaRunas = new List<string>();
 
     [Header("--- CLIMA POR RUNAS ---")]
-    [Tooltip("Quantidade de runas necessárias para mudar o clima para tarde/DramaticDay.")]
     public int quantidadeRunasParaMudarParaTarde = 3;
 
     [Header("Runas Atualmente Coletadas")]
@@ -36,13 +34,20 @@ public class InventarioRunas : MonoBehaviour
     private Coroutine rotinaCarregar;
     private Coroutine rotinaRedesenhar;
     private Coroutine rotinaVerificarClima;
+
     private bool registradoNoSceneLoaded = false;
     private bool cenaPermitidaAtual = false;
+    private bool saveCarregadoPeloMenosUmaVez = false;
+
+    private HashSet<string> idsRunasColetadasNormalizados = new HashSet<string>();
+
+    private const string SEPARADOR_RUNAS = "|";
 
     private void Awake() 
     {
         if (Instance != null && Instance != this)
         {
+            CopiarConfiguracaoSeNecessario(Instance);
             Destroy(gameObject);
             return;
         }
@@ -65,7 +70,7 @@ public class InventarioRunas : MonoBehaviour
     {
         if (Instance != this) return;
 
-        rotinaCarregar = StartCoroutine(CarregarRunasDoSaveSeguro());
+        RecarregarDoSave();
     }
 
     private void OnDestroy()
@@ -77,31 +82,80 @@ public class InventarioRunas : MonoBehaviour
             Instance = null;
     }
 
+    private void CopiarConfiguracaoSeNecessario(InventarioRunas alvo)
+    {
+        if (alvo == null) return;
+
+        bool mudouAlgo = false;
+
+        if (configuracaoRunas != null && configuracaoRunas.Count > 0)
+        {
+            if (alvo.configuracaoRunas == null)
+                alvo.configuracaoRunas = new List<SlotConfigRuna>();
+
+            foreach (SlotConfigRuna nova in configuracaoRunas)
+            {
+                if (nova == null || string.IsNullOrEmpty(nova.nomeIdentificador))
+                    continue;
+
+                string novaNorm = NormalizarIDRuna(nova.nomeIdentificador);
+
+                bool jaExiste = alvo.configuracaoRunas.Exists(x =>
+                    x != null &&
+                    NormalizarIDRuna(x.nomeIdentificador) == novaNorm
+                );
+
+                if (!jaExiste)
+                {
+                    alvo.configuracaoRunas.Add(nova);
+                    mudouAlgo = true;
+                }
+            }
+        }
+
+        if (cenasPermitidasParaRunas != null && cenasPermitidasParaRunas.Count > 0)
+        {
+            if (alvo.cenasPermitidasParaRunas == null)
+                alvo.cenasPermitidasParaRunas = new List<string>();
+
+            foreach (string cena in cenasPermitidasParaRunas)
+            {
+                if (string.IsNullOrEmpty(cena))
+                    continue;
+
+                if (!alvo.cenasPermitidasParaRunas.Contains(cena))
+                {
+                    alvo.cenasPermitidasParaRunas.Add(cena);
+                    mudouAlgo = true;
+                }
+            }
+        }
+
+        if (mudouAlgo)
+            alvo.RecarregarDoSave();
+    }
+
     private void AoCarregarCena(Scene scene, LoadSceneMode mode)
     {
         if (Instance != this) return;
 
         cenaPermitidaAtual = CenaPermitida(scene.name);
 
-        if (rotinaRedesenhar != null)
-            StopCoroutine(rotinaRedesenhar);
-
-        rotinaRedesenhar = StartCoroutine(RedesenharRunasNaTelaSeguro());
+        if (!saveCarregadoPeloMenosUmaVez)
+            RecarregarDoSave();
+        else
+            RedesenharAgora();
     }
 
     private bool CenaAtualEstaPermitida()
     {
-        string cenaAtual = SceneManager.GetActiveScene().name;
-        return CenaPermitida(cenaAtual);
+        return CenaPermitida(SceneManager.GetActiveScene().name);
     }
 
     private bool CenaPermitida(string nomeCena)
     {
         if (cenasPermitidasParaRunas == null || cenasPermitidasParaRunas.Count == 0)
-        {
-            Debug.LogError("[InventarioRunas] Nenhuma cena permitida foi configurada. Adicione os nomes das cenas no Inspector.");
-            return false;
-        }
+            return true;
 
         return cenasPermitidasParaRunas.Contains(nomeCena);
     }
@@ -110,50 +164,13 @@ public class InventarioRunas : MonoBehaviour
     {
         if (Instance != this) return;
 
-        runasNaMao.Clear();
-
         if (rotinaCarregar != null)
             StopCoroutine(rotinaCarregar);
 
         rotinaCarregar = StartCoroutine(CarregarRunasDoSaveSeguro());
     }
 
-    IEnumerator RedesenharRunasNaTelaSeguro()
-    {
-        yield return null;
-
-        float timeout = 2f;
-
-        while (AreaDasRunas.Instance == null && timeout > 0f)
-        {
-            timeout -= Time.unscaledDeltaTime;
-            yield return null;
-        }
-
-        if (AreaDasRunas.Instance != null)
-            AreaDasRunas.Instance.LimparTodasAsRunasDaTela();
-
-        if (!cenaPermitidaAtual)
-        {
-            rotinaRedesenhar = null;
-            yield break;
-        }
-
-        foreach (var runa in runasNaMao)
-        {
-            if (runa != null)
-                AtualizarUI(runa.icone);
-        }
-
-        rotinaRedesenhar = null;
-    }
-
-    System.Collections.IEnumerator RedesenharRunasNaTela()
-    {
-        yield return RedesenharRunasNaTelaSeguro();
-    }
-
-    private System.Collections.IEnumerator CarregarRunasDoSaveSeguro()
+    private IEnumerator CarregarRunasDoSaveSeguro()
     {
         yield return new WaitUntil(() =>
             PersistenciaManager.Instance != null &&
@@ -162,6 +179,8 @@ public class InventarioRunas : MonoBehaviour
         );
 
         CarregarRunasDoSave();
+
+        saveCarregadoPeloMenosUmaVez = true;
         rotinaCarregar = null;
 
         VerificarMudancaClimaPorRunasSeguro();
@@ -169,28 +188,245 @@ public class InventarioRunas : MonoBehaviour
 
     private void CarregarRunasDoSave()
     {
-        if (PersistenciaManager.Instance == null) return;
+        if (PersistenciaManager.Instance == null)
+            return;
 
+        idsRunasColetadasNormalizados.Clear();
+
+        CarregarManifestoDeRunas();
+
+        if (configuracaoRunas != null)
+        {
+            foreach (SlotConfigRuna slot in configuracaoRunas)
+            {
+                if (slot == null || string.IsNullOrEmpty(slot.nomeIdentificador))
+                    continue;
+
+                string nomeOriginal = slot.nomeIdentificador;
+                string nomeNorm = NormalizarIDRuna(nomeOriginal);
+
+                if (ObterEstadoRunaComVariantes(nomeOriginal, nomeNorm))
+                    idsRunasColetadasNormalizados.Add(nomeNorm);
+            }
+        }
+
+        ReconstruirListaVisualAPartirDosIDs();
+        SalvarManifestoDeRunas();
+        RedesenharAgora();
+    }
+
+    private bool ObterEstadoRunaComVariantes(string nomeOriginal, string nomeNorm)
+    {
+        if (PersistenciaManager.Instance == null)
+            return false;
+
+        string prefixo = PrefixoSlotAtual();
+
+        if (PersistenciaManager.Instance.ObterEstado(prefixo + "Runa_" + nomeNorm, false))
+            return true;
+
+        if (PersistenciaManager.Instance.ObterEstado(prefixo + "Runa_" + nomeOriginal, false))
+            return true;
+
+        if (PersistenciaManager.Instance.ObterEstado(prefixo + "Runa_Runa_" + nomeNorm, false))
+            return true;
+
+        if (PersistenciaManager.Instance.ObterEstado(prefixo + "Runa_Runa_" + nomeOriginal, false))
+            return true;
+
+        if (PersistenciaManager.Instance.ObterEstado("Runa_" + nomeNorm, false))
+            return true;
+
+        if (PersistenciaManager.Instance.ObterEstado("Runa_" + nomeOriginal, false))
+            return true;
+
+        if (PersistenciaManager.Instance.ObterEstado("Runa_Runa_" + nomeNorm, false))
+            return true;
+
+        if (PersistenciaManager.Instance.ObterEstado("Runa_Runa_" + nomeOriginal, false))
+            return true;
+
+        return false;
+    }
+
+    private void CarregarManifestoDeRunas()
+    {
+        if (PersistenciaManager.Instance == null)
+            return;
+
+        string manifestoSlot = PersistenciaManager.Instance.ObterString(ChaveManifestoSlot(), "");
+        string manifestoLegado = PersistenciaManager.Instance.ObterString("Runas_Coletadas", "");
+
+        LerManifesto(manifestoSlot);
+        LerManifesto(manifestoLegado);
+    }
+
+    private void LerManifesto(string texto)
+    {
+        if (string.IsNullOrEmpty(texto))
+            return;
+
+        string[] partes = texto.Split(new string[] { SEPARADOR_RUNAS }, System.StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (string parte in partes)
+        {
+            string id = NormalizarIDRuna(parte.Trim());
+
+            if (!string.IsNullOrEmpty(id))
+                idsRunasColetadasNormalizados.Add(id);
+        }
+    }
+
+    private void SalvarManifestoDeRunas()
+    {
+        if (PersistenciaManager.Instance == null)
+            return;
+
+        string manifesto = CriarManifestoAtual();
+
+        PersistenciaManager.Instance.SalvarString(ChaveManifestoSlot(), manifesto);
+        PersistenciaManager.Instance.SalvarString("Runas_Coletadas", manifesto);
+    }
+
+    private string CriarManifestoAtual()
+    {
+        List<string> lista = new List<string>(idsRunasColetadasNormalizados);
+        lista.Sort();
+
+        return string.Join(SEPARADOR_RUNAS, lista);
+    }
+
+    private void ReconstruirListaVisualAPartirDosIDs()
+    {
         runasNaMao.Clear();
 
-        if (configuracaoRunas == null)
-            configuracaoRunas = new List<SlotConfigRuna>();
+        if (configuracaoRunas == null || configuracaoRunas.Count == 0)
+        {
+            Debug.LogError("[InventarioRunas] configuracaoRunas está vazia. Sem RunaData, não tem como desenhar ícone.");
+            return;
+        }
 
-        foreach (var slot in configuracaoRunas)
+        foreach (SlotConfigRuna slot in configuracaoRunas)
         {
             if (slot == null || slot.data == null || string.IsNullOrEmpty(slot.nomeIdentificador))
                 continue;
 
-            bool temRuna = PersistenciaManager.Instance.ObterEstado("Runa_" + slot.nomeIdentificador, false);
+            string slotNorm = NormalizarIDRuna(slot.nomeIdentificador);
 
-            if (temRuna && !runasNaMao.Contains(slot.data))
-                runasNaMao.Add(slot.data);
+            if (idsRunasColetadasNormalizados.Contains(slotNorm))
+            {
+                if (!runasNaMao.Contains(slot.data))
+                    runasNaMao.Add(slot.data);
+            }
         }
 
+        Debug.Log("[InventarioRunas] Reconstruído. IDs: " + CriarManifestoAtual() + " | runasNaMao: " + runasNaMao.Count);
+    }
+
+    private void RedesenharAgora()
+    {
         if (rotinaRedesenhar != null)
             StopCoroutine(rotinaRedesenhar);
 
         rotinaRedesenhar = StartCoroutine(RedesenharRunasNaTelaSeguro());
+    }
+
+    public void ForcarRedesenhoDasRunas()
+    {
+        if (rotinaRedesenhar != null)
+            StopCoroutine(rotinaRedesenhar);
+
+        rotinaRedesenhar = StartCoroutine(RedesenharRunasNaTelaSeguro());
+    }
+
+    public void SolicitarRedesenhoDaUI()
+    {
+        if (!saveCarregadoPeloMenosUmaVez)
+        {
+            RecarregarDoSave();
+            return;
+        }
+
+        ForcarRedesenhoDasRunas();
+    }
+
+    private IEnumerator RedesenharRunasNaTelaSeguro()
+    {
+        yield return null;
+        yield return new WaitForEndOfFrame();
+
+        AreaDasRunas area = AreaDasRunas.Instance;
+
+        if (area == null)
+        {
+            AreaDasRunas[] areas = Object.FindObjectsByType<AreaDasRunas>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+
+            if (areas != null && areas.Length > 0)
+            {
+                area = areas[0];
+
+                if (area != null)
+                {
+                    Canvas canvasPai = area.GetComponentInParent<Canvas>(true);
+
+                    if (canvasPai != null)
+                        canvasPai.gameObject.SetActive(true);
+
+                    area.gameObject.SetActive(true);
+                    AreaDasRunas.Instance = area;
+                }
+            }
+        }
+
+        float timeout = 8f;
+
+        while (area == null && timeout > 0f)
+        {
+            timeout -= Time.unscaledDeltaTime;
+            area = AreaDasRunas.Instance;
+            yield return null;
+        }
+
+        if (area == null)
+        {
+            Debug.LogError("[InventarioRunas] Não existe AreaDasRunas na cena. runasNaMao.Count = " + runasNaMao.Count);
+            rotinaRedesenhar = null;
+            yield break;
+        }
+
+        area.LimparTodasAsRunasDaTela();
+
+        if (!cenaPermitidaAtual)
+        {
+            Debug.LogWarning("[InventarioRunas] Cena não está em cenasPermitidasParaRunas: " + SceneManager.GetActiveScene().name + ". Mesmo assim vou desenhar porque AreaDasRunas existe.");
+        }
+
+        int desenhadas = 0;
+
+        foreach (RunaData runa in runasNaMao)
+        {
+            if (runa == null)
+            {
+                Debug.LogWarning("[InventarioRunas] Existe uma runa nula em runasNaMao.");
+                continue;
+            }
+
+            if (runa.icone == null)
+            {
+                Debug.LogWarning("[InventarioRunas] Runa sem ícone: " + runa.name);
+                continue;
+            }
+
+            area.AdicionarRunaNaTela(runa.icone);
+            desenhadas++;
+        }
+
+        Debug.Log("[InventarioRunas] Redesenho finalizado. runasNaMao.Count = " + runasNaMao.Count + " | desenhadas = " + desenhadas);
+
+        rotinaRedesenhar = null;
     }
 
     public void SalvarPosicaoAtual(Vector3 posicao)
@@ -211,18 +447,20 @@ public class InventarioRunas : MonoBehaviour
 
     private void ColetarRunaInterno(string nome, bool salvarNoDisco)
     {
-        if (string.IsNullOrEmpty(nome)) return;
-
-        if (!cenaPermitidaAtual)
-        {
-            Debug.LogWarning("[InventarioRunas] Tentativa de coletar runa em cena não permitida: " + SceneManager.GetActiveScene().name);
+        if (string.IsNullOrEmpty(nome))
             return;
-        }
+
+        string nomeNorm = NormalizarIDRuna(nome);
+
+        if (string.IsNullOrEmpty(nomeNorm))
+            return;
 
         if (configuracaoRunas == null)
             configuracaoRunas = new List<SlotConfigRuna>();
 
-        SlotConfigRuna slot = configuracaoRunas.Find(x => x != null && x.nomeIdentificador == nome);
+        idsRunasColetadasNormalizados.Add(nomeNorm);
+
+        SlotConfigRuna slot = EncontrarSlotPorNome(nome);
 
         if (slot != null && slot.data != null)
         {
@@ -233,23 +471,48 @@ public class InventarioRunas : MonoBehaviour
                 if (slot.eventoParaColetar != null)
                     slot.eventoParaColetar.Invoke();
 
-                AtualizarUI(slot.data.icone);
-
                 VerificarMudancaClimaPorRunasSeguro();
-            }
-
-            if (PersistenciaManager.Instance != null)
-            {
-                PersistenciaManager.Instance.RegistrarEstado("Runa_" + nome, true);
-
-                if (salvarNoDisco)
-                    SalvarProgressoSeguro();
             }
         }
         else
         {
-            Debug.LogWarning("[InventarioRunas] Tentou coletar uma runa que não existe na configuracaoRunas: " + nome);
+            Debug.LogError("[InventarioRunas] Runa salva, mas não existe SlotConfigRuna compatível com: " + nome + " | normalizado: " + nomeNorm);
         }
+
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado(ChaveRunaSlot(nomeNorm), true);
+            PersistenciaManager.Instance.RegistrarEstado("Runa_" + nomeNorm, true);
+            PersistenciaManager.Instance.RegistrarEstado("Runa_" + nome, true);
+
+            SalvarManifestoDeRunas();
+
+            if (salvarNoDisco)
+                SalvarProgressoSeguro();
+        }
+
+        Debug.Log("[InventarioRunas] Runa registrada/coletada: " + nome + " | normalizada: " + nomeNorm + " | runasNaMao.Count = " + runasNaMao.Count);
+
+        RedesenharAgora();
+    }
+
+    private SlotConfigRuna EncontrarSlotPorNome(string nome)
+    {
+        if (configuracaoRunas == null)
+            return null;
+
+        string nomeNorm = NormalizarIDRuna(nome);
+
+        foreach (SlotConfigRuna slot in configuracaoRunas)
+        {
+            if (slot == null || string.IsNullOrEmpty(slot.nomeIdentificador))
+                continue;
+
+            if (NormalizarIDRuna(slot.nomeIdentificador) == nomeNorm)
+                return slot;
+        }
+
+        return null;
     }
 
     private void VerificarMudancaClimaPorRunasSeguro()
@@ -280,26 +543,34 @@ public class InventarioRunas : MonoBehaviour
             yield break;
 
         if (DayNightCycle.Instance.currentState == DayNightCycle.TimeState.InitialDay)
-        {
             DayNightCycle.Instance.ChangeTo(DayNightCycle.TimeState.DramaticDay);
-        }
 
         rotinaVerificarClima = null;
     }
 
     public bool TemRuna(string nome)
     {
-        if (string.IsNullOrEmpty(nome)) return false;
-
-        if (configuracaoRunas == null)
-            configuracaoRunas = new List<SlotConfigRuna>();
-
-        SlotConfigRuna slot = configuracaoRunas.Find(x => x != null && x.nomeIdentificador == nome);
-
-        if (slot == null || slot.data == null)
+        if (string.IsNullOrEmpty(nome))
             return false;
 
-        return runasNaMao.Contains(slot.data);
+        string nomeNorm = NormalizarIDRuna(nome);
+
+        if (idsRunasColetadasNormalizados.Contains(nomeNorm))
+            return true;
+
+        if (PersistenciaManager.Instance != null)
+        {
+            if (PersistenciaManager.Instance.ObterEstado(ChaveRunaSlot(nomeNorm), false))
+                return true;
+
+            if (PersistenciaManager.Instance.ObterEstado("Runa_" + nomeNorm, false))
+                return true;
+
+            if (PersistenciaManager.Instance.ObterEstado("Runa_" + nome, false))
+                return true;
+        }
+
+        return false;
     }
 
     public bool TemARunaPeloNome(string nome)
@@ -309,70 +580,124 @@ public class InventarioRunas : MonoBehaviour
 
     public void RemoverRuna(string nome)
     {
-        if (string.IsNullOrEmpty(nome)) return;
+        if (string.IsNullOrEmpty(nome))
+            return;
 
-        if (configuracaoRunas == null)
-            configuracaoRunas = new List<SlotConfigRuna>();
+        string nomeNorm = NormalizarIDRuna(nome);
 
-        SlotConfigRuna slot = configuracaoRunas.Find(x => x != null && x.nomeIdentificador == nome);
+        idsRunasColetadasNormalizados.Remove(nomeNorm);
+
+        SlotConfigRuna slot = EncontrarSlotPorNome(nome);
 
         if (slot != null && slot.data != null && runasNaMao.Contains(slot.data))
-        {
             runasNaMao.Remove(slot.data);
 
-            if (PersistenciaManager.Instance != null)
-            {
-                PersistenciaManager.Instance.RegistrarEstado("Runa_" + nome, false);
-                SalvarProgressoSeguro();
-            }
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado(ChaveRunaSlot(nomeNorm), false);
+            PersistenciaManager.Instance.RegistrarEstado("Runa_" + nomeNorm, false);
+            PersistenciaManager.Instance.RegistrarEstado("Runa_" + nome, false);
 
-            if (rotinaRedesenhar != null)
-                StopCoroutine(rotinaRedesenhar);
-
-            rotinaRedesenhar = StartCoroutine(RedesenharRunasNaTelaSeguro());
+            SalvarManifestoDeRunas();
+            SalvarProgressoSeguro();
         }
+
+        RedesenharAgora();
     }
 
     public void UsarTodasAsRunasNoAltar()
     {
-        if (configuracaoRunas == null)
-            configuracaoRunas = new List<SlotConfigRuna>();
+        List<string> idsParaRemover = new List<string>(idsRunasColetadasNormalizados);
 
-        foreach (var slot in configuracaoRunas)
+        foreach (string id in idsParaRemover)
         {
-            if (slot == null || string.IsNullOrEmpty(slot.nomeIdentificador)) continue;
-
             if (PersistenciaManager.Instance != null)
-                PersistenciaManager.Instance.RegistrarEstado("Runa_" + slot.nomeIdentificador, false);
+            {
+                PersistenciaManager.Instance.RegistrarEstado(ChaveRunaSlot(id), false);
+                PersistenciaManager.Instance.RegistrarEstado("Runa_" + id, false);
+            }
         }
 
+        idsRunasColetadasNormalizados.Clear();
         runasNaMao.Clear();
 
-        if (rotinaRedesenhar != null)
-            StopCoroutine(rotinaRedesenhar);
+        SalvarManifestoDeRunas();
 
-        rotinaRedesenhar = StartCoroutine(RedesenharRunasNaTelaSeguro());
+        if (PersistenciaManager.Instance != null)
+            SalvarProgressoSeguro();
 
-        SalvarProgressoSeguro();
+        RedesenharAgora();
     }
 
     private void AtualizarUI(Sprite icone)
     {
-        if (!cenaPermitidaAtual) return;
+        if (icone == null)
+        {
+            Debug.LogWarning("[InventarioRunas] AtualizarUI recebeu ícone nulo.");
+            return;
+        }
 
         if (AreaDasRunas.Instance != null)
+        {
             AreaDasRunas.Instance.AdicionarRunaNaTela(icone);
+        }
+        else
+        {
+            Debug.LogWarning("[InventarioRunas] AreaDasRunas.Instance nula. Redesenho será tentado depois.");
+            RedesenharAgora();
+        }
+    }
+
+    private string PrefixoSlotAtual()
+    {
+        if (SistemaGlobal.Instance != null &&
+            SistemaGlobal.Instance.slotFoiDefinido &&
+            SistemaGlobal.Instance.slotAtual > 0)
+        {
+            return "Slot_" + SistemaGlobal.Instance.slotAtual + "_";
+        }
+
+        return "";
+    }
+
+    private string ChaveRunaSlot(string nomeNormalizado)
+    {
+        return PrefixoSlotAtual() + "Runa_" + NormalizarIDRuna(nomeNormalizado);
+    }
+
+    private string ChaveManifestoSlot()
+    {
+        return PrefixoSlotAtual() + "Runas_Coletadas";
+    }
+
+    private string NormalizarIDRuna(string nome)
+    {
+        if (string.IsNullOrEmpty(nome))
+            return "";
+
+        string n = nome.Trim();
+
+        while (n.StartsWith("Runa_"))
+            n = n.Substring(5);
+
+        while (n.StartsWith("runa_"))
+            n = n.Substring(5);
+
+        return n.Trim().ToLowerInvariant();
     }
 
     private void SalvarProgressoSeguro()
     {
-        if (GameManager.Instance != null && GameManager.CenaPronta)
-        {
-            GameManager.Instance.SalvarProgresso();
-            return;
-        }
-
         if (PersistenciaManager.Instance != null)
             PersistenciaManager.Instance.SalvarTudo(true);
+    }
+
+    [ContextMenu("DEBUG - Mostrar Runas Salvas")]
+    private void DebugMostrarRunasSalvas()
+    {
+        Debug.Log("[InventarioRunas] Slot prefix: " + PrefixoSlotAtual());
+        Debug.Log("[InventarioRunas] IDs normalizados coletados: " + CriarManifestoAtual());
+        Debug.Log("[InventarioRunas] runasNaMao.Count: " + (runasNaMao != null ? runasNaMao.Count : -1));
+        Debug.Log("[InventarioRunas] cenaPermitidaAtual: " + cenaPermitidaAtual + " | cena: " + SceneManager.GetActiveScene().name);
     }
 }

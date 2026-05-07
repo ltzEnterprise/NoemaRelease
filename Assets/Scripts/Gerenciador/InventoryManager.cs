@@ -22,7 +22,6 @@ public class InventoryManager : MonoBehaviour
 
     private float tempoParaProximaTroca = 0f;
     private Vector3[] posicoesOriginais;
-    private Coroutine[] corrotinasSaque; 
     private Coroutine rotinaTrocaInventario;
     private int itemVisualAtual = -1;
 
@@ -30,13 +29,14 @@ public class InventoryManager : MonoBehaviour
     {
         Instance = this; 
 
-        PrepararArraysEPosicoes();
+        PrepararArraysEPosicoes(false);
 
         if (itensRegistrados != null)
         {
             foreach (var item in itensRegistrados) 
             {
-                if (item != null) item.SetActive(false);
+                if (item != null)
+                    item.SetActive(false);
             }
         }
     }
@@ -53,7 +53,7 @@ public class InventoryManager : MonoBehaviour
 
     void Start()
     {
-        PrepararArraysEPosicoes();
+        PrepararArraysEPosicoes(false);
         StartCoroutine(InitInventarioSeguro());
     }
 
@@ -61,25 +61,34 @@ public class InventoryManager : MonoBehaviour
     {
         if (scene.name == "MenuPrincipal") return;
 
-        PrepararArraysEPosicoes();
+        PrepararArraysEPosicoes(false);
         StartCoroutine(InitInventarioSeguro());
     }
 
-    private void PrepararArraysEPosicoes()
+    private void PrepararArraysEPosicoes(bool forcarRecalculo)
     {
         if (itensRegistrados == null || itensRegistrados.Count == 0) return;
 
         if (posicoesOriginais == null || posicoesOriginais.Length != itensRegistrados.Count)
+        {
             posicoesOriginais = new Vector3[itensRegistrados.Count];
+            forcarRecalculo = true;
+        }
 
-        if (corrotinasSaque == null || corrotinasSaque.Length != itensRegistrados.Count)
-            corrotinasSaque = new Coroutine[itensRegistrados.Count];
+        if (!forcarRecalculo)
+            return;
 
         for (int i = 0; i < itensRegistrados.Count; i++)
         {
             if (itensRegistrados[i] != null)
                 posicoesOriginais[i] = itensRegistrados[i].transform.localPosition;
         }
+    }
+
+    [ContextMenu("Recalcular Posições Originais dos Itens")]
+    public void RecalcularPosicoesOriginais()
+    {
+        PrepararArraysEPosicoes(true);
     }
 
     IEnumerator InitInventarioSeguro()
@@ -106,9 +115,7 @@ public class InventoryManager : MonoBehaviour
     void Update()
     {
         if (FPS_Master.travadoInteracao) return;
-
         if (itensRegistrados == null || itensRegistrados.Count == 0) return;
-        PrepararArraysEPosicoes();
 
         float scroll = Input.GetAxis("Mouse ScrollWheel");
 
@@ -150,19 +157,17 @@ public class InventoryManager : MonoBehaviour
         if (id < 0 || itensRegistrados == null || id >= itensRegistrados.Count) return;
 
         DesbloquearItem(id);
-        itemSelecionado = id; 
+        TrocarItemSelecionado(id, true);
 
-        SalvarItemSelecionadoNaRAM(id);
         SalvarProgressoSeguro();
 
         if (id >= 0 && id < itensRegistrados.Count && itensRegistrados[id] != null)
         {
             ItemIdentificador idScript = itensRegistrados[id].GetComponent<ItemIdentificador>();
+
             if (idScript != null && HUDItemNome.Instance != null)
                 HUDItemNome.Instance.MostrarFadeDeColeta(idScript.nomeDoItem);
         }
-
-        AtualizarVisual(true);
     }
 
     public void ReceberItemDeVolta(int id) 
@@ -176,9 +181,7 @@ public class InventoryManager : MonoBehaviour
 
         if (itemSelecionado == id)
         {
-            itemSelecionado = -1; 
-            SalvarItemSelecionadoNaRAM(-1);
-            AtualizarVisual(true);
+            TrocarItemSelecionado(-1, true);
         }
 
         SalvarProgressoSeguro();
@@ -190,12 +193,17 @@ public class InventoryManager : MonoBehaviour
         {
             if (itemSelecionado != id)
             {
-                itemSelecionado = id;
-                SalvarItemSelecionadoNaRAM(id);
+                TrocarItemSelecionado(id, true);
                 SalvarProgressoSeguro();
-                AtualizarVisual(true);
             }
         }
+    }
+
+    private void TrocarItemSelecionado(int novoItem, bool animar)
+    {
+        itemSelecionado = novoItem;
+        SalvarItemSelecionadoNaRAM(novoItem);
+        AtualizarVisual(animar);
     }
 
     void NavegarInventario(int direcao)
@@ -212,10 +220,8 @@ public class InventoryManager : MonoBehaviour
 
             if (tentativa == -1 || ItemEstaDesbloqueado(tentativa))
             {
-                itemSelecionado = tentativa;
-                SalvarItemSelecionadoNaRAM(tentativa);
+                TrocarItemSelecionado(tentativa, true);
                 SalvarProgressoSeguro();
-                AtualizarVisual(true);
                 return;
             }
         }
@@ -225,21 +231,24 @@ public class InventoryManager : MonoBehaviour
     {
         if (itensRegistrados == null) return;
 
-        PrepararArraysEPosicoes();
+        PrepararArraysEPosicoes(false);
 
         if (posicoesOriginais == null || posicoesOriginais.Length != itensRegistrados.Count) return;
-        if (corrotinasSaque == null || corrotinasSaque.Length != itensRegistrados.Count) return;
-
-        if (!animar)
-        {
-            AplicarVisualInstantaneo();
-            return;
-        }
 
         if (rotinaTrocaInventario != null)
+        {
             StopCoroutine(rotinaTrocaInventario);
+            rotinaTrocaInventario = null;
+        }
 
-        rotinaTrocaInventario = StartCoroutine(RotinaTrocaVisual(itemVisualAtual, itemSelecionado));
+        if (animar)
+        {
+            rotinaTrocaInventario = StartCoroutine(RotinaTrocaVisual(itemVisualAtual, itemSelecionado));
+        }
+        else
+        {
+            AplicarVisualInstantaneo();
+        }
 
         string nomeParaHUD = "";
 
@@ -249,7 +258,7 @@ public class InventoryManager : MonoBehaviour
             nomeParaHUD = idScript ? idScript.nomeDoItem : itensRegistrados[itemSelecionado].name;
         }
 
-        if (HUDItemNome.Instance != null)
+        if (HUDItemNome.Instance != null && animar)
             HUDItemNome.Instance.MostrarNome(itemSelecionado == -1 ? "" : nomeParaHUD);
     }
 
@@ -260,12 +269,6 @@ public class InventoryManager : MonoBehaviour
         for (int i = 0; i < itensRegistrados.Count; i++)
         {
             if (itensRegistrados[i] == null) continue;
-
-            if (corrotinasSaque[i] != null)
-            {
-                StopCoroutine(corrotinasSaque[i]);
-                corrotinasSaque[i] = null;
-            }
 
             itensRegistrados[i].transform.localPosition = posicoesOriginais[i];
 
@@ -280,43 +283,88 @@ public class InventoryManager : MonoBehaviour
     {
         bool cameraEstaNoRosto = RealityCamera.Instance != null && RealityCamera.Instance.modoAtivo;
 
+        itemAnterior = ValidarIndiceVisual(itemAnterior) ? itemAnterior : DescobrirItemVisualAtivo();
+
         for (int i = 0; i < itensRegistrados.Count; i++)
         {
             if (itensRegistrados[i] == null) continue;
 
-            if (corrotinasSaque[i] != null)
-            {
-                StopCoroutine(corrotinasSaque[i]);
-                corrotinasSaque[i] = null;
-            }
+            bool deveManterPorCamera = (i == idDaCamera && cameraEstaNoRosto);
+            bool ehAnterior = i == itemAnterior;
+            bool ehNovo = i == itemNovo;
 
-            if (i != itemAnterior && i != itemNovo && !(i == idDaCamera && cameraEstaNoRosto))
+            if (!ehAnterior && !ehNovo && !deveManterPorCamera)
             {
                 itensRegistrados[i].transform.localPosition = posicoesOriginais[i];
                 itensRegistrados[i].SetActive(false);
             }
         }
 
-        if (itemAnterior >= 0 &&
-            itemAnterior < itensRegistrados.Count &&
-            itensRegistrados[itemAnterior] != null &&
-            itemAnterior != itemNovo)
+        Transform anteriorTransform = null;
+        Transform novoTransform = null;
+
+        Vector3 anteriorInicio = Vector3.zero;
+        Vector3 anteriorFim = Vector3.zero;
+        Vector3 novoInicio = Vector3.zero;
+        Vector3 novoFim = Vector3.zero;
+
+        bool animarAnterior = itemAnterior >= 0 &&
+                              itemAnterior < itensRegistrados.Count &&
+                              itensRegistrados[itemAnterior] != null &&
+                              itemAnterior != itemNovo;
+
+        bool animarNovo = itemNovo >= 0 &&
+                          itemNovo < itensRegistrados.Count &&
+                          itensRegistrados[itemNovo] != null;
+
+        if (animarAnterior)
+        {
+            itensRegistrados[itemAnterior].SetActive(true);
+            anteriorTransform = itensRegistrados[itemAnterior].transform;
+            anteriorInicio = anteriorTransform.localPosition;
+            anteriorFim = posicoesOriginais[itemAnterior] + new Vector3(0f, -forcaDropSaque, 0f);
+        }
+
+        if (animarNovo)
+        {
+            itensRegistrados[itemNovo].SetActive(true);
+            novoTransform = itensRegistrados[itemNovo].transform;
+            novoFim = posicoesOriginais[itemNovo];
+            novoInicio = novoFim + new Vector3(0f, -forcaDropSaque, 0f);
+            novoTransform.localPosition = novoInicio;
+        }
+
+        float tempoPercorrido = 0f;
+        float tempoTotal = 1f / Mathf.Max(0.1f, velocidadeSaque);
+
+        while (tempoPercorrido < tempoTotal)
+        {
+            tempoPercorrido += Time.deltaTime;
+            float p = Mathf.Clamp01(tempoPercorrido / tempoTotal);
+
+            if (anteriorTransform != null)
+                anteriorTransform.localPosition = Vector3.Lerp(anteriorInicio, anteriorFim, p);
+
+            if (novoTransform != null)
+                novoTransform.localPosition = Vector3.Lerp(novoInicio, novoFim, p);
+
+            yield return null;
+        }
+
+        if (animarAnterior)
         {
             bool manterCameraAtiva = itemAnterior == idDaCamera && cameraEstaNoRosto;
 
-            itensRegistrados[itemAnterior].SetActive(true);
-            yield return StartCoroutine(RotinaDeGuardar(itemAnterior));
+            itensRegistrados[itemAnterior].transform.localPosition = posicoesOriginais[itemAnterior];
 
             if (!manterCameraAtiva)
                 itensRegistrados[itemAnterior].SetActive(false);
         }
 
-        if (itemNovo >= 0 &&
-            itemNovo < itensRegistrados.Count &&
-            itensRegistrados[itemNovo] != null)
+        if (animarNovo)
         {
+            itensRegistrados[itemNovo].transform.localPosition = posicoesOriginais[itemNovo];
             itensRegistrados[itemNovo].SetActive(true);
-            yield return StartCoroutine(RotinaDeSaque(itemNovo));
         }
 
         for (int i = 0; i < itensRegistrados.Count; i++)
@@ -324,6 +372,7 @@ public class InventoryManager : MonoBehaviour
             if (itensRegistrados[i] == null) continue;
 
             bool ativar = (i == itemNovo) || (i == idDaCamera && cameraEstaNoRosto);
+
             itensRegistrados[i].SetActive(ativar);
 
             if (!ativar)
@@ -334,51 +383,25 @@ public class InventoryManager : MonoBehaviour
         rotinaTrocaInventario = null;
     }
 
-    IEnumerator RotinaDeSaque(int index)
+    private bool ValidarIndiceVisual(int id)
     {
-        if (index < 0 || index >= itensRegistrados.Count) yield break;
-        if (itensRegistrados[index] == null) yield break;
-
-        Transform itemTransform = itensRegistrados[index].transform;
-
-        Vector3 posFinal = posicoesOriginais[index];
-        Vector3 posInicial = posFinal + new Vector3(0, -forcaDropSaque, 0);
-
-        itemTransform.localPosition = posInicial;
-        float tempoPercorrido = 0f;
-        float tempoTotal = 1f / Mathf.Max(0.1f, velocidadeSaque); 
-
-        while (tempoPercorrido < tempoTotal)
-        {
-            tempoPercorrido += Time.deltaTime;
-            itemTransform.localPosition = Vector3.Lerp(posInicial, posFinal, tempoPercorrido / tempoTotal);
-            yield return null;
-        }
-
-        itemTransform.localPosition = posFinal;
+        return id >= 0 && itensRegistrados != null && id < itensRegistrados.Count && itensRegistrados[id] != null;
     }
 
-    IEnumerator RotinaDeGuardar(int index)
+    private int DescobrirItemVisualAtivo()
     {
-        if (index < 0 || index >= itensRegistrados.Count) yield break;
-        if (itensRegistrados[index] == null) yield break;
+        if (itensRegistrados == null) return -1;
 
-        Transform itemTransform = itensRegistrados[index].transform;
-
-        Vector3 posInicial = itemTransform.localPosition;
-        Vector3 posFinal = posicoesOriginais[index] + new Vector3(0, -forcaDropSaque, 0);
-
-        float tempoPercorrido = 0f;
-        float tempoTotal = 1f / Mathf.Max(0.1f, velocidadeSaque); 
-
-        while (tempoPercorrido < tempoTotal)
+        for (int i = 0; i < itensRegistrados.Count; i++)
         {
-            tempoPercorrido += Time.deltaTime;
-            itemTransform.localPosition = Vector3.Lerp(posInicial, posFinal, tempoPercorrido / tempoTotal);
-            yield return null;
+            if (i == idDaCamera && RealityCamera.Instance != null && RealityCamera.Instance.modoAtivo)
+                continue;
+
+            if (itensRegistrados[i] != null && itensRegistrados[i].activeSelf)
+                return i;
         }
 
-        itemTransform.localPosition = posicoesOriginais[index];
+        return -1;
     }
 
     bool ItemEstaDesbloqueado(int id) 

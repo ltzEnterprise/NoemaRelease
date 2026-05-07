@@ -34,6 +34,8 @@ public class PersistenciaManager : MonoBehaviour
     private float ultimoSaveTempo = 0f;
     private float intervaloMinimoSave = 2f;
 
+    private const int SAVES_PARA_ATUALIZAR_BACKUP = 3;
+
     public bool DadosProntosParaUso { get; private set; } = false;
     public bool EstaCarregando { get; private set; } = false;
 
@@ -264,26 +266,143 @@ public class PersistenciaManager : MonoBehaviour
                 dadosParaSerializar.strings.Add(new StringEntry { k = kv.Key, v = kv.Value });
 
             string json = JsonUtility.ToJson(dadosParaSerializar, true);
-            string caminho = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
-            string tempPath = caminho + ".tmp";
-            string backupPath = caminho + ".bak";
+
+            string caminho = GetCaminhoSave(slot);
+            string tempPath = GetCaminhoTemp(slot);
+
+            string jsonAnteriorDoSavePrincipal = null;
+
+            if (File.Exists(caminho))
+                jsonAnteriorDoSavePrincipal = File.ReadAllText(caminho);
 
             File.WriteAllText(tempPath, json);
 
             if (File.Exists(caminho))
-            {
-                if (File.Exists(backupPath)) File.Delete(backupPath);
-                File.Move(caminho, backupPath);
-            }
+                File.Delete(caminho);
 
-            if (File.Exists(caminho)) File.Delete(caminho);
             File.Move(tempPath, caminho);
+
+            AtualizarBackupDeTresSaves(slot, jsonAnteriorDoSavePrincipal, json);
 
             Debug.Log($"<color=cyan>[SAVE DISCO] Arquivo escrito no slot {slot}: {caminho}</color>");
         }
         catch (Exception e)
         {
             Debug.LogError("[SAVE] Erro ao escrever no disco: " + e.Message);
+        }
+    }
+
+    private string GetCaminhoSave(int slot)
+    {
+        return Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
+    }
+
+    private string GetCaminhoTemp(int slot)
+    {
+        return GetCaminhoSave(slot) + ".tmp";
+    }
+
+    private string GetCaminhoBackup(int slot)
+    {
+        return GetCaminhoSave(slot) + ".bak";
+    }
+
+    private string GetCaminhoBackupPendente(int slot)
+    {
+        return GetCaminhoSave(slot) + ".bak.pending";
+    }
+
+    private string GetCaminhoContadorBackup(int slot)
+    {
+        return GetCaminhoSave(slot) + ".bak.count";
+    }
+
+    private int LerContadorBackup(int slot)
+    {
+        string caminhoContador = GetCaminhoContadorBackup(slot);
+
+        if (!File.Exists(caminhoContador))
+            return 0;
+
+        try
+        {
+            string texto = File.ReadAllText(caminhoContador);
+
+            if (int.TryParse(texto, out int valor))
+                return Mathf.Clamp(valor, 0, SAVES_PARA_ATUALIZAR_BACKUP - 1);
+        }
+        catch { }
+
+        return 0;
+    }
+
+    private void SalvarContadorBackup(int slot, int valor)
+    {
+        string caminhoContador = GetCaminhoContadorBackup(slot);
+
+        try
+        {
+            File.WriteAllText(caminhoContador, valor.ToString());
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[BACKUP] Não foi possível salvar contador de backup: " + e.Message);
+        }
+    }
+
+    private void AtualizarBackupDeTresSaves(int slot, string jsonAnteriorDoSavePrincipal, string jsonNovoSavePrincipal)
+    {
+        string caminhoBackup = GetCaminhoBackup(slot);
+        string caminhoPendente = GetCaminhoBackupPendente(slot);
+
+        try
+        {
+            if (!File.Exists(caminhoPendente))
+            {
+                string candidatoInicial = !string.IsNullOrEmpty(jsonAnteriorDoSavePrincipal)
+                    ? jsonAnteriorDoSavePrincipal
+                    : jsonNovoSavePrincipal;
+
+                File.WriteAllText(caminhoPendente, candidatoInicial);
+            }
+
+            int contador = LerContadorBackup(slot);
+            contador++;
+
+            if (contador >= SAVES_PARA_ATUALIZAR_BACKUP)
+            {
+                if (File.Exists(caminhoPendente))
+                    File.Copy(caminhoPendente, caminhoBackup, true);
+
+                if (File.Exists(caminhoPendente))
+                    File.Delete(caminhoPendente);
+
+                contador = 0;
+
+                Debug.Log($"<color=orange>[BACKUP] Backup do slot {slot} atualizado com versão de {SAVES_PARA_ATUALIZAR_BACKUP} saves atrás.</color>");
+            }
+
+            SalvarContadorBackup(slot, contador);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[BACKUP] Falha ao atualizar backup de 3 saves: " + e.Message);
+        }
+    }
+
+    public void ResetarControleBackupDoSlot(int slot)
+    {
+        try
+        {
+            string pendente = GetCaminhoBackupPendente(slot);
+            string contador = GetCaminhoContadorBackup(slot);
+
+            if (File.Exists(pendente)) File.Delete(pendente);
+            if (File.Exists(contador)) File.Delete(contador);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[BACKUP] Falha ao resetar controle de backup do slot " + slot + ": " + e.Message);
         }
     }
 

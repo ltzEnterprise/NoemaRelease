@@ -104,8 +104,8 @@ public class CaptainLeverPuzzle : MonoBehaviour
         if (PersistenciaManager.Instance == null || string.IsNullOrEmpty(uniqueID))
             return;
 
-        isSolved = PersistenciaManager.Instance.ObterEstado(uniqueID + "_resolvido");
-        isSecretSolved = PersistenciaManager.Instance.ObterEstado(uniqueID + "_segredo");
+        isSolved = PersistenciaManager.Instance.ObterEstado(uniqueID + "_resolvido", false);
+        isSecretSolved = PersistenciaManager.Instance.ObterEstado(uniqueID + "_segredo", false);
 
         if (isSolved)
             AplicarEstadoRecompensaPrincipal(false);
@@ -189,12 +189,14 @@ public class CaptainLeverPuzzle : MonoBehaviour
     {
         if (mostrarPainelESom)
         {
-            if (quadSegredo)
+            GameObject painelDoSegredo = quadSegredo != null ? quadSegredo : painelRecompensa;
+
+            if (painelDoSegredo)
             {
                 if (rotinaPainelSegredo != null)
                     StopCoroutine(rotinaPainelSegredo);
 
-                rotinaPainelSegredo = StartCoroutine(MostrarPainelTemporario(quadSegredo, false));
+                rotinaPainelSegredo = StartCoroutine(MostrarPainelTemporario(painelDoSegredo, false));
             }
 
             if (audioSource && somSegredo)
@@ -241,6 +243,8 @@ public class CaptainLeverPuzzle : MonoBehaviour
 
         if (InventarioRunas.Instance != null)
             InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
+        else if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.RegistrarEstado("Runa_" + nomeDaRuna, true);
 
         if (onPuzzleSolved != null)
             onPuzzleSolved.Invoke();
@@ -297,14 +301,8 @@ public class CaptainLeverPuzzle : MonoBehaviour
 
     private void SalvarProgressoSeguro()
     {
-        if (GameManager.Instance != null && GameManager.CenaPronta)
-        {
-            GameManager.Instance.SalvarProgresso();
-            return;
-        }
-
         if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.SalvarTudo(false);
+            PersistenciaManager.Instance.SalvarTudo(true);
     }
 
     [ContextMenu("Generate Unique ID")]

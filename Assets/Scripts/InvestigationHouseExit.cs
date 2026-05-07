@@ -38,10 +38,7 @@ public class InvestigationHouseExit : MonoBehaviour
         if (FPS_Master.Instance != null)
             FPS_Master.travadoInteracao = true;
 
-        if (SistemaGlobal.Instance != null)
-            SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = false;
-
-        SalvarAntesDeTrocarCena();
+        SalvarAntesDeVoltarParaCenaPrincipal();
 
         if (somSairDaCasa && fonteAudio) 
         {
@@ -56,8 +53,11 @@ public class InvestigationHouseExit : MonoBehaviour
         SceneManager.LoadScene(nomeDaCenaPrincipal);
     }
 
-    private void SalvarAntesDeTrocarCena()
+    private void SalvarAntesDeVoltarParaCenaPrincipal()
     {
+        if (SistemaGlobal.Instance != null)
+            SistemaGlobal.Instance.deveCarregarPosicaoAoIniciar = true;
+
         if (PersistenciaManager.Instance != null)
             PersistenciaManager.Instance.SalvarTudo(true);
     }

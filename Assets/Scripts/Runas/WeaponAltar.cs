@@ -24,6 +24,16 @@ public class WeaponAltar : MonoBehaviour
     private bool estaOlhando = false; 
     private bool mostrandoErro = false; 
 
+    private string ChaveAltarUsado
+    {
+        get { return "WeaponAltar_Weapon_" + weaponIDToUnlock + "_Taken"; }
+    }
+
+    private string ChaveAltarAtivado
+    {
+        get { return "WeaponAltar_Weapon_" + weaponIDToUnlock + "_Activated"; }
+    }
+
     void Start()
     {
         if (runesUIPanel) runesUIPanel.SetActive(false); 
@@ -41,7 +51,10 @@ public class WeaponAltar : MonoBehaviour
             PersistenciaManager.Instance.DadosProntosParaUso
         );
 
-        alreadyTaken = PersistenciaManager.Instance.ObterEstado("WeaponAltar_Weapon_" + weaponIDToUnlock + "_Taken", false);
+        bool altarUsado = PersistenciaManager.Instance.ObterEstado(ChaveAltarUsado, false);
+        bool altarAtivado = PersistenciaManager.Instance.ObterEstado(ChaveAltarAtivado, false);
+
+        alreadyTaken = altarUsado || altarAtivado;
 
         if (alreadyTaken)
         {
@@ -113,12 +126,31 @@ public class WeaponAltar : MonoBehaviour
                 Debug.Log(">> ALTAR ACTIVATED VIA DEV MODE <<");
             }
 
+            SalvarAtivacaoDoAltarImediatamente();
             StartPickupProcess();
         }
         else
         {
             StopAllCoroutines();
             StartCoroutine(ShowMissingRunesWarning());
+        }
+    }
+
+    private void SalvarAtivacaoDoAltarImediatamente()
+    {
+        alreadyTaken = true;
+
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado(ChaveAltarAtivado, true);
+            PersistenciaManager.Instance.RegistrarEstado(ChaveAltarUsado, true);
+
+            PersistenciaManager.Instance.SalvarTudo(true);
+        }
+
+        if (weaponIDToUnlock >= 0 && weaponIDToUnlock < EstadoGlobal.armasDesbloqueadas.Length)
+        {
+            EstadoGlobal.armasDesbloqueadas[weaponIDToUnlock] = true; 
         }
     }
 
@@ -161,7 +193,9 @@ public class WeaponAltar : MonoBehaviour
 
         if (PersistenciaManager.Instance != null)
         {
-            PersistenciaManager.Instance.RegistrarEstado("WeaponAltar_Weapon_" + weaponIDToUnlock + "_Taken", true);
+            PersistenciaManager.Instance.RegistrarEstado(ChaveAltarAtivado, true);
+            PersistenciaManager.Instance.RegistrarEstado(ChaveAltarUsado, true);
+
             SalvarProgressoSeguro();
         }
     }
@@ -185,13 +219,7 @@ public class WeaponAltar : MonoBehaviour
 
     private void SalvarProgressoSeguro()
     {
-        if (GameManager.Instance != null && GameManager.CenaPronta)
-        {
-            GameManager.Instance.SalvarProgresso();
-            return;
-        }
-
         if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.SalvarTudo(false);
+            PersistenciaManager.Instance.SalvarTudo(true);
     }
 }

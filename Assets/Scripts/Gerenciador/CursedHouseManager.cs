@@ -65,15 +65,18 @@ public class CursedHouseManager : MonoBehaviour
         else
         {
             Debug.LogWarning("[CursedHouseManager] InventarioRunas.Instance está nulo. Salvando runa direto no PersistenciaManager: " + nomeDaRuna);
-
-            if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(nomeDaRuna))
-                PersistenciaManager.Instance.RegistrarEstado("Runa_" + nomeDaRuna, true);
         }
 
-        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
-            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Resolvido", true);
+        if (PersistenciaManager.Instance != null)
+        {
+            if (!string.IsNullOrEmpty(nomeDaRuna))
+                PersistenciaManager.Instance.RegistrarEstado("Runa_" + nomeDaRuna, true);
 
-        SalvarProgressoSeguro();
+            if (!string.IsNullOrEmpty(uniqueID))
+                PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Resolvido", true);
+
+            PersistenciaManager.Instance.SalvarTudo(true);
+        }
 
         if (fonteAudio && somPortaDestrancando) 
             fonteAudio.PlayOneShot(somPortaDestrancando);
@@ -93,11 +96,5 @@ public class CursedHouseManager : MonoBehaviour
     { 
         if (painelRecompensa)
             painelRecompensa.SetActive(false); 
-    }
-
-    private void SalvarProgressoSeguro()
-    {
-        if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.SalvarTudo(true);
     }
 }

@@ -181,12 +181,7 @@ public class SaveSlotManager : MonoBehaviour
                 SistemaGlobal.Instance.ApagarSave(numeroDoSlot);
             else
             {
-                string backup = caminho + ".bak";
-                string temp = caminho + ".tmp";
-
-                if (File.Exists(caminho)) File.Delete(caminho);
-                if (File.Exists(backup)) File.Delete(backup);
-                if (File.Exists(temp)) File.Delete(temp);
+                ApagarArquivosDoSlot(numeroDoSlot);
             }
 
             uiManager.slotConfirmacao = -1;
@@ -197,6 +192,21 @@ public class SaveSlotManager : MonoBehaviour
         }
 
         AtualizarTextosSlots();
+    }
+
+    private void ApagarArquivosDoSlot(int slot)
+    {
+        string caminho = Path.Combine(DiretorioSaves, $"Save_Slot_{slot}.json");
+        string backup = caminho + ".bak";
+        string temp = caminho + ".tmp";
+        string pending = caminho + ".bak.pending";
+        string count = caminho + ".bak.count";
+
+        if (File.Exists(caminho)) File.Delete(caminho);
+        if (File.Exists(backup)) File.Delete(backup);
+        if (File.Exists(temp)) File.Delete(temp);
+        if (File.Exists(pending)) File.Delete(pending);
+        if (File.Exists(count)) File.Delete(count);
     }
 
     public void BOTAO_PREPARAR_BACKUP_SLOT(int numeroDoSlot)
@@ -215,10 +225,18 @@ public class SaveSlotManager : MonoBehaviour
         {
             string caminho = Path.Combine(DiretorioSaves, $"Save_Slot_{uiManager.slotParaRestaurar}.json");
             string backup = caminho + ".bak";
+            string pending = caminho + ".bak.pending";
+            string count = caminho + ".bak.count";
 
             if (File.Exists(backup))
             {
                 File.Copy(backup, caminho, true);
+
+                if (File.Exists(pending)) File.Delete(pending);
+                if (File.Exists(count)) File.Delete(count);
+
+                if (PersistenciaManager.Instance != null)
+                    PersistenciaManager.Instance.ResetarControleBackupDoSlot(uiManager.slotParaRestaurar);
 
                 if (PersistenciaManager.Instance != null &&
                     SistemaGlobal.Instance != null &&

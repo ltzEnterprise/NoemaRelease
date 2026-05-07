@@ -24,13 +24,8 @@ public class ComputerController : MonoBehaviour
     public GameObject telaAzulUITransicao; 
 
     [Header("--- LOADING LOCAL OPCIONAL ---")]
-    [Tooltip("Se preencher, o PC usa este painel para carregar a cena 2D, ignorando o loading do InterfaceManager.")]
     public GameObject painelLoadingLocal;
-
-    [Tooltip("Força o painel de loading local a ocupar a tela inteira e ficar centralizado.")]
     public bool forcarPainelLoadingFullscreen = true;
-
-    [Tooltip("Tempo mínimo que o painel de loading fica visível antes de ativar a cena.")]
     public float tempoMinimoLoadingLocal = 0.5f;
 
     [Header("--- TEMPOS DA CUTSCENE PÓS-CRASH ---")]
@@ -68,6 +63,35 @@ public class ComputerController : MonoBehaviour
     private bool estaOlhando = false;
     private float tempoUltimoClique = 0f;
 
+    private bool deveRodarCutscenePosCrash = false;
+
+    private string ChavePcQueimado => "PC_" + idDoComputador + "_Queimado";
+    private string ChaveCutsceneVista => "PC_" + idDoComputador + "_CutscenePosCrashVista";
+    private string ChaveChaveCasaRecebida => "PC_" + idDoComputador + "_ChaveCasaRecebida";
+    private string ChavePainelMundo2D => "PC_" + idDoComputador + "_PainelMundo2D_Ativo";
+    private string ChavePainelMundo2DConcluido => "PC_" + idDoComputador + "_PainelMundo2D_Concluido";
+    private string ChavePainelExtra => "PC_" + idDoComputador + "_PainelExtra_Ativo";
+
+    void Awake()
+    {
+        if (PersistenciaManager.Instance != null)
+        {
+            bool crashEvent = PersistenciaManager.Instance.ObterEstado("PC_Crash_Event", false);
+            bool cutsceneVista = PersistenciaManager.Instance.ObterEstado(ChaveCutsceneVista, false);
+            bool queimado = PersistenciaManager.Instance.ObterEstado(ChavePcQueimado, false);
+
+            deveRodarCutscenePosCrash = crashEvent && !cutsceneVista && !queimado;
+
+            if (deveRodarCutscenePosCrash)
+            {
+                if (pixelURPFeature != null)
+                    pixelURPFeature.SetActive(true);
+
+                AtivarTelaAzulImediata();
+            }
+        }
+    }
+
     void Start()
     {
         StartCoroutine(InicializarSeguro());
@@ -82,34 +106,93 @@ public class ComputerController : MonoBehaviour
         if (textoInteragirRuna) textoInteragirRuna.SetActive(false);
         if (painelAvisoRuna) painelAvisoRuna.SetActive(false);
         if (painelUpgradeCamera) painelUpgradeCamera.SetActive(false);
-        if (telaAzulUITransicao) telaAzulUITransicao.SetActive(false);
         if (painelLoadingLocal) painelLoadingLocal.SetActive(false);
+
+        if (telaAzulUITransicao && !deveRodarCutscenePosCrash)
+            telaAzulUITransicao.SetActive(false);
 
         yield return new WaitUntil(() =>
             PersistenciaManager.Instance != null &&
             PersistenciaManager.Instance.DadosProntosParaUso
         );
 
+        bool crashEvent = PersistenciaManager.Instance.ObterEstado("PC_Crash_Event", false);
+        bool cutsceneVista = PersistenciaManager.Instance.ObterEstado(ChaveCutsceneVista, false);
+        bool queimado = PersistenciaManager.Instance.ObterEstado(ChavePcQueimado, false);
+
+        deveRodarCutscenePosCrash = crashEvent && !cutsceneVista && !queimado;
+
+        if (deveRodarCutscenePosCrash)
+            AtivarTelaAzulImediata();
+
         CarregarEstadoInicial();
+    }
+
+    private void AtivarTelaAzulImediata()
+    {
+        if (telaAzulUITransicao == null) return;
+
+        Canvas canvas = telaAzulUITransicao.GetComponentInParent<Canvas>(true);
+
+        if (canvas != null)
+        {
+            canvas.gameObject.SetActive(true);
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 32767;
+        }
+
+        telaAzulUITransicao.SetActive(true);
+        telaAzulUITransicao.transform.SetAsLastSibling();
+
+        RectTransform rt = telaAzulUITransicao.GetComponent<RectTransform>();
+
+        if (rt != null)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.localScale = Vector3.one;
+            rt.localRotation = Quaternion.identity;
+        }
+    }
+
+    private void MostrarPainelUpgradeSemDestruirLayout()
+    {
+        if (painelUpgradeCamera == null) return;
+
+        Canvas canvas = painelUpgradeCamera.GetComponentInParent<Canvas>(true);
+
+        if (canvas != null)
+        {
+            canvas.gameObject.SetActive(true);
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 32766;
+        }
+
+        painelUpgradeCamera.SetActive(true);
+        painelUpgradeCamera.transform.SetAsLastSibling();
     }
 
     private void CarregarEstadoInicial()
     {
         if (PersistenciaManager.Instance == null) return;
 
-        if (PersistenciaManager.Instance.ObterEstado("World_Is_Pixelated"))
-        {
-            if (pixelURPFeature != null) pixelURPFeature.SetActive(true);
-        }
-        else
-        {
-            if (pixelURPFeature != null) pixelURPFeature.SetActive(false);
-        }
+        bool mundoPixelado = PersistenciaManager.Instance.ObterEstado("World_Is_Pixelated", false);
 
-        if (PersistenciaManager.Instance.ObterEstado("PC_" + idDoComputador + "_Queimado"))
+        if (pixelURPFeature != null)
+            pixelURPFeature.SetActive(mundoPixelado);
+
+        if (PersistenciaManager.Instance.ObterEstado(ChavePcQueimado, false))
         {
             pcQueimado = true;
+            modoRunaAtivo = false;
             DesligarTudo();
+
+            if (telaAzulUITransicao)
+                telaAzulUITransicao.SetActive(false);
 
             if (FPS_Master.Instance != null)
                 FPS_Master.Instance.AlterarEstadoJogador(false, false);
@@ -117,31 +200,47 @@ public class ComputerController : MonoBehaviour
             return;
         }
 
-        if (PersistenciaManager.Instance.ObterEstado("PC_Crash_Event"))
+        if (PersistenciaManager.Instance.ObterEstado("PC_Crash_Event", false))
         {
             AtivarModoPósCrash(false);
+            return;
         }
-        else if (PersistenciaManager.Instance.ObterEstado("FuseBox_Noite_Resolvida"))
+
+        bool painelExtraAtivo =
+            PersistenciaManager.Instance.ObterEstado(ChavePainelExtra, false) ||
+            PersistenciaManager.Instance.ObterEstado("FuseBox_Noite_Resolvida", false);
+
+        bool painelMundo2DAtivo =
+            PersistenciaManager.Instance.ObterEstado(ChavePainelMundo2D, false) ||
+            PersistenciaManager.Instance.ObterEstado("FuseBox_Dia_Resolvida", false);
+
+        bool painelMundo2DConcluido =
+            PersistenciaManager.Instance.ObterEstado(ChavePainelMundo2DConcluido, false);
+
+        if (painelExtraAtivo)
         {
             AtivarModoBonusNoite(false);
 
             if (FPS_Master.Instance != null)
                 FPS_Master.Instance.AlterarEstadoJogador(false, false);
+
+            return;
         }
-        else if (PersistenciaManager.Instance.ObterEstado("FuseBox_Dia_Resolvida"))
+
+        if (painelMundo2DAtivo && !painelMundo2DConcluido)
         {
             AtivarModoNormal(false);
 
             if (FPS_Master.Instance != null)
                 FPS_Master.Instance.AlterarEstadoJogador(false, false);
-        }
-        else
-        {
-            DesligarTudo();
 
-            if (FPS_Master.Instance != null)
-                FPS_Master.Instance.AlterarEstadoJogador(false, false);
+            return;
         }
+
+        DesligarTudo();
+
+        if (FPS_Master.Instance != null)
+            FPS_Master.Instance.AlterarEstadoJogador(false, false);
     }
 
     public void AoOlhar()
@@ -183,11 +282,26 @@ public class ComputerController : MonoBehaviour
 
     public void LigarPCProMundo2D()
     {
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado("FuseBox_Dia_Resolvida", true);
+            PersistenciaManager.Instance.RegistrarEstado(ChavePainelMundo2D, true);
+            PersistenciaManager.Instance.RegistrarEstado(ChavePainelMundo2DConcluido, false);
+            PersistenciaManager.Instance.SalvarTudo(true);
+        }
+
         AtivarModoNormal(true);
     }
 
     public void LigarPcSetaNoite()
     {
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado("FuseBox_Noite_Resolvida", true);
+            PersistenciaManager.Instance.RegistrarEstado(ChavePainelExtra, true);
+            PersistenciaManager.Instance.SalvarTudo(true);
+        }
+
         AtivarModoBonusNoite(true);
     }
 
@@ -217,24 +331,72 @@ public class ComputerController : MonoBehaviour
     {
         modoRunaAtivo = true;
         DesligarTudo();
-        
+
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado(ChavePainelMundo2DConcluido, true);
+            PersistenciaManager.Instance.RegistrarEstado(ChavePainelMundo2D, false);
+            PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", true);
+        }
+
         if (telaBSOD_Runa)
             telaBSOD_Runa.SetActive(true); 
-
-        if (telaAzulUITransicao)
-            telaAzulUITransicao.SetActive(true);
 
         if (tocarSom)
             TocarSom();
 
-        if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", true);
-
         if (pixelURPFeature != null)
             pixelURPFeature.SetActive(true);
 
+        GarantirChaveDaCasa();
+        ReposicionarPlayerPosCrash();
+
+        if (DayNightCycle.Instance != null)
+            DayNightCycle.Instance.ChangeTo(DayNightCycle.TimeState.Night);
+
+        if (deveRodarCutscenePosCrash)
+        {
+            StartCoroutine(SequenciaDeAberturaDaCena());
+        }
+        else
+        {
+            if (telaAzulUITransicao)
+                telaAzulUITransicao.SetActive(false);
+
+            if (painelUpgradeCamera)
+                painelUpgradeCamera.SetActive(false);
+
+            if (FPS_Master.Instance != null)
+                FPS_Master.Instance.AlterarEstadoJogador(false, false);
+        }
+
+        SalvarEstadoAtualDoJogo();
+    }
+
+    private void GarantirChaveDaCasa()
+    {
         if (PersistenciaManager.Instance != null &&
-            PersistenciaManager.Instance.ObterEstado("Player3D_HasSave") &&
+            PersistenciaManager.Instance.ObterEstado(ChaveChaveCasaRecebida, false))
+        {
+            if (iconeChaveHUD)
+                iconeChaveHUD.SetActive(true);
+
+            return;
+        }
+
+        KeySystem.AdicionarChave(idChaveDaCasa);
+
+        if (iconeChaveHUD)
+            iconeChaveHUD.SetActive(true);
+
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.RegistrarEstado(ChaveChaveCasaRecebida, true);
+    }
+
+    private void ReposicionarPlayerPosCrash()
+    {
+        if (PersistenciaManager.Instance != null &&
+            PersistenciaManager.Instance.ObterEstado("Player3D_HasSave", false) &&
             player3D != null &&
             FPS_Master.Instance != null)
         {
@@ -261,11 +423,6 @@ public class ComputerController : MonoBehaviour
 
             Physics.SyncTransforms();
         }
-
-        if (DayNightCycle.Instance != null)
-            DayNightCycle.Instance.ChangeTo(DayNightCycle.TimeState.Night);
-
-        StartCoroutine(SequenciaDeAberturaDaCena());
     }
 
     private IEnumerator SequenciaDeAberturaDaCena()
@@ -276,21 +433,16 @@ public class ComputerController : MonoBehaviour
         if (FPS_Master.Instance != null)
             FPS_Master.Instance.AlterarEstadoJogador(true, false);
 
+        AtivarTelaAzulImediata();
+
         yield return new WaitForSecondsRealtime(tempoTelaAzul); 
 
         if (telaAzulUITransicao)
             telaAzulUITransicao.SetActive(false);
 
-        if (painelUpgradeCamera != null)
-        {
-            Canvas canvasPai = painelUpgradeCamera.GetComponentInParent<Canvas>(true);
+        yield return null;
 
-            if (canvasPai != null)
-                canvasPai.gameObject.SetActive(true);
-
-            painelUpgradeCamera.SetActive(true);
-            painelUpgradeCamera.transform.SetAsLastSibling(); 
-        }
+        MostrarPainelUpgradeSemDestruirLayout();
 
         if (audioSourcePC != null && somUpgradeCamera != null)
             audioSourcePC.PlayOneShot(somUpgradeCamera);
@@ -304,9 +456,7 @@ public class ComputerController : MonoBehaviour
             }
 
             if (RealityCamera.Instance != null)
-            {
                 RealityCamera.Instance.ReceberUpgradeLanterna();
-            }
         }
         catch (System.Exception) { }
 
@@ -314,6 +464,14 @@ public class ComputerController : MonoBehaviour
         
         if (painelUpgradeCamera)
             painelUpgradeCamera.SetActive(false);
+
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado(ChaveCutsceneVista, true);
+            PersistenciaManager.Instance.RegistrarEstado(ChaveChaveCasaRecebida, true);
+            PersistenciaManager.Instance.RegistrarEstado(ChavePainelMundo2DConcluido, true);
+            PersistenciaManager.Instance.RegistrarEstado(ChavePainelMundo2D, false);
+        }
 
         cutsceneRodando = false;
 
@@ -365,11 +523,10 @@ public class ComputerController : MonoBehaviour
 
         if (InventarioRunas.Instance != null)
             InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
+        else if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.RegistrarEstado("Runa_" + nomeDaRuna, true);
         
-        KeySystem.AdicionarChave(idChaveDaCasa);
-
-        if (iconeChaveHUD)
-            iconeChaveHUD.SetActive(true);
+        GarantirChaveDaCasa();
 
         if (painelAvisoRuna)
             painelAvisoRuna.SetActive(true);
@@ -386,13 +543,13 @@ public class ComputerController : MonoBehaviour
         
         if (PersistenciaManager.Instance != null)
         {
-            PersistenciaManager.Instance.RegistrarEstado("PC_" + idDoComputador + "_Queimado", true);
+            PersistenciaManager.Instance.RegistrarEstado(ChavePcQueimado, true);
             PersistenciaManager.Instance.RegistrarEstado("PC_Crash_Event", false); 
+            PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", true);
         }
         
         pcQueimado = true;
         modoRunaAtivo = false;
-        
         cutsceneRodando = false;
 
         if (FPS_Master.Instance != null)
@@ -468,13 +625,9 @@ public class ComputerController : MonoBehaviour
         InterfaceManager interfaceManager = InterfaceManagerDisponivel();
 
         if (interfaceManager != null)
-        {
             interfaceManager.IniciarLoadingParaCena(nomeDaCena2D);
-        }
         else
-        {
             SceneManager.LoadScene(nomeDaCena2D);
-        }
     }
 
     private IEnumerator CarregarCena2DComPainelLocal()
@@ -506,7 +659,6 @@ public class ComputerController : MonoBehaviour
         if (canvas != null)
         {
             canvas.gameObject.SetActive(true);
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 30000;
         }
 
@@ -561,7 +713,7 @@ public class ComputerController : MonoBehaviour
         }
         else
         {
-            PersistenciaManager.Instance.SalvarTudo(false);
+            PersistenciaManager.Instance.SalvarTudo(true);
         }
     }
 
