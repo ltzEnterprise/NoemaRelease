@@ -54,7 +54,7 @@ public class DayNightCycle : MonoBehaviour
     public LightingProfile dramaticDayProfile;
     public LightingProfile nightProfile;
 
-    [Header("--- MATERIAL DA GAMBIARRA ---")]
+    [Header("--- MATERIAL DO FOG ---")]
     public Material horizonFogMaterial; 
 
     [Header("--- MATERIAIS DA GRAMA ---")]

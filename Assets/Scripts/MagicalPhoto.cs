@@ -3,6 +3,10 @@ using System.Collections;
 
 public class MagicalPhoto : MonoBehaviour
 {
+    [Header("--- SAVE SYSTEM ---")]
+    [Tooltip("ID único desta foto. Ex: Foto_Castelo_01. NÃO deixe repetido entre fotos diferentes.")]
+    public string uniqueID = "Foto_Magica_01";
+
     [Header("--- HORÁRIO NECESSÁRIO ---")]
     public DayNightCycle.TimeState horarioNecessario = DayNightCycle.TimeState.InitialDay;
 
@@ -42,38 +46,46 @@ public class MagicalPhoto : MonoBehaviour
 
     void Start()
     {
-        if (textoDicaMagica) textoDicaMagica.SetActive(false);
+        if (textoDicaMagica)
+            textoDicaMagica.SetActive(false);
+
         StartCoroutine(CarregarEstadoSeguro());
     }
 
     IEnumerator CarregarEstadoSeguro()
     {
         if (PersistenciaManager.Instance != null)
-            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
-
-        bool jaResolvido = false;
-
-        if (PersistenciaManager.Instance != null && objectToReveal != null)
-            jaResolvido = PersistenciaManager.Instance.ObterEstado(objectToReveal.name, false);
-
-        if (jaResolvido)
         {
+            yield return new WaitUntil(() =>
+                PersistenciaManager.Instance.DadosProntosParaUso &&
+                !PersistenciaManager.Instance.EstaCarregando
+            );
+        }
+
+        bool estaFotoJaFoiUsada = false;
+
+        if (PersistenciaManager.Instance != null)
+            estaFotoJaFoiUsada = PersistenciaManager.Instance.ObterEstado(ChaveFotoUsada(), false);
+
+        if (estaFotoJaFoiUsada)
+        {
+            alreadyUsed = true;
+
             if (objectToReveal)
                 objectToReveal.SetActive(hideInsteadOfReveal ? false : true);
 
-            alreadyUsed = true;
-
-            if (consumirFotoAoUsar && InventoryManager.Instance != null)
-                InventoryManager.Instance.ConsumirItem(idDaFotoNoInventario);
+            if (textoDicaMagica)
+                textoDicaMagica.SetActive(false);
 
             gameObject.SetActive(false);
             yield break;
         }
-        else
-        {
-            if (objectToReveal)
-                objectToReveal.SetActive(hideInsteadOfReveal ? true : false);
-        }
+
+        // Se esta foto específica ainda NÃO foi usada, o objeto fica no estado inicial.
+        // Não lê mais estado global de objectToReveal.name nem chave separada do objeto.
+        // Isso impede uma foto de afetar outra.
+        if (objectToReveal)
+            objectToReveal.SetActive(hideInsteadOfReveal ? true : false);
 
         inicializado = true;
     }
@@ -83,8 +95,11 @@ public class MagicalPhoto : MonoBehaviour
         if (!inicializado) return;
         if (alreadyUsed) return;
 
-        if (Input.GetMouseButtonDown(1)) isAiming = true;
-        if (Input.GetMouseButtonUp(1)) isAiming = false;
+        if (Input.GetMouseButtonDown(1))
+            isAiming = true;
+
+        if (Input.GetMouseButtonUp(1))
+            isAiming = false;
 
         Vector3 targetPos = isAiming ? aimingPosition : restingPosition;
         Quaternion targetRot = Quaternion.Euler(isAiming ? aimingRotation : restingRotation);
@@ -123,7 +138,8 @@ public class MagicalPhoto : MonoBehaviour
             return;
         }
 
-        if (idealPoint == null || Camera.main == null) return;
+        if (idealPoint == null || Camera.main == null)
+            return;
 
         float dist = Vector3.Distance(Camera.main.transform.position, idealPoint.position);
         float angle = Quaternion.Angle(Camera.main.transform.rotation, idealPoint.rotation);
@@ -139,7 +155,11 @@ public class MagicalPhoto : MonoBehaviour
 
     IEnumerator SequenciaVitoria()
     {
+        if (alreadyUsed) yield break;
+
         alreadyUsed = true;
+        inicializado = false;
+        isAiming = false;
         
         if (objectToReveal)
             objectToReveal.SetActive(hideInsteadOfReveal ? false : true);
@@ -147,13 +167,12 @@ public class MagicalPhoto : MonoBehaviour
         if (audioSource && revealSound)
             audioSource.PlayOneShot(revealSound);
 
-        if (PersistenciaManager.Instance != null && objectToReveal != null)
-            PersistenciaManager.Instance.RegistrarEstado(objectToReveal.name, true);
+        RegistrarUsoDestaFotoNoSave();
 
-        if (consumirFotoAoUsar && InventoryManager.Instance != null)
-            InventoryManager.Instance.ConsumirItem(idDaFotoNoInventario);
+        if (consumirFotoAoUsar)
+            RemoverSomenteEstaFotoDoInventario();
 
-        float t = 0;
+        float t = 0f;
         Vector3 currentPos = transform.localPosition;
         Vector3 currentScale = transform.localScale;
         
@@ -166,7 +185,113 @@ public class MagicalPhoto : MonoBehaviour
         }
 
         SalvarProgressoSeguro();
+
         gameObject.SetActive(false);
+    }
+
+    private void RegistrarUsoDestaFotoNoSave()
+    {
+        if (PersistenciaManager.Instance == null)
+            return;
+
+        PersistenciaManager.Instance.RegistrarEstado(ChaveFotoUsada(), true);
+    }
+
+    private void RemoverSomenteEstaFotoDoInventario()
+    {
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.ConsumirItem(idDaFotoNoInventario);
+        }
+        else
+        {
+            RegistrarItemBloqueadoNoSave(idDaFotoNoInventario);
+        }
+    }
+
+    private void RegistrarItemBloqueadoNoSave(int id)
+    {
+        if (PersistenciaManager.Instance == null)
+            return;
+
+        if (id < 0)
+            return;
+
+        if (SistemaGlobal.Instance != null &&
+            SistemaGlobal.Instance.slotFoiDefinido &&
+            SistemaGlobal.Instance.slotAtual > 0)
+        {
+            string prefixo = "Slot_" + SistemaGlobal.Instance.slotAtual;
+
+            PersistenciaManager.Instance.RegistrarEstado(prefixo + "_InvUnlocked_" + id, false);
+
+            int itemSelecionado = PersistenciaManager.Instance.ObterInt(prefixo + "_Inv_ItemSelected", -1);
+
+            if (itemSelecionado == id)
+                PersistenciaManager.Instance.SalvarInt(prefixo + "_Inv_ItemSelected", -1);
+        }
+
+        PersistenciaManager.Instance.RegistrarEstado("InvUnlocked_" + id, false);
+
+        int itemSelecionadoGlobal = PersistenciaManager.Instance.ObterInt("Inv_ItemSelected", -1);
+
+        if (itemSelecionadoGlobal == id)
+            PersistenciaManager.Instance.SalvarInt("Inv_ItemSelected", -1);
+    }
+
+    private string ChaveFotoUsada()
+    {
+        // A chave agora usa:
+        // - cena
+        // - caminho do objeto na hierarquia
+        // - uniqueID
+        // - ID do item no inventário
+        //
+        // Isso evita uma foto marcar outra como usada, mesmo se você esquecer uniqueID igual.
+        string cena = gameObject.scene.IsValid() ? gameObject.scene.name : "CenaSemNome";
+        string caminho = ObterCaminhoHierarquia(transform);
+        string id = string.IsNullOrEmpty(uniqueID) ? "FotoSemID" : uniqueID.Trim();
+
+        return "MagicalPhoto_" +
+               NormalizarTexto(cena) + "_" +
+               NormalizarTexto(caminho) + "_" +
+               NormalizarTexto(id) + "_Item_" +
+               idDaFotoNoInventario + "_Usada";
+    }
+
+    private string ObterCaminhoHierarquia(Transform t)
+    {
+        if (t == null)
+            return "ObjetoNulo";
+
+        string caminho = t.name;
+        Transform atual = t.parent;
+
+        while (atual != null)
+        {
+            caminho = atual.name + "/" + caminho;
+            atual = atual.parent;
+        }
+
+        return caminho;
+    }
+
+    private string NormalizarTexto(string texto)
+    {
+        if (string.IsNullOrEmpty(texto))
+            return "vazio";
+
+        return texto
+            .Trim()
+            .ToLowerInvariant()
+            .Replace(" ", "_")
+            .Replace("/", "_")
+            .Replace("\\", "_")
+            .Replace("(", "_")
+            .Replace(")", "_")
+            .Replace("-", "_")
+            .Replace(".", "_")
+            .Replace(":", "_");
     }
 
     private void SalvarProgressoSeguro()

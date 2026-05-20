@@ -5,16 +5,14 @@ using UnityEngine.Rendering;
 public class AltarActivationCutscene : MonoBehaviour
 {
     [Header("--- SAVE SYSTEM ---")]
-    [Tooltip("ID único desta cutscene. Ex: Cutscene_AltarArma_01")]
     public string uniqueID = "Cutscene_AltarArma_01";
     public bool executarApenasUmaVez = true;
 
     [Header("--- GENERAL REFERENCES ---")]
-    public WeaponAltar altarScript; 
-    public Camera playerMainCamera; 
+    public WeaponAltar altarScript;
+    public Camera playerMainCamera;
 
     [Header("--- UI ---")]
-    [Tooltip("Arraste aqui a imagem da retícula/crosshair para ela sumir durante a cutscene.")]
     public GameObject reticula;
 
     [Header("--- CUTSCENE CAMERAS ---")]
@@ -23,30 +21,35 @@ public class AltarActivationCutscene : MonoBehaviour
     public Camera cam3CloseAltar;
 
     [Header("--- AUDIO ---")]
-    public AudioSource cutsceneMusicSource; 
-    public AudioSource sfxSkySource;       
-    public AudioSource sfxCloseWeaponSource; 
+    public AudioSource cutsceneMusicSource;
+    public AudioSource sfxSkySource;
+    public AudioSource sfxCloseWeaponSource;
 
     [Header("--- TIMING (Shot Durations) ---")]
     public float shot1Duration = 4f;
-    public float shot2Duration = 5f; 
+    public float shot2Duration = 5f;
     public float shot3Duration = 3f;
 
     [Header("--- SKY CONFIG ---")]
-    public float skyTransitionDuration = 2.5f; 
-    public float targetExposure = 1.27f; 
+    public float skyTransitionDuration = 2.5f;
+    public float targetExposure = 1.27f;
 
     [Header("--- MUSIC FADE CONFIG ---")]
-    public float fadeOutDuration = 2.5f; 
+    public float fadeOutDuration = 2.5f;
 
     private Material originalSkybox;
     private Material instancedSkybox;
     private float initialExposure;
     private bool isCam1Recoiling = false;
-    private float originalMusicVolume; 
+    private float originalMusicVolume;
     private bool cutsceneJaExecutada = false;
+    private bool ceuFinalAplicado = false;
     private bool emCutscene = false;
     private bool reticulaEstadoAnterior = true;
+
+    private string ChaveCutsceneVista { get { return uniqueID + "_Visto"; } }
+    private string ChaveCutsceneIniciada { get { return uniqueID + "_Iniciada"; } }
+    private string ChaveCeuFinalAplicado { get { return uniqueID + "_CeuFinalAplicado"; } }
 
     void Start()
     {
@@ -54,22 +57,30 @@ public class AltarActivationCutscene : MonoBehaviour
         if (cam2Sky) cam2Sky.gameObject.SetActive(false);
         if (cam3CloseAltar) cam3CloseAltar.gameObject.SetActive(false);
 
-        if (cutsceneMusicSource) originalMusicVolume = cutsceneMusicSource.volume;
+        if (cutsceneMusicSource)
+            originalMusicVolume = cutsceneMusicSource.volume;
 
         StartCoroutine(CarregarEstadoSeguro());
     }
 
     IEnumerator CarregarEstadoSeguro()
     {
-        if (PersistenciaManager.Instance != null)
-        {
-            yield return new WaitUntil(() =>
-                PersistenciaManager.Instance.DadosProntosParaUso &&
-                !PersistenciaManager.Instance.EstaCarregando
-            );
+        yield return new WaitUntil(() =>
+            PersistenciaManager.Instance != null &&
+            PersistenciaManager.Instance.DadosProntosParaUso &&
+            !PersistenciaManager.Instance.EstaCarregando
+        );
 
-            if (!string.IsNullOrEmpty(uniqueID))
-                cutsceneJaExecutada = PersistenciaManager.Instance.ObterEstado(uniqueID + "_Visto", false);
+        if (!string.IsNullOrEmpty(uniqueID))
+        {
+            cutsceneJaExecutada = PersistenciaManager.Instance.ObterEstado(ChaveCutsceneVista, false);
+            ceuFinalAplicado = PersistenciaManager.Instance.ObterEstado(ChaveCeuFinalAplicado, false);
+
+            if (cutsceneJaExecutada || ceuFinalAplicado)
+            {
+                AplicarCeuFinalDaCutscene();
+                SalvarCeuFinalAplicado();
+            }
         }
     }
 
@@ -79,16 +90,19 @@ public class AltarActivationCutscene : MonoBehaviour
             cam1Recoil.transform.Translate(Vector3.back * 0.5f * Time.deltaTime, Space.Self);
     }
 
-    public void IniciarCutscene() 
+    public void IniciarCutscene()
     {
         if (emCutscene) return;
 
         if (executarApenasUmaVez && cutsceneJaExecutada)
         {
-            Debug.Log($"[AltarActivationCutscene] Cutscene '{uniqueID}' já foi vista. Finalizando altar sem repetir câmera.");
+            AplicarCeuFinalDaCutscene();
+            SalvarCeuFinalAplicado();
 
             if (altarScript != null)
                 altarScript.FinalizeActivation();
+
+            StartCoroutine(ReaplicarCeuFinalDepoisDoAltar());
 
             return;
         }
@@ -102,7 +116,7 @@ public class AltarActivationCutscene : MonoBehaviour
         if (PersistenciaManager.Instance == null) return;
 
         if (!string.IsNullOrEmpty(uniqueID))
-            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Iniciada", true);
+            PersistenciaManager.Instance.RegistrarEstado(ChaveCutsceneIniciada, true);
 
         PersistenciaManager.Instance.SalvarTudo(true);
     }
@@ -113,16 +127,16 @@ public class AltarActivationCutscene : MonoBehaviour
 
         EsconderReticula();
 
-        if (cutsceneMusicSource) 
+        if (cutsceneMusicSource)
         {
-            cutsceneMusicSource.volume = originalMusicVolume; 
+            cutsceneMusicSource.volume = originalMusicVolume;
             cutsceneMusicSource.Play();
         }
 
-        if (FPS_Master.Instance != null) 
+        if (FPS_Master.Instance != null)
         {
             FPS_Master.Instance.AlterarEstadoJogador(true, false);
-            FPS_Master.Instance.FicarInvisivelMasFisico(true); 
+            FPS_Master.Instance.FicarInvisivelMasFisico(true);
         }
 
         if (playerMainCamera)
@@ -131,14 +145,7 @@ public class AltarActivationCutscene : MonoBehaviour
         if (altarScript != null && altarScript.visualWeapon != null)
             altarScript.visualWeapon.SetActive(true);
 
-        originalSkybox = RenderSettings.skybox;
-
-        if (originalSkybox != null)
-        {
-            instancedSkybox = new Material(originalSkybox);
-            RenderSettings.skybox = instancedSkybox;
-            initialExposure = instancedSkybox.HasProperty("_Exposure") ? instancedSkybox.GetFloat("_Exposure") : 1f;
-        }
+        PrepararSkyboxInstanciado();
 
         if (cam1Recoil)
             cam1Recoil.gameObject.SetActive(true);
@@ -154,7 +161,7 @@ public class AltarActivationCutscene : MonoBehaviour
             cam2Sky.gameObject.SetActive(true);
 
         if (sfxSkySource)
-            sfxSkySource.Play(); 
+            sfxSkySource.Play();
 
         float skyTimer = 0f;
 
@@ -171,11 +178,11 @@ public class AltarActivationCutscene : MonoBehaviour
                 DynamicGI.UpdateEnvironment();
             }
 
-            yield return null; 
+            yield return null;
         }
 
-        if (instancedSkybox && instancedSkybox.HasProperty("_Exposure")) 
-            instancedSkybox.SetFloat("_Exposure", targetExposure);
+        AplicarCeuFinalDaCutscene();
+        SalvarCeuFinalAplicado();
 
         if (cam2Sky)
             cam2Sky.gameObject.SetActive(false);
@@ -184,7 +191,7 @@ public class AltarActivationCutscene : MonoBehaviour
             cam3CloseAltar.gameObject.SetActive(true);
 
         if (sfxCloseWeaponSource)
-            sfxCloseWeaponSource.Play(); 
+            sfxCloseWeaponSource.Play();
 
         StartCoroutine(MusicFadeOut());
 
@@ -196,9 +203,9 @@ public class AltarActivationCutscene : MonoBehaviour
         if (playerMainCamera)
             playerMainCamera.gameObject.SetActive(true);
 
-        if (FPS_Master.Instance != null) 
+        if (FPS_Master.Instance != null)
         {
-            FPS_Master.Instance.FicarInvisivelMasFisico(false); 
+            FPS_Master.Instance.FicarInvisivelMasFisico(false);
             FPS_Master.Instance.AlterarEstadoJogador(false, false);
         }
 
@@ -209,7 +216,66 @@ public class AltarActivationCutscene : MonoBehaviour
         emCutscene = false;
 
         if (altarScript != null)
-            altarScript.FinalizeActivation(); 
+            altarScript.FinalizeActivation();
+
+        StartCoroutine(ReaplicarCeuFinalDepoisDoAltar());
+    }
+
+    private IEnumerator ReaplicarCeuFinalDepoisDoAltar()
+    {
+        yield return null;
+        yield return new WaitForEndOfFrame();
+
+        AplicarCeuFinalDaCutscene();
+        SalvarCeuFinalAplicado();
+
+        yield return new WaitForSeconds(0.1f);
+
+        AplicarCeuFinalDaCutscene();
+    }
+
+    private void PrepararSkyboxInstanciado()
+    {
+        if (instancedSkybox != null)
+        {
+            RenderSettings.skybox = instancedSkybox;
+            initialExposure = instancedSkybox.HasProperty("_Exposure") ? instancedSkybox.GetFloat("_Exposure") : 1f;
+            return;
+        }
+
+        originalSkybox = RenderSettings.skybox;
+
+        if (originalSkybox != null)
+        {
+            instancedSkybox = new Material(originalSkybox);
+            RenderSettings.skybox = instancedSkybox;
+            initialExposure = instancedSkybox.HasProperty("_Exposure") ? instancedSkybox.GetFloat("_Exposure") : 1f;
+        }
+    }
+
+    public void AplicarCeuFinalDaCutscene()
+    {
+        PrepararSkyboxInstanciado();
+
+        if (instancedSkybox && instancedSkybox.HasProperty("_Exposure"))
+        {
+            instancedSkybox.SetFloat("_Exposure", targetExposure);
+            RenderSettings.skybox = instancedSkybox;
+            DynamicGI.UpdateEnvironment();
+        }
+
+        ceuFinalAplicado = true;
+    }
+
+    private void SalvarCeuFinalAplicado()
+    {
+        ceuFinalAplicado = true;
+
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+        {
+            PersistenciaManager.Instance.RegistrarEstado(ChaveCeuFinalAplicado, true);
+            PersistenciaManager.Instance.SalvarTudo(true);
+        }
     }
 
     IEnumerator MusicFadeOut()
@@ -224,7 +290,7 @@ public class AltarActivationCutscene : MonoBehaviour
         {
             timeElapsed += Time.deltaTime;
             cutsceneMusicSource.volume = Mathf.Lerp(startVol, 0f, timeElapsed / fadeOutDuration);
-            yield return null; 
+            yield return null;
         }
 
         cutsceneMusicSource.volume = 0f;
@@ -250,43 +316,40 @@ public class AltarActivationCutscene : MonoBehaviour
     private void SalvarCutsceneVista()
     {
         cutsceneJaExecutada = true;
+        ceuFinalAplicado = true;
 
         if (!string.IsNullOrEmpty(uniqueID) && PersistenciaManager.Instance != null)
         {
-            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Iniciada", true);
-            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Visto", true);
+            PersistenciaManager.Instance.RegistrarEstado(ChaveCutsceneIniciada, true);
+            PersistenciaManager.Instance.RegistrarEstado(ChaveCutsceneVista, true);
+            PersistenciaManager.Instance.RegistrarEstado(ChaveCeuFinalAplicado, true);
             PersistenciaManager.Instance.SalvarTudo(true);
         }
     }
 
     void OnDestroy()
     {
-        if (originalSkybox != null)
+        if (!ceuFinalAplicado && originalSkybox != null)
         {
             RenderSettings.skybox = originalSkybox;
             DynamicGI.UpdateEnvironment();
         }
 
-        if (instancedSkybox != null)
+        if (instancedSkybox != null && !ceuFinalAplicado)
             Destroy(instancedSkybox);
 
         if (emCutscene)
         {
-            if (cam1Recoil)
-                cam1Recoil.gameObject.SetActive(false);
-
-            if (cam2Sky)
-                cam2Sky.gameObject.SetActive(false);
-
-            if (cam3CloseAltar)
-                cam3CloseAltar.gameObject.SetActive(false);
+            if (cam1Recoil) cam1Recoil.gameObject.SetActive(false);
+            if (cam2Sky) cam2Sky.gameObject.SetActive(false);
+            if (cam3CloseAltar) cam3CloseAltar.gameObject.SetActive(false);
 
             if (playerMainCamera)
                 playerMainCamera.gameObject.SetActive(true);
 
-            if (FPS_Master.Instance != null) 
+            if (FPS_Master.Instance != null)
             {
-                FPS_Master.Instance.FicarInvisivelMasFisico(false); 
+                FPS_Master.Instance.FicarInvisivelMasFisico(false);
                 FPS_Master.Instance.AlterarEstadoJogador(false, false);
             }
 

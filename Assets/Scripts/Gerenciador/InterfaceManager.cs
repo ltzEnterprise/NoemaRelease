@@ -725,6 +725,8 @@ public class InterfaceManager : MonoBehaviour
             yield return new WaitForSecondsRealtime(esperaDepoisDaCenaPronta);
 
         yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
 
         if (fadeOutLoadingFinal > 0f)
             yield return StartCoroutine(FadeOutPainelLoadingFinal());

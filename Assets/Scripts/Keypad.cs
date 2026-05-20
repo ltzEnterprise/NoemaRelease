@@ -60,7 +60,8 @@ public class Keypad : MonoBehaviour
         if (cameraFixaKeypad) 
         {
             cameraFixaKeypad.gameObject.SetActive(false);
-            var listener = cameraFixaKeypad.GetComponent<AudioListener>();
+
+            AudioListener listener = cameraFixaKeypad.GetComponent<AudioListener>();
             if (listener) listener.enabled = false;
         }
 
@@ -74,7 +75,12 @@ public class Keypad : MonoBehaviour
     IEnumerator InicializarSeguro()
     {
         if (PersistenciaManager.Instance != null)
-            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+        {
+            yield return new WaitUntil(() =>
+                PersistenciaManager.Instance.DadosProntosParaUso &&
+                !PersistenciaManager.Instance.EstaCarregando
+            );
+        }
 
         AtualizarDisplay();
         inicializado = true;
@@ -83,7 +89,9 @@ public class Keypad : MonoBehaviour
     public void AoOlhar() 
     { 
         if (!inicializado) return;
+
         estaOlhando = true;
+
         if (TaBloqueado()) return; 
 
         if (!jogadorUsando && textoInteragirProprio) 
@@ -93,6 +101,7 @@ public class Keypad : MonoBehaviour
     public void AoSair() 
     { 
         estaOlhando = false;
+
         if (textoInteragirProprio) 
             textoInteragirProprio.SetActive(false); 
     }
@@ -101,7 +110,9 @@ public class Keypad : MonoBehaviour
     {
         if (!inicializado) return;
         if (TaBloqueado()) return; 
-        if (!jogadorUsando) EntrarModoKeypad();
+
+        if (!jogadorUsando)
+            EntrarModoKeypad();
     }
 
     void Update()
@@ -136,6 +147,7 @@ public class Keypad : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             if (Time.time < tempoUltimoClique + cooldownClique) return;
+
             ProcessarCliqueMouse();
         }
     }
@@ -151,6 +163,7 @@ public class Keypad : MonoBehaviour
         foreach (RaycastHit hit in hits)
         {
             KeypadButton botao = hit.transform.GetComponent<KeypadButton>();
+
             if (botao != null)
             {
                 tempoUltimoClique = Time.time; 
@@ -166,7 +179,8 @@ public class Keypad : MonoBehaviour
         jogadorUsando = true;
         aguardandoSoltarE = true;
 
-        if (textoInteragirProprio) textoInteragirProprio.SetActive(false);
+        if (textoInteragirProprio)
+            textoInteragirProprio.SetActive(false);
 
         if (pontoDeRetorno != null && FPS_Master.Instance != null)
         {
@@ -181,7 +195,8 @@ public class Keypad : MonoBehaviour
             if (FPS_Master.Instance.cameraJogador) 
             {
                 FPS_Master.Instance.cameraJogador.enabled = false;
-                var listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
+
+                AudioListener listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
                 if (listener) listener.enabled = false;
             }
 
@@ -191,7 +206,8 @@ public class Keypad : MonoBehaviour
         if (cameraFixaKeypad) 
         {
             cameraFixaKeypad.gameObject.SetActive(true);
-            var listener = cameraFixaKeypad.GetComponent<AudioListener>();
+
+            AudioListener listener = cameraFixaKeypad.GetComponent<AudioListener>();
             if (listener) listener.enabled = true;
         }
     }
@@ -204,7 +220,8 @@ public class Keypad : MonoBehaviour
         if (cameraFixaKeypad) 
         {
             cameraFixaKeypad.gameObject.SetActive(false);
-            var listener = cameraFixaKeypad.GetComponent<AudioListener>();
+
+            AudioListener listener = cameraFixaKeypad.GetComponent<AudioListener>();
             if (listener) listener.enabled = false;
         }
 
@@ -215,7 +232,8 @@ public class Keypad : MonoBehaviour
             if (FPS_Master.Instance.cameraJogador) 
             {
                 FPS_Master.Instance.cameraJogador.enabled = true;
-                var listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
+
+                AudioListener listener = FPS_Master.Instance.cameraJogador.GetComponent<AudioListener>();
                 if (listener) listener.enabled = true;
             }
 
@@ -329,10 +347,11 @@ public class Keypad : MonoBehaviour
                 }
                 
                 if (manivelaFlutuante != null)
-                {
                     manivelaFlutuante.SetActive(false); 
-                }
             }
+
+            if (PersistenciaManager.Instance != null)
+                PersistenciaManager.Instance.SalvarTudo(true);
         }
 
         PrepararResetDisplay(); 
@@ -351,20 +370,13 @@ public class Keypad : MonoBehaviour
                 InventarioRunas.Instance = inventario;
         }
 
-        if (inventario != null)
+        if (inventario == null)
         {
-            inventario.ColetarRunaPeloNome(nomeDaRuna);
-            inventario.RecarregarDoSave();
+            Debug.LogError("[Keypad] InventarioRunas não encontrado. A runa NÃO foi entregue: " + nomeDaRuna);
             return;
         }
 
-        Debug.LogWarning("[Keypad] InventarioRunas não encontrado. Salvando a runa direto no PersistenciaManager: " + nomeDaRuna);
-
-        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(nomeDaRuna))
-        {
-            PersistenciaManager.Instance.RegistrarEstado("Runa_" + nomeDaRuna, true);
-            PersistenciaManager.Instance.SalvarTudo(true);
-        }
+        inventario.ColetarRunaPeloNome(nomeDaRuna);
     }
 
     void SucessoExtra()

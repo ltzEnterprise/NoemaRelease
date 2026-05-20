@@ -187,6 +187,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: The Player
       objectReference: {fileID: 0}
+    - target: {fileID: 7227924025501616772, guid: 62337a461f3212645a447d079bb8f208, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 7167103094844899107, guid: 62337a461f3212645a447d079bb8f208, type: 3}
@@ -10972,6 +10976,10 @@ MonoBehaviour:
   painelLoading: {fileID: 3241633127620816550}
   barraDeProgresso: {fileID: 7789796154599108088}
   nomeDaCenaDoJogo: 
+  tempoExtraLoading: 2
+  esperaDepoisDaCenaPronta: 0.25
+  fadeOutLoadingFinal: 0.35
+  esperarGameManagerCenaPronta: 1
   textosDosSlots: []
   textosBotaoApagar: []
   textoNovoJogo_PT: NOVO JOGO

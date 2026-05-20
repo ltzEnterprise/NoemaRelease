@@ -38,7 +38,12 @@ public class TVInterativa : MonoBehaviour
     IEnumerator VerificarSaveSeguro()
     {
         if (PersistenciaManager.Instance != null)
-            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+        {
+            yield return new WaitUntil(() =>
+                PersistenciaManager.Instance.DadosProntosParaUso &&
+                !PersistenciaManager.Instance.EstaCarregando
+            );
+        }
 
         VerificarSave();
         inicializado = true;
@@ -57,6 +62,7 @@ public class TVInterativa : MonoBehaviour
             
             if (imagemRunaNaTela) imagemRunaNaTela.SetActive(false);
             if (textoInteragir) textoInteragir.SetActive(false);
+            if (painelFeedback) painelFeedback.SetActive(false);
         }
     }
 
@@ -93,6 +99,8 @@ public class TVInterativa : MonoBehaviour
 
     void PegarRunaAgora()
     {
+        if (jaPegou) return;
+
         jaPegou = true;
         tvLigada = false; 
 
@@ -106,18 +114,23 @@ public class TVInterativa : MonoBehaviour
         }
 
         if (InventarioRunas.Instance != null)
-            InventarioRunas.Instance.ColetarRunaSemForcarSaveHD(nomeDaRuna);
+        {
+            InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
+        }
+        else
+        {
+            Debug.LogError("[TVInterativa] InventarioRunas.Instance está nulo. A runa NÃO foi entregue: " + nomeDaRuna);
+        }
 
         SalvarQueJaPegou();
     }
 
     void SalvarQueJaPegou()
     {
-        if (PersistenciaManager.Instance != null)
-        {
-            PersistenciaManager.Instance.RegistrarEstado(idUnico, false);
-            SalvarProgressoSeguro();
-        }
+        if (PersistenciaManager.Instance == null) return;
+
+        PersistenciaManager.Instance.RegistrarEstado(idUnico, false);
+        PersistenciaManager.Instance.SalvarTudo(true);
     }
 
     IEnumerator SequenciaLigarTV()
@@ -143,17 +156,5 @@ public class TVInterativa : MonoBehaviour
 
         if (painelFeedback)
             painelFeedback.SetActive(false);
-    }
-
-    private void SalvarProgressoSeguro()
-    {
-        if (GameManager.Instance != null && GameManager.CenaPronta)
-        {
-            GameManager.Instance.SalvarProgresso();
-            return;
-        }
-
-        if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.SalvarTudo(false);
     }
 }

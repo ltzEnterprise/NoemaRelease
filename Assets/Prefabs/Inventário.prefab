@@ -5498,6 +5498,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bdedd1fedf5e30b44acba57dfbfe9931, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MagicalPhoto
+  uniqueID: Foto_Magica_01
   horarioNecessario: 0
   restingPosition: {x: 0, y: 0, z: 0.14}
   restingRotation: {x: 8.55, y: -22.18, z: 0}
@@ -11303,6 +11304,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bdedd1fedf5e30b44acba57dfbfe9931, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MagicalPhoto
+  uniqueID: Foto_Magica_01
   horarioNecessario: 0
   restingPosition: {x: 0, y: 0, z: 0.14}
   restingRotation: {x: 8.55, y: -22.18, z: 0}
@@ -11966,6 +11968,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bdedd1fedf5e30b44acba57dfbfe9931, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MagicalPhoto
+  uniqueID: Foto_Magica_01
   horarioNecessario: 0
   restingPosition: {x: 0, y: 0, z: 0.14}
   restingRotation: {x: 8.55, y: -22.18, z: 0}
@@ -17437,6 +17440,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bdedd1fedf5e30b44acba57dfbfe9931, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MagicalPhoto
+  uniqueID: Foto_Magica_01
   horarioNecessario: 0
   restingPosition: {x: 0, y: 0, z: 0.14}
   restingRotation: {x: 8.55, y: -22.18, z: 0}

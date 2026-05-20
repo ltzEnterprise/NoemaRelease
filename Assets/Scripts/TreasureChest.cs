@@ -1,49 +1,48 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Collections;
 using TMPro;
 
 public class TreasureChest : MonoBehaviour
 {
     [Header("Save System")]
-    public string uniqueID; 
+    public string uniqueID;
 
     [Header("Configurações Básicas")]
-    public Transform tampaDoBau; 
-    public string nomeDaRunaNesteBau; 
+    public Transform tampaDoBau;
+    public string nomeDaRunaNesteBau;
 
     [Header("Recompensa: Item de Inventário")]
     public bool darItemInventario = false;
     public int idDoItemInventario = 0;
-    
+
     [Header("O Seu Painel Novo")]
-    public GameObject painelCustomizadoDaRecompensa; 
-    
+    public GameObject painelCustomizadoDaRecompensa;
+
     [Header("--- SISTEMA DE CHAVE ---")]
-    public bool requerChave = false;  
-    public string idChaveNecessaria; 
+    public bool requerChave = false;
+    public string idChaveNecessaria;
 
     [Header("--- TRAVA POR TELEPORTE ---")]
-    [Tooltip("Se ativado, o baú só funciona depois que o jogador usar o teleporte indicado abaixo.")]
     public bool bloquearAteUsarTeleport = false;
 
-    [Tooltip("Precisa ser igual ao uniqueID do TeleportArea necessário.")]
-    public string idTeleportNecessario = "TP_Castelo_01";
+    [Tooltip("Só precisa preencher se bloquearAteUsarTeleport estiver ligado.")]
+    public TeleportArea teleportNecessario;
 
-    [Tooltip("Mensagem opcional quando tentar usar o baú antes de passar pelo teleporte.")]
     public GameObject textoPrecisaTeleport;
 
     [Header("--- DEMO MODE ---")]
     public bool finalizaDemo = false;
-    public GameObject painelFimDemo; 
+    public GameObject painelFimDemo;
     public string nomeCenaMenu = "Menu";
     public float tempoParaVoltarMenu = 5f;
 
-    [Header("UI & Mensagens (Suas Variáveis Antigas)")]
-    public GameObject textoInteragir; 
-    public GameObject textoPrecisaChave; 
-    public GameObject painelPretoRecompensa;     
-    public TextMeshProUGUI textoRecompensa; 
-    public GameObject iconeChaveParaEsconder; 
+    [Header("UI & Mensagens")]
+    public GameObject textoInteragir;
+    public GameObject textoPrecisaChave;
+    public GameObject painelPretoRecompensa;
+    public TextMeshProUGUI textoRecompensa;
+    public GameObject iconeChaveParaEsconder;
 
     [Header("Sons")]
     public AudioSource audioSource;
@@ -51,65 +50,130 @@ public class TreasureChest : MonoBehaviour
     public AudioClip somTrancado;
 
     private bool jaAbriu = false;
-    private bool estaOlhando = false; 
-    private bool mostrandoErro = false;
-    private bool inicializado = false; 
+    private bool estaOlhando = false;
+    private bool inicializado = false;
+    private bool inicializando = false;
 
     private Coroutine rotinaAvisoChave;
     private Coroutine rotinaAvisoTeleport;
+    private Coroutine rotinaRecompensa;
+    private Coroutine rotinaTampa;
 
-    void Start()
+    private void Start()
+    {
+        DesligarUIInicial();
+        StartCoroutine(InicializarSeguro());
+    }
+
+    private void DesligarUIInicial()
     {
         if (textoInteragir) textoInteragir.SetActive(false);
         if (textoPrecisaChave) textoPrecisaChave.SetActive(false);
         if (textoPrecisaTeleport) textoPrecisaTeleport.SetActive(false);
-        if (painelFimDemo) painelFimDemo.SetActive(false); 
+        if (painelFimDemo) painelFimDemo.SetActive(false);
         if (painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
         if (painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
-
-        StartCoroutine(InicializarSeguro());
     }
 
-    IEnumerator InicializarSeguro()
+    private IEnumerator InicializarSeguro()
     {
-        if (PersistenciaManager.Instance != null)
-            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+        if (inicializando)
+            yield break;
 
-        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+        inicializando = true;
+
+        float timeout = 5f;
+
+        while (PersistenciaManager.Instance == null && timeout > 0f)
         {
-            jaAbriu = PersistenciaManager.Instance.ObterEstado(uniqueID, false);
-
-            if (jaAbriu)
-            {
-                if (tampaDoBau)
-                    tampaDoBau.localRotation = Quaternion.Euler(-90, 0, 0);
-
-                if (painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
-                if (painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
-            }
+            timeout -= Time.unscaledDeltaTime;
+            yield return null;
         }
 
-        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(idTeleportNecessario))
+        if (PersistenciaManager.Instance != null)
         {
-            bool tpUsado =
-                PersistenciaManager.Instance.ObterEstado(idTeleportNecessario + "_Usado", false) ||
-                PersistenciaManager.Instance.ObterEstado(idTeleportNecessario, false);
+            timeout = 5f;
 
-            if (tpUsado)
-                TeleportArea.RegistrarTeleportUsadoExternamente(idTeleportNecessario);
+            while ((!PersistenciaManager.Instance.DadosProntosParaUso || PersistenciaManager.Instance.EstaCarregando) && timeout > 0f)
+            {
+                timeout -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            CarregarEstadoDoBau();
+        }
+        else
+        {
+            Debug.LogWarning("[TreasureChest] PersistenciaManager não apareceu. Baú vai funcionar sem carregar save inicial: " + gameObject.name);
         }
 
         inicializado = true;
+        inicializando = false;
+
+        Debug.Log("[TreasureChest] Inicializado: " + gameObject.name +
+                  " | uniqueID=" + uniqueID +
+                  " | jaAbriu=" + jaAbriu +
+                  " | requerChave=" + requerChave +
+                  " | bloquearAteUsarTeleport=" + bloquearAteUsarTeleport);
+    }
+
+    private void CarregarEstadoDoBau()
+    {
+        if (PersistenciaManager.Instance == null)
+            return;
+
+        if (string.IsNullOrEmpty(uniqueID))
+        {
+            Debug.LogWarning("[TreasureChest] uniqueID vazio. O baú funciona, mas não salva aberto: " + gameObject.name);
+            return;
+        }
+
+        jaAbriu = PersistenciaManager.Instance.ObterEstado(uniqueID, false);
+
+        if (jaAbriu)
+        {
+            if (SaveDoBauEstaInconsistente())
+            {
+                Debug.LogWarning("[TreasureChest] Save inconsistente: baú estava salvo como aberto, mas a recompensa principal não está no inventário. Liberando baú novamente. Baú=" + gameObject.name);
+
+                jaAbriu = false;
+                PersistenciaManager.Instance.RegistrarEstado(uniqueID, false);
+                PersistenciaManager.Instance.SalvarTudo(true);
+                return;
+            }
+
+            AplicarVisualAberto();
+            ForcarEsconderMensagens();
+        }
+    }
+
+    private bool SaveDoBauEstaInconsistente()
+    {
+        if (string.IsNullOrEmpty(nomeDaRunaNesteBau))
+            return false;
+
+        if (InventarioRunas.Instance == null)
+            return false;
+
+        return !InventarioRunas.Instance.TemRuna(nomeDaRunaNesteBau);
+    }
+
+    private void AplicarVisualAberto()
+    {
+        if (tampaDoBau)
+            tampaDoBau.localRotation = Quaternion.Euler(-90, 0, 0);
+
+        if (painelPretoRecompensa) painelPretoRecompensa.SetActive(false);
+        if (painelCustomizadoDaRecompensa) painelCustomizadoDaRecompensa.SetActive(false);
     }
 
     public void AoOlhar()
     {
-        if (!inicializado) return;
         if (jaAbriu) return;
 
         estaOlhando = true;
 
-        if (!mostrandoErro && textoInteragir) 
+        if (textoInteragir)
             textoInteragir.SetActive(true);
     }
 
@@ -123,15 +187,28 @@ public class TreasureChest : MonoBehaviour
 
     public void Interagir()
     {
-        if (!inicializado) return;
-        if (jaAbriu || mostrandoErro) return;
+        Debug.Log("[TreasureChest] Interagir chamado: " + gameObject.name +
+                  " | inicializado=" + inicializado +
+                  " | inicializando=" + inicializando +
+                  " | jaAbriu=" + jaAbriu +
+                  " | requerChave=" + requerChave +
+                  " | bloquearTP=" + bloquearAteUsarTeleport +
+                  " | tp=" + (teleportNecessario != null ? teleportNecessario.name : "NULL"));
 
-        if (!TeleportNecessarioFoiUsado())
+        if (!inicializado && !inicializando)
+            StartCoroutine(InicializarSeguro());
+
+        if (jaAbriu)
         {
-            Debug.LogWarning("[TreasureChest] Baú bloqueado. Teleporte necessário ainda não foi usado: " + idTeleportNecessario);
+            Debug.Log("[TreasureChest] Bloqueou porque já abriu: " + gameObject.name);
+            return;
+        }
 
-            if (audioSource && somTrancado)
-                audioSource.PlayOneShot(somTrancado);
+        ForcarEsconderMensagens();
+
+        if (!PodePassarPelaTravaDoTeleport())
+        {
+            TocarSomTrancado();
 
             if (rotinaAvisoTeleport != null)
                 StopCoroutine(rotinaAvisoTeleport);
@@ -140,51 +217,64 @@ public class TreasureChest : MonoBehaviour
             return;
         }
 
-        if (!requerChave)
+        if (!PodePassarPelaTravaDaChave())
         {
-            AbrirBau();
-        }
-        else
-        {
-            if (KeySystem.TemChave(idChaveNecessaria))
-            {
-                AbrirBau();
-            }
-            else
-            {
-                if (audioSource && somTrancado)
-                    audioSource.PlayOneShot(somTrancado);
+            TocarSomTrancado();
 
-                if (rotinaAvisoChave != null)
-                    StopCoroutine(rotinaAvisoChave);
+            if (rotinaAvisoChave != null)
+                StopCoroutine(rotinaAvisoChave);
 
-                rotinaAvisoChave = StartCoroutine(AvisoChaveFaltando());
-            }
+            rotinaAvisoChave = StartCoroutine(AvisoChaveFaltando());
+            return;
         }
+
+        AbrirBau();
     }
 
-    private bool TeleportNecessarioFoiUsado()
+    private bool PodePassarPelaTravaDoTeleport()
     {
         if (!bloquearAteUsarTeleport)
             return true;
 
-        if (string.IsNullOrEmpty(idTeleportNecessario))
-            return true;
-
-        if (TeleportArea.TeleportFoiUsadoNestaSessao(idTeleportNecessario))
-            return true;
-
-        if (PersistenciaManager.Instance == null)
+        if (teleportNecessario == null)
+        {
+            Debug.LogError("[TreasureChest] bloquearAteUsarTeleport ligado, mas teleportNecessario vazio. Baú=" + gameObject.name);
             return false;
+        }
 
-        bool usado =
-            PersistenciaManager.Instance.ObterEstado(idTeleportNecessario + "_Usado", false) ||
-            PersistenciaManager.Instance.ObterEstado(idTeleportNecessario, false);
+        bool usado = teleportNecessario.FoiUsado();
 
-        if (usado)
-            TeleportArea.RegistrarTeleportUsadoExternamente(idTeleportNecessario);
+        Debug.Log("[TreasureChest] Checando TP: baú=" + gameObject.name +
+                  " | TP=" + teleportNecessario.name +
+                  " | usado=" + usado);
 
         return usado;
+    }
+
+    private bool PodePassarPelaTravaDaChave()
+    {
+        if (!requerChave)
+            return true;
+
+        if (string.IsNullOrEmpty(idChaveNecessaria))
+        {
+            Debug.LogError("[TreasureChest] requerChave está ligado, mas idChaveNecessaria está vazio. Baú=" + gameObject.name);
+            return false;
+        }
+
+        bool temChave = KeySystem.TemChave(idChaveNecessaria);
+
+        Debug.Log("[TreasureChest] Checando chave: baú=" + gameObject.name +
+                  " | chave=" + idChaveNecessaria +
+                  " | temChave=" + temChave);
+
+        return temChave;
+    }
+
+    private void TocarSomTrancado()
+    {
+        if (audioSource && somTrancado)
+            audioSource.PlayOneShot(somTrancado);
     }
 
     public void ForcarEsconderMensagens()
@@ -201,8 +291,6 @@ public class TreasureChest : MonoBehaviour
             rotinaAvisoTeleport = null;
         }
 
-        mostrandoErro = false;
-
         if (textoPrecisaChave)
             textoPrecisaChave.SetActive(false);
 
@@ -213,28 +301,24 @@ public class TreasureChest : MonoBehaviour
             textoInteragir.SetActive(false);
     }
 
-    void AbrirBau()
+    private void AbrirBau()
     {
+        if (jaAbriu)
+            return;
+
         jaAbriu = true;
-        
-        if (textoInteragir)
-            textoInteragir.SetActive(false);
 
-        if (textoPrecisaChave)
-            textoPrecisaChave.SetActive(false);
-
-        if (textoPrecisaTeleport)
-            textoPrecisaTeleport.SetActive(false);
-
-        mostrandoErro = false;
+        ForcarEsconderMensagens();
 
         if (audioSource && somAbrir)
             audioSource.PlayOneShot(somAbrir);
 
         if (tampaDoBau)
         {
-            StopAllCoroutines();
-            StartCoroutine(AnimarTampa());
+            if (rotinaTampa != null)
+                StopCoroutine(rotinaTampa);
+
+            rotinaTampa = StartCoroutine(AnimarTampa());
         }
 
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
@@ -244,24 +328,33 @@ public class TreasureChest : MonoBehaviour
         {
             KeySystem.GastarChave(idChaveNecessaria);
 
-            if (iconeChaveParaEsconder != null)
+            if (iconeChaveParaEsconder)
                 iconeChaveParaEsconder.SetActive(false);
         }
 
         if (InventarioRunas.Instance != null && !string.IsNullOrEmpty(nomeDaRunaNesteBau))
-            InventarioRunas.Instance.ColetarRunaSemForcarSaveHD(nomeDaRunaNesteBau);
+            InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRunaNesteBau);
 
         if (darItemInventario && InventoryManager.Instance != null)
             InventoryManager.Instance.ReceberItem(idDoItemInventario);
 
-        SalvarProgressoSeguro();
+        if (PersistenciaManager.Instance != null)
+            PersistenciaManager.Instance.SalvarTudo(true);
 
-        StartCoroutine(SequenciaRecompensa());
+        if (rotinaRecompensa != null)
+            StopCoroutine(rotinaRecompensa);
+
+        rotinaRecompensa = StartCoroutine(SequenciaRecompensa());
+
+        Debug.Log("[TreasureChest] BAÚ ABERTO: " + gameObject.name);
     }
 
-    IEnumerator AnimarTampa()
+    private IEnumerator AnimarTampa()
     {
-        float t = 0;
+        if (tampaDoBau == null)
+            yield break;
+
+        float t = 0f;
         Quaternion startRot = tampaDoBau.localRotation;
         Quaternion endRot = Quaternion.Euler(-90, 0, 0);
 
@@ -273,36 +366,36 @@ public class TreasureChest : MonoBehaviour
         }
 
         tampaDoBau.localRotation = endRot;
+        rotinaTampa = null;
     }
 
-    IEnumerator AvisoChaveFaltando()
+    private IEnumerator AvisoChaveFaltando()
     {
-        mostrandoErro = true;
-
         if (textoInteragir)
             textoInteragir.SetActive(false);
-        
+
         if (textoPrecisaChave)
         {
             textoPrecisaChave.SetActive(true);
             yield return new WaitForSeconds(2f);
             textoPrecisaChave.SetActive(false);
         }
-        
-        mostrandoErro = false;
+        else
+        {
+            yield return new WaitForSeconds(2f);
+        }
+
         rotinaAvisoChave = null;
 
-        if (!jaAbriu && estaOlhando && textoInteragir) 
+        if (!jaAbriu && estaOlhando && textoInteragir)
             textoInteragir.SetActive(true);
     }
 
-    IEnumerator AvisoTeleportFaltando()
+    private IEnumerator AvisoTeleportFaltando()
     {
-        mostrandoErro = true;
-
         if (textoInteragir)
             textoInteragir.SetActive(false);
-        
+
         if (textoPrecisaTeleport)
         {
             textoPrecisaTeleport.SetActive(true);
@@ -319,27 +412,26 @@ public class TreasureChest : MonoBehaviour
         {
             yield return new WaitForSeconds(2f);
         }
-        
-        mostrandoErro = false;
+
         rotinaAvisoTeleport = null;
 
-        if (!jaAbriu && estaOlhando && textoInteragir) 
+        if (!jaAbriu && estaOlhando && textoInteragir)
             textoInteragir.SetActive(true);
     }
 
-    IEnumerator SequenciaRecompensa()
+    private IEnumerator SequenciaRecompensa()
     {
         if (painelPretoRecompensa)
             painelPretoRecompensa.SetActive(true);
-        
-        if (textoRecompensa && !string.IsNullOrEmpty(nomeDaRunaNesteBau)) 
+
+        if (textoRecompensa && !string.IsNullOrEmpty(nomeDaRunaNesteBau))
             textoRecompensa.text = "Você pegou a " + nomeDaRunaNesteBau + "!";
-            
+
         if (painelCustomizadoDaRecompensa)
             painelCustomizadoDaRecompensa.SetActive(true);
-        
+
         yield return new WaitForSecondsRealtime(3f);
-        
+
         if (painelPretoRecompensa)
             painelPretoRecompensa.SetActive(false);
 
@@ -350,23 +442,25 @@ public class TreasureChest : MonoBehaviour
         {
             if (FPS_Master.Instance != null)
                 FPS_Master.Instance.AlterarEstadoJogador(true, false);
-            
-            if (painelFimDemo != null)
+
+            if (painelFimDemo)
                 painelFimDemo.SetActive(true);
-            
+
             yield return new WaitForSecondsRealtime(tempoParaVoltarMenu);
-            
+
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             Time.timeScale = 1f;
 
-            UnityEngine.SceneManagement.SceneManager.LoadScene(nomeCenaMenu);
+            SceneManager.LoadScene(nomeCenaMenu);
         }
+
+        rotinaRecompensa = null;
     }
 
-    private void SalvarProgressoSeguro()
+    [ContextMenu("DEBUG - Abrir Baú Agora")]
+    private void DebugAbrirBauAgora()
     {
-        if (PersistenciaManager.Instance != null)
-            PersistenciaManager.Instance.SalvarTudo(true);
+        AbrirBau();
     }
 }

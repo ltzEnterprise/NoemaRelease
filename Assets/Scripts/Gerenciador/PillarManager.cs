@@ -51,10 +51,12 @@ public class PillarManager : MonoBehaviour
 
     void Awake()
     {
-        todosOsPuzzles.RemoveAll(p => p == null);
+        RegistrarEstePuzzle();
+    }
 
-        if (!todosOsPuzzles.Contains(this))
-            todosOsPuzzles.Add(this);
+    void OnEnable()
+    {
+        RegistrarEstePuzzle();
     }
 
     void Start()
@@ -62,8 +64,18 @@ public class PillarManager : MonoBehaviour
         StartCoroutine(InicializarSeguro());
     }
 
+    private void RegistrarEstePuzzle()
+    {
+        todosOsPuzzles.RemoveAll(p => p == null);
+
+        if (!todosOsPuzzles.Contains(this))
+            todosOsPuzzles.Add(this);
+    }
+
     private IEnumerator InicializarSeguro()
     {
+        RegistrarEstePuzzle();
+
         if (totalDePilares <= 0)
         {
             Debug.LogError($"[ERRO] O Puzzle {idDoPuzzle} tá com 0 pilares configurados. Arruma isso no Inspector!");
@@ -90,6 +102,7 @@ public class PillarManager : MonoBehaviour
         if (playerTransform == null)
         {
             GameObject player = GameObject.FindGameObjectWithTag("Player");
+
             if (player != null)
                 playerTransform = player.transform;
         }
@@ -97,10 +110,12 @@ public class PillarManager : MonoBehaviour
         CarregarSave();
         saveCarregado = true;
 
+        AplicarEstadoVisualDoPuzzle();
+
+        yield return null;
         yield return new WaitForEndOfFrame();
 
-        RecalcularPuzzleAtualNaTela();
-        AtualizarTextoDeTodosOsPuzzles();
+        ForcarAtualizacaoGlobalDosPilares();
     }
 
     private void CarregarSave()
@@ -108,6 +123,11 @@ public class PillarManager : MonoBehaviour
         if (PersistenciaManager.Instance == null) return;
 
         puzzleConcluido = PersistenciaManager.Instance.ObterEstado(idDoPuzzle + "_Concluido", false);
+
+        if (desativaMundoPixelado && PixeladoFoiDesativadoPermanentemente())
+        {
+            puzzleConcluido = true;
+        }
 
         if (puzzleConcluido)
         {
@@ -117,12 +137,7 @@ public class PillarManager : MonoBehaviour
                 pastaDePlasmas.SetActive(false);
 
             if (desativaMundoPixelado)
-            {
-                if (efeitoGlitchURP != null)
-                    efeitoGlitchURP.SetActive(false);
-
-                PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", false);
-            }
+                AplicarPixeladoDesativadoPermanente();
         }
     }
 
@@ -143,6 +158,12 @@ public class PillarManager : MonoBehaviour
     {
         List<int> ordem = ObterOrdemCorreta();
         return ordem != null && ordem.Count > 0 ? ordem.Count : totalDePilares;
+    }
+
+    private static void ForcarAtualizacaoGlobalDosPilares()
+    {
+        RecalcularPuzzleAtualNaTela();
+        AtualizarTextoDeTodosOsPuzzles();
     }
 
     private static void RecalcularPuzzleAtualNaTela()
@@ -183,12 +204,22 @@ public class PillarManager : MonoBehaviour
     {
         if (textoProgresso != null)
         {
+            Canvas canvasPai = textoProgresso.GetComponentInParent<Canvas>(true);
+
+            if (canvasPai != null)
+                canvasPai.gameObject.SetActive(true);
+
             textoProgresso.gameObject.SetActive(true);
             textoProgresso.text = $"{inputsDoJogador.Count}/{ObterTotalSequencia()}";
         }
 
         if (canvasGroupDoTexto != null)
+        {
+            canvasGroupDoTexto.gameObject.SetActive(true);
             canvasGroupDoTexto.alpha = 1f;
+            canvasGroupDoTexto.blocksRaycasts = false;
+            canvasGroupDoTexto.interactable = false;
+        }
     }
 
     private void EsconderTextoProgresso()
@@ -202,6 +233,11 @@ public class PillarManager : MonoBehaviour
 
     void Update()
     {
+        if (desativaMundoPixelado && PixeladoFoiDesativadoPermanentemente())
+        {
+            AplicarPixeladoDesativadoPermanente();
+        }
+
         if (puzzleConcluido) return;
 
         if (pastaDePlasmas != null && DayNightCycle.Instance != null)
@@ -219,7 +255,13 @@ public class PillarManager : MonoBehaviour
 
     public void ReceberInteracaoPilar(int numeroDoPilar)
     {
-        if (!saveCarregado) return;
+        if (!saveCarregado)
+        {
+            CarregarSave();
+            saveCarregado = true;
+            ForcarAtualizacaoGlobalDosPilares();
+        }
+
         if (puzzleConcluido) return; 
         if (completando) return;
 
@@ -252,11 +294,8 @@ public class PillarManager : MonoBehaviour
 
         if (ordemDoPuzzle == puzzleAtualNaTela && textoProgresso != null)
         {
-            textoProgresso.gameObject.SetActive(true);
+            MostrarTextoProgresso();
             textoProgresso.text = $"{inputsDoJogador.Count}/{ordem.Count}";
-
-            if (canvasGroupDoTexto != null)
-                canvasGroupDoTexto.alpha = 1f;
         }
 
         if (inputsDoJogador.Count == ordem.Count)
@@ -275,8 +314,9 @@ public class PillarManager : MonoBehaviour
 
         SalvarEstadoConcluidoImediatamente();
 
-        RecalcularPuzzleAtualNaTela();
-        AtualizarTextoDeTodosOsPuzzles();
+        yield return null;
+
+        ForcarLiberacaoDoProximoPuzzle();
 
         if (desativaMundoPixelado)
         {
@@ -300,8 +340,7 @@ public class PillarManager : MonoBehaviour
             if (audioSourceFeedback && somDespixalizacao)
                 audioSourceFeedback.PlayOneShot(somDespixalizacao);
 
-            if (efeitoGlitchURP != null)
-                efeitoGlitchURP.SetActive(false);
+            AplicarPixeladoDesativadoPermanente();
 
             yield return new WaitForSeconds(0.5f);
 
@@ -337,6 +376,43 @@ public class PillarManager : MonoBehaviour
         }
 
         completando = false;
+
+        ForcarLiberacaoDoProximoPuzzle();
+    }
+
+    private void ForcarLiberacaoDoProximoPuzzle()
+    {
+        todosOsPuzzles.RemoveAll(p => p == null);
+
+        foreach (var p in todosOsPuzzles)
+        {
+            if (p == null) continue;
+
+            if (!p.saveCarregado)
+            {
+                p.CarregarSave();
+                p.saveCarregado = true;
+            }
+
+            if (!p.puzzleConcluido)
+                p.inputsDoJogador.Clear();
+        }
+
+        RecalcularPuzzleAtualNaTela();
+        AtualizarTextoDeTodosOsPuzzles();
+
+        Debug.Log("[PillarManager] Puzzle concluído: " + idDoPuzzle + ". Próximo puzzle atual: " + puzzleAtualNaTela);
+    }
+
+    private void AplicarEstadoVisualDoPuzzle()
+    {
+        if (!puzzleConcluido) return;
+
+        if (pastaDePlasmas != null)
+            pastaDePlasmas.SetActive(false);
+
+        if (desativaMundoPixelado)
+            AplicarPixeladoDesativadoPermanente();
     }
 
     private void SalvarEstadoConcluidoImediatamente()
@@ -346,24 +422,64 @@ public class PillarManager : MonoBehaviour
             PersistenciaManager.Instance.RegistrarEstado(idDoPuzzle + "_Concluido", true);
 
             if (desativaMundoPixelado)
+            {
+                PersistenciaManager.Instance.RegistrarEstado(ChavePixeladoDesativadoDoPuzzle(), true);
                 PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", false);
+                PersistenciaManager.Instance.RegistrarEstado("World_Pixelated_Disabled", true);
+                PersistenciaManager.Instance.RegistrarEstado("PixelatedWorld_Disabled", true);
+            }
 
             PersistenciaManager.Instance.SalvarTudo(true);
         }
     }
 
+    private bool PixeladoFoiDesativadoPermanentemente()
+    {
+        if (PersistenciaManager.Instance == null)
+            return false;
+
+        return PersistenciaManager.Instance.ObterEstado(ChavePixeladoDesativadoDoPuzzle(), false) ||
+               PersistenciaManager.Instance.ObterEstado("World_Pixelated_Disabled", false) ||
+               PersistenciaManager.Instance.ObterEstado("PixelatedWorld_Disabled", false) ||
+               PersistenciaManager.Instance.ObterEstado("World_Is_Pixelated", true) == false;
+    }
+
+    private void AplicarPixeladoDesativadoPermanente()
+    {
+        if (efeitoGlitchURP != null)
+            efeitoGlitchURP.SetActive(false);
+
+        if (pastaDePlasmas != null)
+            pastaDePlasmas.SetActive(false);
+
+        if (PersistenciaManager.Instance != null)
+        {
+            PersistenciaManager.Instance.RegistrarEstado(ChavePixeladoDesativadoDoPuzzle(), true);
+            PersistenciaManager.Instance.RegistrarEstado("World_Is_Pixelated", false);
+            PersistenciaManager.Instance.RegistrarEstado("World_Pixelated_Disabled", true);
+            PersistenciaManager.Instance.RegistrarEstado("PixelatedWorld_Disabled", true);
+        }
+    }
+
+    private string ChavePixeladoDesativadoDoPuzzle()
+    {
+        return idDoPuzzle + "_PixeladoDesativadoPermanente";
+    }
+
     void OnDisable()
     {
-        if (efeitoGlitchURP != null && desativaMundoPixelado)
+        if (efeitoGlitchURP != null && desativaMundoPixelado && PixeladoFoiDesativadoPermanentemente())
             efeitoGlitchURP.SetActive(false);
     }
 
     void OnDestroy()
     {
-        if (efeitoGlitchURP != null && desativaMundoPixelado)
+        if (efeitoGlitchURP != null && desativaMundoPixelado && PixeladoFoiDesativadoPermanentemente())
             efeitoGlitchURP.SetActive(false);
 
         if (todosOsPuzzles.Contains(this))
             todosOsPuzzles.Remove(this);
+
+        ForcarAtualizacaoGlobalDosPilares();
     }
 }

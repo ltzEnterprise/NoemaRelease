@@ -34,7 +34,12 @@ public class CursedHouseManager : MonoBehaviour
     IEnumerator InicializarSeguro()
     {
         if (PersistenciaManager.Instance != null)
-            yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso);
+        {
+            yield return new WaitUntil(() =>
+                PersistenciaManager.Instance.DadosProntosParaUso &&
+                !PersistenciaManager.Instance.EstaCarregando
+            );
+        }
 
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
@@ -60,18 +65,15 @@ public class CursedHouseManager : MonoBehaviour
         if (InventarioRunas.Instance != null)
         {
             InventarioRunas.Instance.ColetarRunaPeloNome(nomeDaRuna);
-            Debug.Log("Runa adicionada ao inventário global: " + nomeDaRuna);
+            Debug.Log("[CursedHouseManager] Runa coletada e salva pelo InventarioRunas: " + nomeDaRuna);
         }
         else
         {
-            Debug.LogWarning("[CursedHouseManager] InventarioRunas.Instance está nulo. Salvando runa direto no PersistenciaManager: " + nomeDaRuna);
+            Debug.LogError("[CursedHouseManager] InventarioRunas.Instance está nulo. A runa NÃO foi entregue: " + nomeDaRuna);
         }
 
         if (PersistenciaManager.Instance != null)
         {
-            if (!string.IsNullOrEmpty(nomeDaRuna))
-                PersistenciaManager.Instance.RegistrarEstado("Runa_" + nomeDaRuna, true);
-
             if (!string.IsNullOrEmpty(uniqueID))
                 PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Resolvido", true);
 
@@ -88,7 +90,7 @@ public class CursedHouseManager : MonoBehaviour
             if (textoRecompensa)
                 textoRecompensa.text = "Você encontrou a " + nomeDaRuna + "!";
 
-            Invoke("EsconderPainel", 4f);
+            Invoke(nameof(EsconderPainel), 4f);
         }
     }
 

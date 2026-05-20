@@ -25,6 +25,8 @@ public class InventoryManager : MonoBehaviour
     private Coroutine rotinaTrocaInventario;
     private int itemVisualAtual = -1;
 
+    private HashSet<int> itensDesbloqueadosRuntime = new HashSet<int>();
+
     void Awake()
     {
         Instance = this; 
@@ -96,6 +98,7 @@ public class InventoryManager : MonoBehaviour
         yield return new WaitUntil(() => PersistenciaManager.Instance != null);
         yield return new WaitUntil(() => PersistenciaManager.Instance.DadosProntosParaUso && !PersistenciaManager.Instance.EstaCarregando);
 
+        CarregarItensDesbloqueadosParaRAM();
         CarregarItemSelecionadoDoSave();
 
         if (comecarComTodosOsItens)
@@ -109,7 +112,34 @@ public class InventoryManager : MonoBehaviour
             SalvarItemSelecionadoNaRAM(itemSelecionado);
         }
 
+        if (itemSelecionado != -1 && !ItemEstaDesbloqueado(itemSelecionado))
+            itemSelecionado = -1;
+
         AtualizarVisual(false);
+    }
+
+    private void CarregarItensDesbloqueadosParaRAM()
+    {
+        itensDesbloqueadosRuntime.Clear();
+
+        if (itensRegistrados == null || PersistenciaManager.Instance == null)
+            return;
+
+        for (int i = 0; i < itensRegistrados.Count; i++)
+        {
+            string key = GetChaveItemDesbloqueado(i);
+
+            bool desbloqueado = false;
+
+            if (!string.IsNullOrEmpty(key))
+                desbloqueado = PersistenciaManager.Instance.ObterEstado(key, false);
+
+            if (!desbloqueado)
+                desbloqueado = PersistenciaManager.Instance.ObterEstado("InvUnlocked_" + i, false);
+
+            if (desbloqueado)
+                itensDesbloqueadosRuntime.Add(i);
+        }
     }
 
     void Update()
@@ -125,11 +155,8 @@ public class InventoryManager : MonoBehaviour
             NavegarInventario(scroll > 0 ? 1 : -1);
         }
 
-        if (Input.GetKeyDown(KeyCode.Alpha1)) TentarEquipar(0);
-        if (Input.GetKeyDown(KeyCode.Alpha2)) TentarEquipar(1);
-        if (Input.GetKeyDown(KeyCode.Alpha3)) TentarEquipar(2);
-        if (Input.GetKeyDown(KeyCode.Alpha4)) TentarEquipar(3);
-        if (Input.GetKeyDown(KeyCode.H)) TentarEquipar(-1); 
+        // Atalhos 1,2,3,4 e H removidos.
+        // Agora o inventário só troca por scroll ou por chamada direta de outros scripts.
     }
 
     private string GetChaveInventario()
@@ -154,20 +181,43 @@ public class InventoryManager : MonoBehaviour
 
     public void ReceberItem(int id)
     {
-        if (id < 0 || itensRegistrados == null || id >= itensRegistrados.Count) return;
+        if (id < 0)
+        {
+            Debug.LogError("[InventoryManager] ReceberItem recebeu ID negativo: " + id);
+            return;
+        }
+
+        if (itensRegistrados == null)
+        {
+            Debug.LogError("[InventoryManager] itensRegistrados está NULL.");
+            return;
+        }
+
+        if (id >= itensRegistrados.Count)
+        {
+            Debug.LogError("[InventoryManager] ReceberItem recebeu ID fora da lista: " + id + " | Count=" + itensRegistrados.Count);
+            return;
+        }
+
+        if (itensRegistrados[id] == null)
+        {
+            Debug.LogError("[InventoryManager] ReceberItem recebeu ID " + id + ", mas o Element " + id + " está NULL.");
+            return;
+        }
 
         DesbloquearItem(id);
+
+        // Mantém animação de saque. Não força visual instantâneo aqui.
         TrocarItemSelecionado(id, true);
 
         SalvarProgressoSeguro();
 
-        if (id >= 0 && id < itensRegistrados.Count && itensRegistrados[id] != null)
-        {
-            ItemIdentificador idScript = itensRegistrados[id].GetComponent<ItemIdentificador>();
+        ItemIdentificador idScript = itensRegistrados[id].GetComponent<ItemIdentificador>();
 
-            if (idScript != null && HUDItemNome.Instance != null)
-                HUDItemNome.Instance.MostrarFadeDeColeta(idScript.nomeDoItem);
-        }
+        if (idScript != null && HUDItemNome.Instance != null)
+            HUDItemNome.Instance.MostrarFadeDeColeta(idScript.nomeDoItem);
+
+        Debug.Log("[InventoryManager] Item recebido/desbloqueado/equipado com animação. ID=" + id + " | Objeto=" + itensRegistrados[id].name);
     }
 
     public void ReceberItemDeVolta(int id) 
@@ -177,11 +227,17 @@ public class InventoryManager : MonoBehaviour
 
     public void ConsumirItem(int id)
     {
+        if (id < 0) return;
+
         BloquearItem(id);
 
         if (itemSelecionado == id)
         {
             TrocarItemSelecionado(-1, true);
+        }
+        else
+        {
+            AtualizarVisual(false);
         }
 
         SalvarProgressoSeguro();
@@ -201,6 +257,12 @@ public class InventoryManager : MonoBehaviour
 
     private void TrocarItemSelecionado(int novoItem, bool animar)
     {
+        if (novoItem >= 0 && !ItemEstaDesbloqueado(novoItem))
+        {
+            Debug.LogWarning("[InventoryManager] Tentou trocar para item bloqueado. ID=" + novoItem);
+            return;
+        }
+
         itemSelecionado = novoItem;
         SalvarItemSelecionadoNaRAM(novoItem);
         AtualizarVisual(animar);
@@ -218,6 +280,7 @@ public class InventoryManager : MonoBehaviour
             if (tentativa >= total) tentativa = -1;
             if (tentativa < -1) tentativa = total - 1;
 
+            // -1 é mão vazia e continua existindo.
             if (tentativa == -1 || ItemEstaDesbloqueado(tentativa))
             {
                 TrocarItemSelecionado(tentativa, true);
@@ -254,7 +317,7 @@ public class InventoryManager : MonoBehaviour
 
         if (itemSelecionado >= 0 && itemSelecionado < itensRegistrados.Count && itensRegistrados[itemSelecionado] != null)
         {
-            var idScript = itensRegistrados[itemSelecionado].GetComponent<ItemIdentificador>(); 
+            ItemIdentificador idScript = itensRegistrados[itemSelecionado].GetComponent<ItemIdentificador>(); 
             nomeParaHUD = idScript ? idScript.nomeDoItem : itensRegistrados[itemSelecionado].name;
         }
 
@@ -404,10 +467,11 @@ public class InventoryManager : MonoBehaviour
         return -1;
     }
 
-    bool ItemEstaDesbloqueado(int id) 
+    public bool ItemEstaDesbloqueado(int id) 
     {
         if (id < 0) return false;
-        if (comecarComTodosOsItens) return true; 
+        if (comecarComTodosOsItens) return true;
+        if (itensDesbloqueadosRuntime.Contains(id)) return true; 
         if (PersistenciaManager.Instance == null) return false;
 
         string key = GetChaveItemDesbloqueado(id);
@@ -422,6 +486,9 @@ public class InventoryManager : MonoBehaviour
     void DesbloquearItem(int id) 
     { 
         if (id < 0) return;
+
+        itensDesbloqueadosRuntime.Add(id);
+
         if (PersistenciaManager.Instance == null) return;
 
         string key = GetChaveItemDesbloqueado(id);
@@ -435,6 +502,9 @@ public class InventoryManager : MonoBehaviour
     void BloquearItem(int id) 
     { 
         if (id < 0) return;
+
+        itensDesbloqueadosRuntime.Remove(id);
+
         if (PersistenciaManager.Instance == null) return;
 
         string key = GetChaveItemDesbloqueado(id);
