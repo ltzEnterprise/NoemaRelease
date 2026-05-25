@@ -124,7 +124,7 @@ Material:
     - _Pixelation: 256
     - _QueueOffset: 0
     - _ReceiveShadows: 1
-    - _SkyDarkness: 0.9
+    - _SkyDarkness: 1
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -133,7 +133,7 @@ Material:
     - _SrcBlendAlpha: 1
     - _Surface: 0
     - _WorkflowMode: 1
-    - _WorldBrightness: 1.2
+    - _WorldBrightness: 1.36
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:

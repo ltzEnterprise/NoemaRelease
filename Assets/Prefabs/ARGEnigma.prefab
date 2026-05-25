@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1103525202854868463
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 828552975138443751}
+  - component: {fileID: 824468491705245877}
+  m_Layer: 0
+  m_Name: ARGEnigma
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &828552975138443751
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1103525202854868463}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.0587, y: 0.71923, z: 9.93838}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &824468491705245877
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1103525202854868463}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4ca04b88000f3a4eb61ed54199bdfc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SecretCodeReveal
+  uniqueID: Segredo_Codigo_SetasARG
+  ativarApenasUmaVez: 1
+  sequenciaSecreta: 110100001301000012010000130100001401000011010000
+  objetoParaAparecer: {fileID: 0}
+  somSucesso: {fileID: 8300000, guid: 56e2a1afdd6ebc4409a3c1ed3936f66c, type: 3}
+  volumeSom: 0.829
+  darItemAoCompletarCodigo: 0
+  itemIDParaDar: 0
+  darItemApenasUmaVez: 0
+  usarRelampagoNoCeu: 0
+  exposicaoRelampago: 1
+  tempoSubidaRelampago: 0.04
+  tempoPicoRelampago: 0.05
+  tempoRetornoRelampago: 0.18
+  quantidadePiscadas: 2
+  intervaloEntrePiscadas: 0.08
+  aoRevelarSegredo:
+    m_PersistentCalls:
+      m_Calls: []

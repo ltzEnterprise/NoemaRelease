@@ -20,12 +20,19 @@ public class SecretCodeReveal : MonoBehaviour
     [Header("--- O QUE ACONTECE ---")]
     [Tooltip("O objeto (ou grupo) que vai aparecer no mapa.")]
     public GameObject objetoParaAparecer;
-    
+
     [Tooltip("O som que toca ao acertar.")]
     public AudioClip somSucesso;
-    
+
     [Tooltip("Volume do som (0 a 1).")]
     [Range(0f, 1f)] public float volumeSom = 1f;
+
+    [Header("--- TROCA DE TEMPO OPCIONAL ---")]
+    [Tooltip("Se ligado, ao completar o código troca o tempo: Noite -> Manhã, Manhã -> Tarde, Tarde -> Noite.")]
+    public bool trocarTempoAoCompletarCodigo = false;
+
+    [Tooltip("Se ligado, a troca de tempo só acontece uma vez no save deste segredo.")]
+    public bool trocarTempoApenasUmaVez = false;
 
     [Header("--- RELÂMPAGO NO CÉU ---")]
     [Tooltip("Ativa um flash rápido de exposição no skybox ao revelar o segredo.")]
@@ -55,12 +62,28 @@ public class SecretCodeReveal : MonoBehaviour
     private int indexAtual = 0;
     private AudioSource audioSource;
     private bool segredoRevelado = false;
+    private bool tempoJaTrocado = false;
     private bool inicializado = false;
     private bool relampagoRodando = false;
 
     private Material skyboxOriginal;
     private Material skyboxInstanciado;
     private float exposicaoOriginal = 1f;
+
+    private string ChaveRevelado
+    {
+        get { return uniqueID + "_Revelado"; }
+    }
+
+    private string ChaveObjetoApareceu
+    {
+        get { return uniqueID + "_ObjetoApareceu"; }
+    }
+
+    private string ChaveTempoTrocado
+    {
+        get { return uniqueID + "_TempoTrocado"; }
+    }
 
     void Start()
     {
@@ -100,7 +123,10 @@ public class SecretCodeReveal : MonoBehaviour
             );
 
             if (!string.IsNullOrEmpty(uniqueID))
-                segredoRevelado = PersistenciaManager.Instance.ObterEstado(uniqueID + "_Revelado", false);
+            {
+                segredoRevelado = PersistenciaManager.Instance.ObterEstado(ChaveRevelado, false);
+                tempoJaTrocado = PersistenciaManager.Instance.ObterEstado(ChaveTempoTrocado, false);
+            }
         }
 
         if (segredoRevelado)
@@ -148,16 +174,68 @@ public class SecretCodeReveal : MonoBehaviour
         segredoRevelado = true;
 
         AplicarEstadoRevelado(true);
+        TrocarTempoOpcional();
 
         if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
         {
-            PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_Revelado", true);
+            PersistenciaManager.Instance.RegistrarEstado(ChaveRevelado, true);
 
             if (objetoParaAparecer != null)
-                PersistenciaManager.Instance.RegistrarEstado(uniqueID + "_ObjetoApareceu", true);
+                PersistenciaManager.Instance.RegistrarEstado(ChaveObjetoApareceu, true);
+
+            PersistenciaManager.Instance.RegistrarEstado(ChaveTempoTrocado, tempoJaTrocado);
 
             PersistenciaManager.Instance.SalvarTudo(true);
         }
+    }
+
+    private void TrocarTempoOpcional()
+    {
+        if (!trocarTempoAoCompletarCodigo)
+            return;
+
+        if (trocarTempoApenasUmaVez && tempoJaTrocado)
+            return;
+
+        if (DayNightCycle.Instance == null)
+        {
+            Debug.LogError("[SecretCodeReveal] trocarTempoAoCompletarCodigo está ligado, mas DayNightCycle.Instance está nulo.");
+            return;
+        }
+
+        DayNightCycle.TimeState estadoAtual = DayNightCycle.Instance.currentState;
+        DayNightCycle.TimeState novoEstado;
+
+        switch (estadoAtual)
+        {
+            case DayNightCycle.TimeState.Night:
+                novoEstado = DayNightCycle.TimeState.InitialDay;
+                break;
+
+            case DayNightCycle.TimeState.InitialDay:
+                novoEstado = DayNightCycle.TimeState.DramaticDay;
+                break;
+
+            case DayNightCycle.TimeState.DramaticDay:
+                novoEstado = DayNightCycle.TimeState.Night;
+                break;
+
+            default:
+                novoEstado = DayNightCycle.TimeState.InitialDay;
+                break;
+        }
+
+        DayNightCycle.Instance.ChangeTo(novoEstado);
+
+        tempoJaTrocado = true;
+
+        if (PersistenciaManager.Instance != null && !string.IsNullOrEmpty(uniqueID))
+        {
+            PersistenciaManager.Instance.RegistrarEstado(ChaveTempoTrocado, true);
+            PersistenciaManager.Instance.SalvarTudo(true);
+        }
+
+        Debug.Log("[SecretCodeReveal] Tempo alterado pelo código secreto: " + estadoAtual + " -> " + novoEstado);
     }
 
     private void AplicarEstadoRevelado(bool tocarEfeitos)
